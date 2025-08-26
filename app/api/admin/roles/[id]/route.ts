@@ -3,10 +3,7 @@ import pool from "@/lib/database";
 import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 import { logActivity } from "@/lib/activityLogger";
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Record<string, string> }
-) {
+export async function PUT(request: Request, { params }: any) {
   try {
     const { name, description, permissions, status } = await request.json();
     const roleId = params["id"];
@@ -115,10 +112,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Record<string, string> }
-) {
+export async function DELETE(request: Request, { params }: any) {
   try {
     const roleId = params["id"];
     const client = await pool.connect();
