@@ -73,12 +73,9 @@ export async function GET(request: Request, { params }: any) {
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: Request, { params }: any) {
   try {
-    const testId = params.id;
+    const testId = params["id"];
     const { questionIds } = await request.json();
 
     if (!questionIds || !Array.isArray(questionIds)) {
