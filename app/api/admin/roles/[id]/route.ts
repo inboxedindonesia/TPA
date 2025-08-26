@@ -5,11 +5,11 @@ import { logActivity } from "@/lib/activityLogger";
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Record<string, string> }
 ) {
   try {
     const { name, description, permissions, status } = await request.json();
-    const roleId = params.id;
+    const roleId = params["id"];
 
     // Validasi input
     if (!name || !description) {
@@ -117,10 +117,10 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Record<string, string> }
 ) {
   try {
-    const roleId = params.id;
+    const roleId = params["id"];
     const client = await pool.connect();
 
     // Cek apakah role ada
