@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function VerifyOtpPage() {
+function VerifyOtpInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
@@ -78,5 +78,13 @@ export default function VerifyOtpPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense>
+      <VerifyOtpInner />
+    </Suspense>
   );
 }
