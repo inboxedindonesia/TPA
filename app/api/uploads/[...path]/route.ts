@@ -2,16 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
+export async function GET(request: Request, { params }: any) {
   try {
     const filePath = path.join(
       process.cwd(),
       "public",
       "uploads",
-      ...params.path
+      ...params["path"]
     );
 
     // Check if file exists
@@ -44,8 +41,16 @@ export async function GET(
         break;
     }
 
-    // Return file with appropriate headers
-    return new NextResponse(fileBuffer, {
+    // Convert Buffer to ArrayBuffer for NextResponse
+    // Make sure to only send ArrayBuffer, not SharedArrayBuffer
+    const arrayBuffer =
+      fileBuffer instanceof Buffer
+        ? fileBuffer.buffer.slice(
+            fileBuffer.byteOffset,
+            fileBuffer.byteOffset + fileBuffer.byteLength
+          )
+        : fileBuffer;
+    return new NextResponse(arrayBuffer as ArrayBuffer, {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=31536000", // Cache for 1 year
