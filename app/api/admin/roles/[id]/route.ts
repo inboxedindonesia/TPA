@@ -3,13 +3,10 @@ import pool from "@/lib/database";
 import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 import { logActivity } from "@/lib/activityLogger";
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } } // Perbaikan di sini
-) {
+export async function PUT(request: Request, { params }: any) {
   try {
     const { name, description, permissions, status } = await request.json();
-    const roleId = params.id; // Memperbaiki akses id dari params
+    const roleId = params["id"]; // Memperbaiki akses id dari params
 
     // Validasi input
     if (!name || !description) {
@@ -115,12 +112,9 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } } // Perbaikan di sini
-) {
+export async function DELETE(request: Request, { params }: any) {
   try {
-    const roleId = params.id; // Memperbaiki akses id dari params
+    const roleId = params["id"]; // Memperbaiki akses id dari params
     const client = await pool.connect();
 
     // Cek apakah role ada
