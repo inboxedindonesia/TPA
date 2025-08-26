@@ -2,93 +2,174 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
 
 export async function GET(request: NextRequest) {
-  const client = await pool.connect();
-
   try {
-    // Total peserta
-    const totalPesertaRes = await client.query(
-      "SELECT COUNT(*) as count FROM users WHERE role = $1",
-      ["PESERTA"]
-    );
-    const totalPeserta = parseInt(totalPesertaRes.rows[0].count);
+    const client = await pool.connect();
+    try {
+      const url = new URL(request.url);
+      const id = url.searchParams.get("id");
+      if (id) {
+        // Fetch all user fields
+        const pesertaRes = await client.query(
+          `SELECT * FROM users WHERE id = $1`,
+          [id]
+        );
+        if (pesertaRes.rows.length === 0) {
+          return NextResponse.json({ peserta: null }, { status: 404 });
+        }
+        const peserta = pesertaRes.rows[0];
 
-    // Peserta aktif (yang pernah mengikuti tes)
-    const pesertaAktifRes = await client.query(
-      `
-      SELECT COUNT(DISTINCT u.id) as count 
-      FROM users u 
-      INNER JOIN test_sessions ts ON u.id = ts."userId" 
-      WHERE u.role = $1
-    `,
-      ["PESERTA"]
-    );
-    const pesertaAktif = parseInt(pesertaAktifRes.rows[0].count);
+        // Fetch test results for this peserta
+        const testResultsRes = await client.query(
+          `SELECT ts.id, ts.status, ts."startTime", ts."endTime", ts.score, ts."maxScore", ts."testId", t.name as test_name, t.description as test_description
+           FROM test_sessions ts
+           JOIN tests t ON ts."testId" = t.id
+           WHERE ts."userId" = $1
+           ORDER BY ts."startTime" DESC`,
+          [id]
+        );
+        const testResults = testResultsRes.rows.map((row) => ({
+          id: row.id,
+          status: row.status,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          score: row.score,
+          maxScore: row.maxScore,
+          testId: row.testId,
+          testName: row.test_name,
+          testDescription: row.test_description,
+        }));
 
-    // Peserta baru (dibuat dalam 30 hari terakhir)
-    const pesertaBaruRes = await client.query(
-      `
-      SELECT COUNT(*) as count 
-      FROM users 
-      WHERE role = $1 AND "createdAt" >= NOW() - INTERVAL '30 days'
-    `,
-      ["PESERTA"]
-    );
-    const pesertaBaru = parseInt(pesertaBaruRes.rows[0].count);
+        return NextResponse.json({ peserta, testResults });
+      }
+      // Debug: Check all users and their roles
+      const allUsersResult = await client.query(
+        'SELECT u.id, u.name, u.email, r.name as role FROM users u LEFT JOIN roles r ON u.role_id = r.id ORDER BY u."createdAt" DESC'
+      );
+      console.log("All users in database:", allUsersResult.rows);
 
-    // Rata-rata skor
-    const rataRataSkorRes = await client.query(
-      `
-      SELECT AVG(score) as avg FROM test_sessions WHERE status = $1
-    `,
-      ["COMPLETED"]
-    );
-    const rataRataSkor = rataRataSkorRes.rows[0].avg
-      ? parseFloat(rataRataSkorRes.rows[0].avg).toFixed(1)
-      : "0.0";
+      // Get total participants (only users with role = 'Peserta')
+      const totalPesertaResult = await client.query(`
+        SELECT COUNT(*) as total 
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE r.name = 'Peserta'
+      `);
+      const totalPeserta = parseInt(totalPesertaResult.rows[0].total);
 
-    // Daftar peserta dengan statistik
-    const daftarPesertaRes = await client.query(
-      `
-      SELECT 
-        u.id,
-        u.name,
-        u.email,
-        u."createdAt",
-        COUNT(ts.id) as "totalTests",
-        COALESCE(AVG(ts.score), 0) as "averageScore"
-      FROM users u
-      LEFT JOIN test_sessions ts ON u.id = ts."userId" AND ts.status = $1
-      WHERE u.role = $2
-      GROUP BY u.id, u.name, u.email, u."createdAt"
-      ORDER BY u."createdAt" DESC
-      LIMIT 20
-    `,
-      ["COMPLETED", "PESERTA"]
-    );
+      // Get active participants (those who have taken tests)
+      const pesertaAktifResult = await client.query(
+        "SELECT COUNT(DISTINCT \"userId\") as total FROM test_sessions WHERE status = 'COMPLETED'"
+      );
+      const pesertaAktif = parseInt(pesertaAktifResult.rows[0].total);
 
-    const daftarPeserta = daftarPesertaRes.rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      createdAt: row.createdAt,
-      totalTests: parseInt(row.totaltests) || 0,
-      averageScore: parseFloat(row.averagescore).toFixed(1) || "0.0",
-    }));
+      // Get new participants this month
+      const currentDate = new Date();
+      const firstDayOfMonth = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        1
+      );
+      const pesertaBaruResult = await client.query(
+        `
+        SELECT COUNT(*) as total 
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE r.name = 'Peserta' AND u."createdAt" >= $1
+      `,
+        [firstDayOfMonth.toISOString()]
+      );
+      const pesertaBaru = parseInt(pesertaBaruResult.rows[0].total);
 
-    return NextResponse.json({
-      totalPeserta,
-      pesertaAktif,
-      pesertaBaru,
-      rataRataSkor,
-      daftarPeserta,
-    });
+      // Get average score
+      const rataRataSkorResult = await client.query(
+        "SELECT AVG(score) as average FROM test_sessions WHERE status = 'COMPLETED' AND score IS NOT NULL"
+      );
+      const rataRataSkor = rataRataSkorResult.rows[0].average
+        ? parseFloat(rataRataSkorResult.rows[0].average).toFixed(1)
+        : "0.0";
+
+      // Get recent participants list
+
+      const daftarPesertaResult = await client.query(`
+        SELECT 
+          u.id,
+          u.name,
+          u.email,
+          u.registration_id,
+          u.is_verified,
+          u."createdAt",
+          COUNT(ts.id) as total_tests,
+          AVG(ts.score) as average_score
+        FROM users u
+        LEFT JOIN test_sessions ts ON u.id = ts."userId" AND ts.status = 'COMPLETED'
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE r.name = 'Peserta'
+        GROUP BY u.id, u.name, u.email, u.registration_id, u.is_verified, u."createdAt"
+        ORDER BY u."createdAt" DESC
+        LIMIT 10
+      `);
+
+      const daftarPeserta = daftarPesertaResult.rows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        registration_id: row.registration_id,
+        is_verified: row.is_verified,
+        createdAt: row.createdAt,
+        totalTests: parseInt(row.total_tests) || 0,
+        averageScore: row.average_score
+          ? parseFloat(row.average_score).toFixed(1)
+          : "0.0",
+        status: parseInt(row.total_tests) > 0 ? "Aktif" : "Pending",
+      }));
+
+      // Get participant statistics by status
+      const statusStatsResult = await client.query(`
+        SELECT 
+          CASE 
+            WHEN COUNT(ts.id) > 0 THEN 'Aktif'
+            ELSE 'Pending'
+          END as status,
+          COUNT(*) as count
+        FROM users u
+        LEFT JOIN test_sessions ts ON u.id = ts."userId" AND ts.status = 'COMPLETED'
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE r.name = 'Peserta'
+        GROUP BY u.id
+      `);
+
+      const statusStats = statusStatsResult.rows.reduce(
+        (acc: any, row: any) => {
+          acc[row.status] = parseInt(row.count);
+          return acc;
+        },
+        {} as { [key: string]: number }
+      );
+
+      const responseData = {
+        totalPeserta,
+        pesertaAktif,
+        pesertaBaru,
+        rataRataSkor,
+        daftarPeserta,
+        statusStats,
+        debug: {
+          allUsers: allUsersResult.rows,
+        },
+      };
+
+      return NextResponse.json(responseData);
+    } finally {
+      client.release();
+    }
   } catch (error) {
-    console.error("Error fetching peserta stats:", error);
+    console.error("Error in peserta API:", error);
     return NextResponse.json(
-      { error: "Gagal mengambil data statistik peserta" },
+      {
+        error: "Gagal mengambil data statistik peserta",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
-  } finally {
-    client.release();
   }
 }

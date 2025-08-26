@@ -66,7 +66,7 @@ export default function TesStatsPage() {
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-xl shadow-md p-6"
+                  className="bg-white rounded-xl p-6"
                 >
                   <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
                   <div className="h-8 bg-gray-200 rounded w-1/2"></div>
@@ -105,7 +105,7 @@ export default function TesStatsPage() {
           <div className="flex items-center space-x-4">
             <Link
               href="/admin/dashboard"
-              className="p-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              className="p-2 bg-white rounded-lg transition-shadow"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </Link>
@@ -182,7 +182,7 @@ export default function TesStatsPage() {
         </div>
 
         {/* Daftar Tes */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
             Daftar Tes
           </h2>

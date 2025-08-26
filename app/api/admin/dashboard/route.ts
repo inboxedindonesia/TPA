@@ -2,7 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
 
 export async function GET(request: NextRequest) {
-  const client = await pool.connect();
+    // Daftar peserta lengkap
+  // (Deklarasi dihapus, sudah ada di dalam blok utama function)
+    const client = await pool.connect();
+
+      // Daftar peserta lengkap
+      const daftarPesertaRes = await client.query(`
+        SELECT u.id, u.name, u.email, u.registration_id, u.is_verified, u."createdAt"
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE r.name = 'Peserta'
+        ORDER BY u."createdAt" DESC
+        LIMIT 100
+      `);
+      const daftarPeserta = daftarPesertaRes.rows;
 
   try {
     // Total peserta (users dengan role Peserta)
@@ -27,9 +40,9 @@ export async function GET(request: NextRequest) {
     const tesAktifRes = await client.query(
       'SELECT COUNT(*) as count FROM tests WHERE "isActive" = true'
     );
-    const tesAktif = parseInt(tesAktifRes.rows[0].count);
+    const tesAktif = parseInt(tesAktifRes.rows[0].count) || 0;
 
-    // Daftar tes dengan statistik
+    // Daftar tes dengan statistik menggunakan test_questions
     const tesListRes = await client.query(`
       SELECT 
         t.id, 
@@ -37,8 +50,8 @@ export async function GET(request: NextRequest) {
         t.duration, 
         t."isActive" as status,
         t."createdAt",
-        (SELECT COUNT(*) FROM questions q WHERE q."testId" = t.id) as "jumlahSoal",
-        (SELECT COUNT(*) FROM test_sessions ts WHERE ts."testId" = t.id) as "peserta"
+        COALESCE((SELECT COUNT(*) FROM test_questions tq WHERE tq.test_id = t.id), 0) as "jumlahSoal",
+        COALESCE((SELECT COUNT(*) FROM test_sessions ts WHERE ts."testId" = t.id), 0) as "peserta"
       FROM tests t
       ORDER BY t."createdAt" DESC
     `);
@@ -67,44 +80,58 @@ export async function GET(request: NextRequest) {
     );
     const activeSessionsCount = parseInt(activeSessions.rows[0].count);
 
+    // Rata-rata skor dan durasi
+    const avgScoreRes = await client.query(`
+      SELECT COALESCE(AVG(score), 0) as avg_score
+      FROM test_sessions 
+      WHERE status = 'COMPLETED'
+    `);
+    const avgScore = parseFloat(avgScoreRes.rows[0].avg_score).toFixed(1);
+
+    const avgDurationRes = await client.query(`
+      SELECT COALESCE(AVG(duration), 0) as avg_duration
+      FROM tests
+    `);
+    const avgDuration = parseInt(avgDurationRes.rows[0].avg_duration) || 0;
+
     // Statistik soal
     const soalBaru = await client.query(`
-             SELECT COUNT(*) as count 
-             FROM questions 
-             WHERE "createdAt" >= NOW() - INTERVAL '30 days'
-           `);
+      SELECT COUNT(*) as count 
+      FROM questions 
+      WHERE "createdAt" >= NOW() - INTERVAL '30 days'
+    `);
     const soalBaruCount = parseInt(soalBaru.rows[0].count);
 
     const soalCategories = await client.query(`
-             SELECT COUNT(DISTINCT category) as count 
-             FROM questions 
-             WHERE category IS NOT NULL
-           `);
+      SELECT COUNT(DISTINCT category) as count 
+      FROM questions 
+      WHERE category IS NOT NULL
+    `);
     const soalCategoriesCount = parseInt(soalCategories.rows[0].count);
 
     const soalCategoryList = await client.query(`
-             SELECT DISTINCT category 
-             FROM questions 
-             WHERE category IS NOT NULL 
-             LIMIT 5
-           `);
+      SELECT DISTINCT category 
+      FROM questions 
+      WHERE category IS NOT NULL 
+      LIMIT 5
+    `);
     const soalCategoryListText =
       soalCategoryList.rows.map((row) => row.category).join(", ") ||
       "Belum ada kategori";
 
     const soalDifficulties = await client.query(`
-             SELECT COUNT(DISTINCT difficulty) as count 
-             FROM questions 
-             WHERE difficulty IS NOT NULL
-           `);
+      SELECT COUNT(DISTINCT difficulty) as count 
+      FROM questions 
+      WHERE difficulty IS NOT NULL
+    `);
     const soalDifficultiesCount = parseInt(soalDifficulties.rows[0].count);
 
     const soalDifficultyList = await client.query(`
-             SELECT DISTINCT difficulty 
-             FROM questions 
-             WHERE difficulty IS NOT NULL 
-             LIMIT 5
-           `);
+      SELECT DISTINCT difficulty 
+      FROM questions 
+      WHERE difficulty IS NOT NULL 
+      LIMIT 5
+    `);
     const soalDifficultyListText =
       soalDifficultyList.rows.map((row) => row.difficulty).join(", ") ||
       "Belum ada tingkat kesulitan";
@@ -126,10 +153,53 @@ export async function GET(request: NextRequest) {
 
     const pesertaBaru = await client.query(`
       SELECT COUNT(*) as count 
-      FROM users 
-      WHERE role = 'PESERTA' AND "createdAt" >= NOW() - INTERVAL '30 days'
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      WHERE r.name = 'Peserta' AND u."createdAt" >= NOW() - INTERVAL '30 days'
     `);
     const pesertaBaruCount = parseInt(pesertaBaru.rows[0].count);
+
+    // Statistik peserta aktif (yang sudah mengikuti tes)
+    const pesertaAktif = await client.query(`
+      SELECT COUNT(DISTINCT u.id) as count 
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      JOIN test_sessions ts ON u.id = ts."userId"
+      WHERE r.name = 'Peserta'
+    `);
+    const pesertaAktifCount = parseInt(pesertaAktif.rows[0].count);
+
+    // Hitung rata-rata kesulitan soal
+    const avgDifficultyRes = await client.query(`
+      SELECT 
+        CASE 
+          WHEN difficulty = 'MUDAH' THEN 1
+          WHEN difficulty = 'SEDANG' THEN 2
+          WHEN difficulty = 'SULIT' THEN 3
+          ELSE 2
+        END as difficulty_value
+      FROM questions
+    `);
+
+    let avgDifficulty = "SEDANG";
+    if (avgDifficultyRes.rows.length > 0) {
+      const avgValue =
+        avgDifficultyRes.rows.reduce(
+          (sum, row) => sum + row.difficulty_value,
+          0
+        ) / avgDifficultyRes.rows.length;
+      if (avgValue < 1.5) avgDifficulty = "MUDAH";
+      else if (avgValue > 2.5) avgDifficulty = "SULIT";
+    }
+
+    // Hitung total peserta yang melakukan tes
+    const totalPesertaTesRes = await client.query(`
+      SELECT COUNT(DISTINCT "userId") as total_peserta_tes
+      FROM test_sessions
+      WHERE status = 'COMPLETED'
+    `);
+    const totalPesertaTes =
+      parseInt(totalPesertaTesRes.rows[0]?.total_peserta_tes) || 0;
 
     return NextResponse.json({
       totalPeserta,
@@ -146,6 +216,13 @@ export async function GET(request: NextRequest) {
       tesBaru: tesBaruCount,
       tesNonaktif: tesNonaktifCount,
       pesertaBaru: pesertaBaruCount,
+      pesertaAktif: pesertaAktifCount,
+      rataRataSkor: avgScore,
+      rataRataDurasi: avgDuration.toString(),
+      rataRataKesulitan: avgDifficulty,
+      soalAktif: totalSoal, // Semua soal dianggap aktif
+      totalPesertaTes,
+      daftarPeserta,
     });
   } catch (error) {
     console.error("Error fetching dashboard data:", error);

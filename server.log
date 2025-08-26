@@ -1,0 +1,1936 @@
+
+> tes-tpa@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.4.5
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.18.128:3000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 1694ms
+ ○ Compiling /api/admin/soal ...
+ ✓ Compiled /api/admin/soal in 639ms (370 modules)
+Decoded JWT: {
+  userId: 'admin-1',
+  email: 'admin@tpa.com',
+  role: 'Administrator',
+  iat: 1753979715,
+  exp: 1754066115
+}
+ POST /api/admin/soal 201 in 821ms
+ ✓ Compiled in 321ms (184 modules)
+ ✓ Compiled in 414ms (184 modules)
+Decoded JWT: {
+  userId: 'admin-1',
+  email: 'admin@tpa.com',
+  role: 'Administrator',
+  iat: 1753979715,
+  exp: 1754066115
+}
+ POST /api/admin/soal 201 in 94ms
+ ✓ Compiled /api/admin/activities in 146ms (372 modules)
+ GET /api/admin/activities?limit=1 200 in 204ms
+ ✓ Compiled /api/auth/login in 171ms (374 modules)
+ POST /api/auth/login 200 in 308ms
+Decoded JWT: {
+  userId: 'user-1',
+  email: 'user@tpa.com',
+  role: 'Peserta',
+  iat: 1753979991,
+  exp: 1754066391
+}
+ POST /api/admin/soal 201 in 38ms
+ GET /api/admin/activities?limit=1 200 in 21ms
+ ✓ Compiled in 533ms (188 modules)
+ ✓ Compiled in 108ms (188 modules)
+ ✓ Compiled in 89ms (188 modules)
+ ✓ Compiled in 124ms (188 modules)
+ GET /api/admin/activities?limit=5 200 in 123ms
+ GET /api/admin/soal 405 in 52ms
+ GET /api/admin/soal 405 in 16ms
+ GET /api/admin/soal 405 in 5ms
+ GET /api/admin/soal 405 in 10ms
+ POST /api/admin/soal 201 in 57ms
+ ✓ Compiled /api/admin/soal/[id] in 323ms (372 modules)
+ DELETE /api/admin/soal/q-1753980115814-1lensg0k1lo 200 in 885ms
+ ✓ Compiled /api/admin/activities in 41ms (188 modules)
+ GET /api/admin/activities?limit=1 200 in 90ms
+ POST /api/admin/soal 201 in 53ms
+ DELETE /api/admin/soal/q-1753980140903-39fcptufnbb 200 in 47ms
+ GET /api/admin/activities?limit=1 200 in 12ms
+ GET /api/admin/activities?limit=10 200 in 39ms
+ GET /api/admin/activities?limit=10 200 in 28ms
+ ○ Compiling /api/admin/stats/soal ...
+ ✓ Compiled /api/admin/stats/soal in 883ms (380 modules)
+Starting stats API call...
+Querying total soal...
+Total soal: 13
+Querying soal baru...
+ GET /api/admin/activities?limit=5 200 in 1101ms
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Soal baru: 13
+Querying soal aktif...
+Soal aktif: 13
+Fetching daftar soal...
+Daftar soal rows: 13
+Returning response...
+ GET /api/admin/stats/soal 200 in 1126ms
+ GET /api/admin/activities?limit=5 200 in 16ms
+ GET /api/admin/stats/peserta 200 in 1145ms
+Starting stats API call...
+Querying total soal...
+Total soal: 13
+Querying soal baru...
+Soal baru: 13
+Querying soal aktif...
+ GET /api/admin/dashboard 200 in 1375ms
+Soal aktif: 13
+Fetching daftar soal...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Daftar soal rows: 13
+Returning response...
+ GET /api/admin/stats/soal 200 in 14ms
+ GET /api/admin/stats/peserta 200 in 18ms
+ GET /api/admin/dashboard 200 in 18ms
+ ✓ Compiled in 537ms (194 modules)
+ ✓ Compiled /admin/activities in 350ms (194 modules)
+ ✓ Compiled in 1974ms (240 modules)
+ GET /admin/activities 200 in 3559ms
+ ✓ Compiled in 343ms (240 modules)
+ GET /api/admin/activities?page=1&limit=20 200 in 67ms
+ GET /api/admin/activities?page=1&limit=20 200 in 9ms
+ GET /admin/activities 200 in 178ms
+ ✓ Compiled /favicon.ico in 315ms (415 modules)
+ GET /favicon.ico 200 in 426ms
+ GET /api/admin/activities?page=1&limit=20 200 in 464ms
+ ○ Compiling /admin/dashboard ...
+ ✓ Compiled /admin/dashboard in 507ms (702 modules)
+ GET /admin/dashboard 200 in 631ms
+Starting stats API call...
+Querying total soal...
+Total soal: 13
+Querying soal baru...
+Soal baru: 13
+Querying soal aktif...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+ GET /api/admin/activities?limit=5 200 in 62ms
+Soal aktif: 13
+Fetching daftar soal...
+Daftar soal rows: 13
+Returning response...
+ GET /api/admin/stats/soal 200 in 65ms
+ GET /api/admin/stats/peserta 200 in 70ms
+ GET /api/admin/dashboard 200 in 77ms
+ GET /api/admin/activities?limit=5 200 in 14ms
+Starting stats API call...
+Querying total soal...
+Total soal: 13
+Querying soal baru...
+Soal baru: 13
+Querying soal aktif...
+Soal aktif: 13
+Fetching daftar soal...
+Daftar soal rows: 13
+Returning response...
+ GET /api/admin/stats/soal 200 in 21ms
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+ GET /api/admin/stats/peserta 200 in 23ms
+ GET /api/admin/dashboard 200 in 20ms
+ ✓ Compiled /login in 190ms (717 modules)
+ GET /login 200 in 348ms
+ ✓ Compiled /api/auth/login in 243ms (536 modules)
+ POST /api/auth/login 200 in 407ms
+ GET /admin/dashboard 200 in 35ms
+Starting stats API call...
+Querying total soal...
+Total soal: 13
+Querying soal baru...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Soal baru: 13
+Querying soal aktif...
+Soal aktif: 13
+Fetching daftar soal...
+Daftar soal rows: 13
+Returning response...
+ GET /api/admin/stats/soal 200 in 49ms
+ GET /api/admin/activities?limit=5 200 in 50ms
+ GET /api/admin/stats/peserta 200 in 57ms
+ GET /api/admin/dashboard 200 in 59ms
+Starting stats API call...
+Querying total soal...
+ GET /api/admin/activities?limit=5 200 in 14ms
+Total soal: 13
+Querying soal baru...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Soal baru: 13
+Querying soal aktif...
+Soal aktif: 13
+Fetching daftar soal...
+Daftar soal rows: 13
+Returning response...
+ GET /api/admin/stats/soal 200 in 16ms
+ GET /api/admin/stats/peserta 200 in 19ms
+ GET /api/admin/dashboard 200 in 21ms
+ ✓ Compiled /api/admin/soal/[id] in 258ms (539 modules)
+ DELETE /api/admin/soal/q-1753980006352-1uvgv0a4k41 200 in 347ms
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+ GET /api/admin/stats/peserta 200 in 36ms
+Starting stats API call...
+Querying total soal...
+Total soal: 12
+Querying soal baru...
+Soal baru: 12
+Querying soal aktif...
+ GET /api/admin/dashboard 200 in 40ms
+Soal aktif: 12
+Fetching daftar soal...
+ GET /api/admin/activities?limit=5 200 in 41ms
+Daftar soal rows: 12
+Returning response...
+ GET /api/admin/stats/soal 200 in 42ms
+ ✓ Compiled /admin/soal/create in 262ms (807 modules)
+ GET /admin/soal/create 200 in 441ms
+Starting stats API call...
+Querying total soal...
+Total soal: 12
+Querying soal baru...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Soal baru: 12
+Querying soal aktif...
+ GET /api/admin/activities?limit=5 200 in 83ms
+Soal aktif: 12
+Fetching daftar soal...
+Daftar soal rows: 12
+Returning response...
+ GET /api/admin/stats/soal 200 in 88ms
+ GET /api/admin/stats/peserta 200 in 93ms
+ GET /api/admin/dashboard 200 in 106ms
+ GET /api/admin/activities?limit=5 200 in 17ms
+Starting stats API call...
+Querying total soal...
+Total soal: 12
+Querying soal baru...
+Soal baru: 12
+Querying soal aktif...
+Soal aktif: 12
+Fetching daftar soal...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Daftar soal rows: 12
+Returning response...
+ GET /api/admin/stats/soal 200 in 30ms
+ GET /api/admin/stats/peserta 200 in 31ms
+ GET /api/admin/dashboard 200 in 25ms
+ GET /login 200 in 186ms
+ POST /api/auth/login 200 in 144ms
+ ✓ Compiled /peserta/dashboard in 348ms (819 modules)
+ GET /peserta/dashboard 200 in 422ms
+ ✓ Compiled /api/peserta/dashboard in 252ms (821 modules)
+ GET /api/peserta/dashboard 200 in 293ms
+ GET /api/peserta/dashboard 200 in 8ms
+ GET /login 200 in 127ms
+ POST /api/auth/login 200 in 169ms
+ GET /admin/dashboard 200 in 25ms
+Starting stats API call...
+Querying total soal...
+Total soal: 12
+Querying soal baru...
+Soal baru: 12
+Querying soal aktif...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+ GET /api/admin/activities?limit=5 200 in 44ms
+ GET /api/admin/dashboard 200 in 47ms
+Soal aktif: 12
+Fetching daftar soal...
+Daftar soal rows: 12
+Returning response...
+ GET /api/admin/stats/soal 200 in 47ms
+ GET /api/admin/stats/peserta 200 in 52ms
+Starting stats API call...
+Querying total soal...
+Total soal: 12
+Querying soal baru...
+ GET /api/admin/activities?limit=5 200 in 16ms
+Soal baru: 12
+Querying soal aktif...
+Soal aktif: 12
+Fetching daftar soal...
+Daftar soal rows: 12
+Returning response...
+ GET /api/admin/stats/soal 200 in 19ms
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+ GET /api/admin/dashboard 200 in 25ms
+ GET /api/admin/stats/peserta 200 in 18ms
+ ✓ Compiled /api/admin/tes/[id] in 358ms (824 modules)
+ DELETE /api/admin/tes/test-1753978935469-a7gwyluo0 400 in 991ms
+ DELETE /api/admin/tes/test-1753978493175-djkqx3i5f 400 in 44ms
+ ✓ Compiled /api/admin/soal/[id] in 153ms (556 modules)
+ DELETE /api/admin/soal/q-1753979921741-idssbjnigx 200 in 216ms
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Starting stats API call...
+Querying total soal...
+ GET /api/admin/stats/peserta 200 in 43ms
+Total soal: 11
+Querying soal baru...
+Soal baru: 11
+Querying soal aktif...
+Soal aktif: 11
+Fetching daftar soal...
+Daftar soal rows: 11
+Returning response...
+ GET /api/admin/stats/soal 200 in 47ms
+ GET /api/admin/activities?limit=5 200 in 47ms
+ GET /api/admin/dashboard 200 in 51ms
+ GET /api/admin/activities?limit=10 200 in 62ms
+ POST /api/auth/login 401 in 136ms
+ POST /api/auth/login 200 in 148ms
+ POST /api/auth/login 401 in 41ms
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+ GET /api/admin/stats/peserta 200 in 152ms
+ POST /api/auth/login 401 in 120ms
+ POST /api/auth/login 401 in 163ms
+ POST /api/auth/login 401 in 108ms
+ POST /api/auth/login 200 in 129ms
+ ✓ Compiled /api/admin/soal in 375ms (544 modules)
+ POST /api/admin/soal 201 in 469ms
+ ✓ Compiled /api/admin/soal/[id] in 155ms (546 modules)
+ DELETE /api/admin/soal/q-1753980644213-csxsbnyryjh 200 in 323ms
+ ✓ Compiled /api/admin/activities in 108ms (548 modules)
+ GET /api/admin/activities?limit=1 200 in 143ms
+ ✓ Compiled in 383ms (548 modules)
+ GET /admin/dashboard 200 in 116ms
+ ✓ Compiled in 438ms (548 modules)
+ GET /admin/dashboard 200 in 124ms
+ POST /api/admin/soal 201 in 72ms
+ GET /api/admin/activities?limit=1 200 in 21ms
+ POST /api/admin/soal 201 in 46ms
+ GET /api/admin/activities?limit=1 200 in 13ms
+ GET /api/admin/activities?limit=5 200 in 10ms
+ GET /api/admin/activities?limit=5 200 in 30ms
+ GET /api/admin/activities?limit=5 200 in 9ms
+ ✓ Compiled in 1567ms (828 modules)
+ GET /admin/dashboard 200 in 113ms
+ ✓ Compiled in 651ms (828 modules)
+ GET /admin/dashboard 200 in 73ms
+ ✓ Compiled in 2.4s (828 modules)
+ GET /admin/dashboard 200 in 102ms
+ ✓ Compiled in 863ms (747 modules)
+ GET /admin/dashboard 200 in 52ms
+ ✓ Compiled /api/admin/soal in 193ms (544 modules)
+ POST /api/admin/soal 201 in 321ms
+ GET /api/admin/activities?limit=1 200 in 40ms
+ ✓ Compiled in 681ms (828 modules)
+ GET /admin/dashboard 200 in 39ms
+ ○ Compiling /api/admin/stats/peserta ...
+ ✓ Compiled /api/admin/stats/peserta in 540ms (546 modules)
+ ✓ Compiled (550 modules)
+Starting stats API call...
+Querying total soal...
+Total soal: 14
+Querying soal baru...
+ GET /api/admin/activities?limit=5 200 in 821ms
+Soal baru: 14
+Querying soal aktif...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Soal aktif: 14
+Fetching daftar soal...
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 830ms
+ GET /api/admin/stats/peserta 200 in 835ms
+ GET /api/admin/dashboard 200 in 841ms
+Starting stats API call...
+Querying total soal...
+Total soal: 14
+Querying soal baru...
+Soal baru: 14
+Querying soal aktif...
+ GET /api/admin/activities?limit=5 200 in 21ms
+Soal aktif: 14
+Fetching daftar soal...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 24ms
+ GET /api/admin/dashboard 200 in 27ms
+ GET /api/admin/stats/peserta 200 in 29ms
+Starting stats API call...
+Querying total soal...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Total soal: 14
+Querying soal baru...
+Soal baru: 14
+Querying soal aktif...
+Soal aktif: 14
+Fetching daftar soal...
+ GET /api/admin/activities?limit=5 200 in 42ms
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 43ms
+ GET /api/admin/stats/peserta 200 in 47ms
+ GET /api/admin/dashboard 200 in 52ms
+Starting stats API call...
+Querying total soal...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Total soal: 14
+Querying soal baru...
+Soal baru: 14
+Querying soal aktif...
+ GET /api/admin/activities?limit=5 200 in 38ms
+Soal aktif: 14
+Fetching daftar soal...
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 41ms
+ GET /api/admin/stats/peserta 200 in 44ms
+ GET /api/admin/dashboard 200 in 47ms
+Starting stats API call...
+Querying total soal...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Total soal: 14
+Querying soal baru...
+Soal baru: 14
+Querying soal aktif...
+ GET /api/admin/activities?limit=5 200 in 33ms
+Soal aktif: 14
+Fetching daftar soal...
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 36ms
+ GET /api/admin/stats/peserta 200 in 38ms
+ GET /api/admin/dashboard 200 in 41ms
+ GET /admin/activities 200 in 70ms
+ GET /api/admin/activities?page=1&limit=20 200 in 14ms
+ GET /api/admin/activities?page=1&limit=20 200 in 8ms
+ ✓ Compiled in 4.9s (722 modules)
+ GET /admin/dashboard 200 in 390ms
+ ✓ Compiled /api/admin/activities in 151ms (463 modules)
+ ✓ Compiled (469 modules)
+Starting stats API call...
+Querying total soal...
+Total soal: 14
+Querying soal baru...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+ GET /api/admin/activities?limit=5 200 in 497ms
+Soal baru: 14
+Querying soal aktif...
+Soal aktif: 14
+Fetching daftar soal...
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 506ms
+ GET /api/admin/stats/peserta 200 in 519ms
+ GET /api/admin/activities?limit=5 200 in 20ms
+Starting stats API call...
+Querying total soal...
+ GET /api/admin/dashboard 200 in 538ms
+Total soal: 14
+Querying soal baru...
+Soal baru: 14
+Querying soal aktif...
+Soal aktif: 14
+Fetching daftar soal...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 25ms
+ GET /api/admin/stats/peserta 200 in 25ms
+ GET /api/admin/dashboard 200 in 15ms
+ GET /login 200 in 190ms
+ ✓ Compiled in 878ms (753 modules)
+ GET /login 200 in 55ms
+ ✓ Compiled in 689ms (753 modules)
+ GET /login 200 in 233ms
+ ✓ Compiled in 637ms (753 modules)
+ GET /login 200 in 85ms
+ ✓ Compiled in 551ms (722 modules)
+ GET /login 200 in 477ms
+ ✓ Compiled in 2.6s (722 modules)
+ GET /login 200 in 98ms
+ ✓ Compiled in 772ms (722 modules)
+ GET /login 200 in 602ms
+ ✓ Compiled in 511ms (722 modules)
+ GET /login 200 in 265ms
+ ✓ Compiled in 578ms (722 modules)
+ GET /login 200 in 61ms
+ ✓ Compiled in 1337ms (708 modules)
+ ✓ Compiled in 393ms (284 modules)
+ ✓ Compiled in 1305ms (284 modules)
+ ✓ Compiled in 1299ms (722 modules)
+ ✓ Compiled in 1980ms (284 modules)
+ ✓ Compiled in 226ms (284 modules)
+ ✓ Compiled in 272ms (284 modules)
+ ✓ Compiled in 247ms (284 modules)
+ ✓ Compiled in 321ms (284 modules)
+ ✓ Compiled in 223ms (284 modules)
+ ✓ Compiled in 402ms (284 modules)
+ ✓ Compiled in 320ms (284 modules)
+ ✓ Compiled in 399ms (284 modules)
+ ✓ Compiled in 308ms (284 modules)
+ ○ Compiling /api/profile ...
+ ✓ Compiled /api/profile in 778ms (728 modules)
+ GET /api/profile 200 in 1201ms
+ GET /api/profile 200 in 31ms
+ GET /api/profile 200 in 41ms
+ GET /api/profile 200 in 28ms
+ ✓ Compiled in 1147ms (742 modules)
+ ✓ Compiled in 474ms (742 modules)
+ ✓ Compiled in 825ms (744 modules)
+ ✓ Compiled in 368ms (744 modules)
+ ✓ Compiled /api/auth/login in 479ms (542 modules)
+ POST /api/auth/login 200 in 755ms
+ GET /peserta/dashboard 200 in 92ms
+ ○ Compiling /api/peserta/dashboard ...
+ ✓ Compiled /api/peserta/dashboard in 677ms (544 modules)
+ GET /api/peserta/dashboard 200 in 783ms
+ GET /api/peserta/dashboard 200 in 27ms
+ GET /login 200 in 268ms
+ ✓ Compiled in 1333ms (829 modules)
+ GET /login 200 in 67ms
+ POST /api/auth/login 200 in 190ms
+ GET /admin/dashboard 200 in 34ms
+ ✓ Compiled /api/admin/stats/soal in 410ms (546 modules)
+ ✓ Compiled (552 modules)
+Starting stats API call...
+Querying total soal...
+Total soal: 14
+Querying soal baru...
+Soal baru: 14
+Querying soal aktif...
+ GET /api/admin/activities?limit=5 200 in 1358ms
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Soal aktif: 14
+Fetching daftar soal...
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 1381ms
+ GET /api/admin/stats/peserta 200 in 1420ms
+ GET /api/admin/dashboard 200 in 1487ms
+ GET /api/admin/activities?limit=5 200 in 55ms
+Starting stats API call...
+Querying total soal...
+Total soal: 14
+Querying soal baru...
+Soal baru: 14
+Querying soal aktif...
+Soal aktif: 14
+Fetching daftar soal...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 207ms
+ GET /api/admin/stats/peserta 200 in 209ms
+ GET /api/admin/dashboard 200 in 166ms
+ ○ Compiling /profile ...
+ ✓ Compiled /profile in 948ms (860 modules)
+ GET /profile 200 in 1353ms
+ GET /profile 200 in 57ms
+ ✓ Compiled /api/profile in 308ms (568 modules)
+ GET /api/profile 200 in 383ms
+ GET /api/profile 200 in 15ms
+ ✓ Compiled in 1668ms (740 modules)
+ GET /profile 200 in 230ms
+ ✓ Compiled in 796ms (740 modules)
+ GET /profile 200 in 84ms
+ ✓ Compiled in 786ms (740 modules)
+ GET /profile 200 in 217ms
+ ✓ Compiled in 1479ms (740 modules)
+ GET /profile 200 in 166ms
+ ✓ Compiled in 707ms (740 modules)
+ GET /profile 200 in 90ms
+ ✓ Compiled in 2.2s (740 modules)
+ GET /profile 200 in 47ms
+ ✓ Compiled in 591ms (740 modules)
+ GET /profile 200 in 49ms
+ ✓ Compiled in 1281ms (740 modules)
+ GET /profile 200 in 120ms
+ ✓ Compiled in 873ms (740 modules)
+ GET /profile 200 in 61ms
+ ✓ Compiled in 649ms (740 modules)
+ GET /profile 200 in 159ms
+ ✓ Compiled in 905ms (740 modules)
+ GET /profile 200 in 121ms
+ ✓ Compiled in 1932ms (740 modules)
+ GET /profile 200 in 50ms
+ ✓ Compiled in 1039ms (740 modules)
+ GET /profile 200 in 67ms
+ ✓ Compiled in 1324ms (740 modules)
+ GET /profile 200 in 97ms
+ ✓ Compiled in 1250ms (740 modules)
+ GET /profile 200 in 111ms
+ ✓ Compiled in 1161ms (740 modules)
+ GET /profile 200 in 116ms
+ ✓ Compiled in 2.6s (740 modules)
+ GET /profile 200 in 113ms
+ ✓ Compiled in 490ms (740 modules)
+ GET /profile 200 in 93ms
+ ✓ Compiled in 2.3s (740 modules)
+ GET /profile 200 in 246ms
+ ✓ Compiled in 757ms (740 modules)
+ GET /profile 200 in 143ms
+ ✓ Compiled in 849ms (740 modules)
+ GET /profile 200 in 67ms
+ ✓ Compiled in 2.4s (740 modules)
+ GET /profile 200 in 622ms
+ ✓ Compiled in 3s (740 modules)
+ GET /profile 200 in 308ms
+ ✓ Compiled in 2.1s (740 modules)
+ GET /profile 200 in 61ms
+ ✓ Compiled in 1988ms (740 modules)
+ GET /profile 200 in 73ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled /api/admin/stats/soal in 955ms (740 modules)
+ ✓ Compiled (771 modules)
+Starting stats API call...
+Querying total soal...
+ GET /admin/dashboard 200 in 4022ms
+ GET /api/admin/dashboard 200 in 4286ms
+ GET /api/admin/stats/soal 200 in 4221ms
+ GET /api/admin/activities?limit=5 200 in 4205ms
+ GET /api/admin/stats/peserta 200 in 4244ms
+Total soal: 14
+Querying soal baru...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Soal baru: 14
+Querying soal aktif...
+Soal aktif: 14
+Fetching daftar soal...
+Daftar soal rows: 14
+Returning response...
+ ✓ Compiled /favicon.ico in 333ms (478 modules)
+ GET /favicon.ico 200 in 503ms
+Starting stats API call...
+Querying total soal...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Total soal: 14
+Querying soal baru...
+ GET /api/admin/activities?limit=5 200 in 504ms
+Soal baru: 14
+Querying soal aktif...
+Soal aktif: 14
+Fetching daftar soal...
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 514ms
+ GET /api/admin/stats/peserta 200 in 516ms
+ GET /api/admin/dashboard 200 in 520ms
+ GET /profile 200 in 150ms
+ ✓ Compiled /api/profile in 340ms (481 modules)
+ GET /api/profile 200 in 377ms
+ GET /api/profile 200 in 8ms
+ ✓ Compiled in 1352ms (740 modules)
+ GET /profile 200 in 142ms
+ ✓ Compiled in 1503ms (740 modules)
+ GET /profile 200 in 172ms
+ ✓ Compiled in 1853ms (740 modules)
+ GET /profile 200 in 88ms
+ ✓ Compiled in 1813ms (295 modules)
+ ✓ Compiled in 331ms (295 modules)
+ ✓ Compiled in 699ms (295 modules)
+ ✓ Compiled in 419ms (295 modules)
+ ✓ Compiled in 1357ms (740 modules)
+ ✓ Compiled in 963ms (740 modules)
+ ✓ Compiled in 240ms (740 modules)
+ ✓ Compiled in 548ms (740 modules)
+ ✓ Compiled in 397ms (740 modules)
+ ⨯ ./app/profile/page.tsx:27:1
+Module not found: Can't resolve '@/components/ViewReport'
+  25 |   getScoreInterpretation,
+  26 | } from "@/lib/dummyProfileData";
+> 27 | import ViewReport from "@/components/ViewReport";
+     | ^
+  28 |
+  29 | export default function ProfilePage() {
+  30 |   const [profileData, setProfileData] = useState(dummyProfileData);
+
+https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./app/profile/page.tsx:27:1
+Module not found: Can't resolve '@/components/ViewReport'
+  25 |   getScoreInterpretation,
+  26 | } from "@/lib/dummyProfileData";
+> 27 | import ViewReport from "@/components/ViewReport";
+     | ^
+  28 |
+  29 | export default function ProfilePage() {
+  30 |   const [profileData, setProfileData] = useState(dummyProfileData);
+
+https://nextjs.org/docs/messages/module-not-found
+ ○ Compiling /_error ...
+ ⨯ ./app/profile/page.tsx:27:1
+Module not found: Can't resolve '@/components/ViewReport'
+  25 |   getScoreInterpretation,
+  26 | } from "@/lib/dummyProfileData";
+> 27 | import ViewReport from "@/components/ViewReport";
+     | ^
+  28 |
+  29 | export default function ProfilePage() {
+  30 |   const [profileData, setProfileData] = useState(dummyProfileData);
+
+https://nextjs.org/docs/messages/module-not-found
+ GET /profile 500 in 4872ms
+ ✓ Compiled /_error in 7.3s (1439 modules)
+ GET /profile 200 in 431ms
+ ✓ Compiled in 1648ms (1352 modules)
+ ○ Compiling /api/admin/activities ...
+ ✓ Compiled /api/admin/activities in 694ms (746 modules)
+ ✓ Compiled (752 modules)
+Starting stats API call...
+Querying total soal...
+Total soal: 14
+Querying soal baru...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+ GET /api/admin/activities?limit=5 200 in 1170ms
+Soal baru: 14
+Querying soal aktif...
+Soal aktif: 14
+Fetching daftar soal...
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 1191ms
+ GET /api/admin/activities?limit=5 200 in 15ms
+ GET /api/admin/stats/peserta 200 in 1198ms
+Starting stats API call...
+Querying total soal...
+Total soal: 14
+Querying soal baru...
+Soal baru: 14
+Querying soal aktif...
+All users in database: [
+  {
+    id: 'user-1753951604929',
+    name: 'Muhammad Wahyu Nalendra',
+    email: 'muhammadwahyunalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753950251088',
+    name: 'nalen',
+    email: 'nalendra@gmail.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'user-1753885376341',
+    name: 'alip',
+    email: 'alipibrahim009@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1753884627848',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Moderator'
+  },
+  {
+    id: 'user-1753881851057',
+    name: 'Nalendra',
+    email: 'itsnalendraa@gmail.com',
+    role: 'Administrator'
+  },
+  {
+    id: 'user-1',
+    name: 'user',
+    email: 'user@tpa.com',
+    role: 'Peserta'
+  },
+  {
+    id: 'admin-1',
+    name: 'Admin TPA',
+    email: 'admin@tpa.com',
+    role: 'Administrator'
+  }
+]
+Soal aktif: 14
+Fetching daftar soal...
+ GET /api/admin/dashboard 200 in 1230ms
+Daftar soal rows: 14
+Returning response...
+ GET /api/admin/stats/soal 200 in 19ms
+ GET /api/admin/stats/peserta 200 in 27ms
+ GET /api/admin/dashboard 200 in 13ms
+ GET /profile 200 in 105ms
+ ✓ Compiled /api/profile in 407ms (755 modules)
+ GET /api/profile 200 in 447ms
+ GET /api/profile 200 in 5ms
+ ✓ Compiled in 1963ms (1352 modules)
+ ✓ Compiled in 1430ms (1352 modules)
+ ✓ Compiled in 1263ms (1352 modules)
+ ✓ Compiled in 1657ms (1352 modules)
+ ✓ Compiled in 823ms (1352 modules)
+ ✓ Compiled in 6.2s (1352 modules)
+ ✓ Compiled in 2.4s (1352 modules)
+ ✓ Compiled in 1220ms (1352 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/muhammadwahyunalendra/code/tes-tpa/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/muhammadwahyunalendra/code/tes-tpa/.next/cache/webpack/client-development/0.pack.gz'
+ ✓ Compiled in 1161ms (1352 modules)
+ ✓ Compiled in 507ms (1352 modules)
+ ✓ Compiled in 643ms (1352 modules)
+ ✓ Compiled in 891ms (1352 modules)
+ ✓ Compiled in 595ms (1352 modules)
+ ✓ Compiled in 847ms (1352 modules)
+ ✓ Compiled in 618ms (1352 modules)
+ ✓ Compiled in 852ms (1352 modules)
+ ✓ Compiled in 461ms (1352 modules)
+ ✓ Compiled in 1132ms (1352 modules)
+ ✓ Compiled in 1134ms (1352 modules)
+ ✓ Compiled in 675ms (1352 modules)
+ ✓ Compiled in 440ms (1352 modules)
+ ✓ Compiled in 701ms (1352 modules)
+ ✓ Compiled in 689ms (1352 modules)
+ ✓ Compiled in 911ms (1352 modules)
+ ✓ Compiled in 657ms (1352 modules)
+ ✓ Compiled in 560ms (1352 modules)
+ ✓ Compiled in 590ms (1352 modules)
+ ✓ Compiled in 981ms (1352 modules)
+ ✓ Compiled in 551ms (1352 modules)
+ ✓ Compiled in 453ms (1352 modules)
+ ✓ Compiled in 416ms (1352 modules)
+ ✓ Compiled in 483ms (1352 modules)
+ ✓ Compiled in 438ms (1352 modules)
+ ✓ Compiled in 1165ms (1352 modules)
+ ✓ Compiled in 553ms (1352 modules)
+ ✓ Compiled in 512ms (1352 modules)
+ ✓ Compiled in 653ms (1352 modules)
+ ✓ Compiled in 893ms (1352 modules)
+ ✓ Compiled in 695ms (1352 modules)
+ ✓ Compiled in 778ms (1352 modules)
+ ✓ Compiled in 782ms (1352 modules)
+ ✓ Compiled in 5.1s (1352 modules)
+ ✓ Compiled in 1823ms (1352 modules)
+ ✓ Compiled in 1078ms (1352 modules)
+ ✓ Compiled in 1463ms (1352 modules)
+ ✓ Compiled in 752ms (1352 modules)
+ ✓ Compiled in 1536ms (1352 modules)
+ ✓ Compiled in 1507ms (1352 modules)
+ ✓ Compiled in 1352ms (1352 modules)
+ ✓ Compiled in 1678ms (1352 modules)
+ ✓ Compiled in 2s (1352 modules)
+ ✓ Compiled in 1338ms (1352 modules)
+ ✓ Compiled in 1619ms (1352 modules)
+ ✓ Compiled in 916ms (1352 modules)
+ ✓ Compiled in 677ms (1352 modules)
+ ✓ Compiled in 1104ms (1352 modules)
+ ✓ Compiled in 784ms (1352 modules)
+ ✓ Compiled in 1774ms (1352 modules)
+ ✓ Compiled in 1231ms (1352 modules)
+ ✓ Compiled in 1989ms (1352 modules)
+ ✓ Compiled in 762ms (1352 modules)
+ ✓ Compiled in 1294ms (1352 modules)
+ ✓ Compiled in 751ms (1352 modules)
+ ✓ Compiled in 1445ms (1352 modules)
+ ✓ Compiled in 1152ms (1352 modules)
+ ✓ Compiled in 1687ms (1352 modules)
+ ✓ Compiled in 1750ms (1352 modules)
+ ✓ Compiled in 2.5s (1352 modules)
+ ✓ Compiled in 2.1s (1352 modules)
+ ✓ Compiled in 1373ms (1352 modules)
+ ✓ Compiled in 1527ms (1352 modules)
+ ✓ Compiled in 959ms (1352 modules)
+ ✓ Compiled in 688ms (1352 modules)
+ ✓ Compiled in 1103ms (1352 modules)
+ ✓ Compiled in 1252ms (1352 modules)
+ ✓ Compiled in 1796ms (1352 modules)
+ ✓ Compiled in 1710ms (1352 modules)
+ ✓ Compiled in 1069ms (1352 modules)
+ ✓ Compiled in 2.1s (1352 modules)
+ ✓ Compiled in 1139ms (1352 modules)
+ ✓ Compiled in 3.1s (1352 modules)
+ ✓ Compiled in 5.3s (1352 modules)
+ ✓ Compiled in 2.2s (1352 modules)
+ ✓ Compiled in 1158ms (1352 modules)
+ ✓ Compiled in 1130ms (1352 modules)
+ ✓ Compiled in 1347ms (1352 modules)
+ ✓ Compiled in 2.5s (1352 modules)
+ ✓ Compiled in 1740ms (1352 modules)
+ ✓ Compiled in 2.7s (1352 modules)
+ ✓ Compiled in 1279ms (1352 modules)
+ ✓ Compiled in 1238ms (1352 modules)
+ ✓ Compiled in 1082ms (1352 modules)
+ ✓ Compiled in 2.5s (1352 modules)
+ ✓ Compiled in 3.6s (1352 modules)
+ ✓ Compiled in 2.2s (1352 modules)
+ ✓ Compiled in 2.1s (1352 modules)
+ ✓ Compiled in 1551ms (1352 modules)
+ ✓ Compiled in 1833ms (1352 modules)
+ ✓ Compiled in 1013ms (1352 modules)
+ ✓ Compiled in 981ms (1352 modules)
+ ✓ Compiled in 1301ms (1352 modules)
+ ✓ Compiled in 3.1s (1352 modules)
+ ✓ Compiled in 1892ms (1352 modules)
+ ✓ Compiled in 1002ms (1352 modules)
+ ✓ Compiled in 1760ms (1352 modules)
+ ✓ Compiled in 1146ms (1352 modules)
+ ✓ Compiled in 1030ms (1352 modules)

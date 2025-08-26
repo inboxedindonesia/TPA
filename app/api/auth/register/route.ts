@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { Pool } from "pg";
+import pool from "@/lib/database";
+import { sendOtpEmail } from "@/lib/email";
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,27 +24,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create database connection
-    const pool = new Pool({
-      host: "localhost",
-      port: 5432,
-      user: "postgres",
-      password: "",
-      database: "tpa_universitas",
-    });
-
+    const client = await pool.connect();
     try {
-      const client = await pool.connect();
-
-      // Check if email already exists
+      // Cek email sudah terdaftar
       const existingResult = await client.query(
         "SELECT id FROM users WHERE email = $1",
         [email]
       );
-
       if (existingResult.rows.length > 0) {
         client.release();
-        await pool.end();
         return NextResponse.json(
           { error: "Email sudah terdaftar" },
           { status: 400 }
@@ -49,31 +41,47 @@ export async function POST(request: NextRequest) {
 
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Generate user ID
       const userId = `user-${Date.now()}`;
+      const today = new Date();
+      const yyyymmdd = today.toISOString().slice(0, 10).replace(/-/g, "");
+      // Cari registration_id terbesar hari ini
+      const maxResult = await client.query(
+        "SELECT registration_id FROM users WHERE registration_id LIKE $1 ORDER BY registration_id DESC LIMIT 1",
+        [`UMB-${yyyymmdd}-%`]
+      );
+      let nextNumber = 1;
+      if (maxResult.rows.length > 0) {
+        const lastId = maxResult.rows[0].registration_id;
+        const lastNum = parseInt(lastId.split("-").pop() || "0", 10);
+        nextNumber = lastNum + 1;
+      }
+      const regId = `UMB-${yyyymmdd}-${String(nextNumber).padStart(4, "0")}`;
 
-      // Insert new user
+      // Insert user status belum aktif
       await client.query(
-        "INSERT INTO users (id, name, email, password, role) VALUES ($1, $2, $3, $4, $5)",
-        [userId, name, email, hashedPassword, "PESERTA"]
+        "INSERT INTO users (id, name, email, password, role_id, registration_id) VALUES ($1, $2, $3, $4, $5, $6)",
+        [userId, name, email, hashedPassword, "role-peserta", regId]
       );
 
-      client.release();
-      await pool.end();
+      // Generate OTP
+      const otp = generateOtp();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      await client.query(
+        "INSERT INTO user_otps (user_id, otp_code, expires_at) VALUES ($1, $2, $3)",
+        [userId, otp, expiresAt]
+      );
 
+      // Kirim email OTP
+      await sendOtpEmail(email, otp);
+
+      client.release();
       return NextResponse.json({
-        message: "Registrasi berhasil",
-        user: {
-          id: userId,
-          name,
-          email,
-          role: "PESERTA",
-        },
+        message: "OTP telah dikirim ke email Anda. Silakan verifikasi.",
+        user: { id: userId, email, registration_id: regId },
       });
-    } catch (dbError) {
-      console.error("Database error:", dbError);
-      await pool.end();
+    } catch (err) {
+      client.release();
+      console.error("Register error:", err);
       return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
   } catch (error) {

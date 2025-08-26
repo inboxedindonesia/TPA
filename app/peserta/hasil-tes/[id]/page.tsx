@@ -139,10 +139,10 @@ export default function DetailHasilTesPesertaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-8">
+      <div className="w-full max-w-lg mx-auto px-4 sm:px-6 lg:px-8 flex-1 flex flex-col gap-8 my-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 pb-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
@@ -169,12 +169,12 @@ export default function DetailHasilTesPesertaPage() {
         )}
 
         {/* Session Info */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Informasi Tes
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-3">
                 Data Tes
@@ -264,11 +264,11 @@ export default function DetailHasilTesPesertaPage() {
           </div>
 
           {session.status === "COMPLETED" && (
-            <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+            <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
               <h3 className="text-xl font-semibold text-blue-900 mb-4">
                 Hasil Akhir
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="text-center">
                   <div
                     className={`text-3xl font-bold ${getScoreColor(
@@ -290,6 +290,17 @@ export default function DetailHasilTesPesertaPage() {
                   <div className="text-sm text-gray-600">Persentase</div>
                 </div>
                 <div className="text-center">
+                  {calculatePercentage(session.score, session.maxScore) >=
+                  60 ? (
+                    <div className="text-2xl font-bold text-green-600">
+                      Lulus
+                    </div>
+                  ) : (
+                    <div className="text-2xl font-bold text-red-600">Gagal</div>
+                  )}
+                  <div className="text-sm text-gray-600">Status</div>
+                </div>
+                <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600">
                     {getScoreMessage(
                       calculatePercentage(session.score, session.maxScore)
@@ -304,12 +315,12 @@ export default function DetailHasilTesPesertaPage() {
 
         {/* Answers Detail */}
         {session.answers && session.answers.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-6 mt-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Detail Jawaban
             </h2>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               {session.answers.map((answer, index) => (
                 <div
                   key={answer.id}
@@ -424,7 +435,7 @@ export default function DetailHasilTesPesertaPage() {
         )}
 
         {(!session.answers || session.answers.length === 0) && (
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-6 mt-8">
             <div className="text-center py-8">
               <div className="text-gray-400 text-4xl mb-4">📝</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -438,7 +449,7 @@ export default function DetailHasilTesPesertaPage() {
         )}
 
         {/* Tips */}
-        <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-4">
           <h3 className="text-lg font-medium text-green-900 mb-2">
             💡 Tips Belajar
           </h3>

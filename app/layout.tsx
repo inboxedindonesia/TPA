@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "rsuite/dist/rsuite-no-reset.min.css";
 import ForceRefresh from "./force-refresh";
 
 export const metadata: Metadata = {

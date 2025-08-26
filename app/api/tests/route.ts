@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
+import { logTestCreated } from "@/lib/activityLogger";
+import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -73,7 +75,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, description, duration, creatorId } = await request.json();
+    const body = await request.json();
+    const { name, description, duration, creatorId, maxAttempts, sections } =
+      body;
 
     // Validasi input
     if (!name || !duration || !creatorId) {
@@ -91,10 +95,11 @@ export async function POST(request: NextRequest) {
         .toString(36)
         .substr(2, 9)}`;
 
+      // Pastikan kolom maxAttempts sudah ada di tabel tests
       const insertQuery = `
         INSERT INTO tests (
-          id, name, description, duration, "creatorId", "isActive"
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          id, name, description, duration, "creatorId", "isActive", "maxAttempts"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       `;
 
       const insertParams = [
@@ -104,9 +109,35 @@ export async function POST(request: NextRequest) {
         parseInt(duration),
         creatorId,
         true,
+        typeof maxAttempts === "number" ? maxAttempts : 1,
       ];
 
       await client.query(insertQuery, insertParams);
+
+      // Insert sections dan relasi soal ke tes (test_questions)
+      if (Array.isArray(sections)) {
+        for (const [sectionOrder, section] of sections.entries()) {
+          // Insert section
+          const sectionInsert = await client.query(
+            `INSERT INTO sections (testId, name, duration, "order") VALUES ($1, $2, $3, $4) RETURNING id`,
+            [testId, section.name, section.duration, sectionOrder + 1]
+          );
+          const sectionId = sectionInsert.rows[0].id;
+          // Insert ke test_questions untuk setiap soal di section
+          if (
+            Array.isArray(section.questionIds) &&
+            section.questionIds.length > 0
+          ) {
+            for (const questionId of section.questionIds) {
+              await client.query(
+                `INSERT INTO test_questions (test_id, question_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+                [testId, questionId]
+              );
+              // Jika ingin menyimpan sectionId di relasi, tambahkan kolom section_id di test_questions dan tambahkan di sini
+            }
+          }
+        }
+      }
 
       // Fetch the created test with creator data
       const result = await client.query(
@@ -130,6 +161,23 @@ export async function POST(request: NextRequest) {
           name: newTest.creatorName,
           email: newTest.creatorEmail,
         };
+      }
+
+      // Get user info from request
+      const userInfo =
+        (await getUserFromRequest(request)) || getFallbackUserInfo();
+
+      // Log activity
+      try {
+        await logTestCreated(
+          userInfo.userId,
+          userInfo.userName,
+          userInfo.userRole,
+          testId,
+          name
+        );
+      } catch (error) {
+        console.error("Error logging activity:", error);
       }
 
       return NextResponse.json(newTest, { status: 201 });

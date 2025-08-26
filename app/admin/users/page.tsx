@@ -286,7 +286,7 @@ export default function UsersManagementPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
+          <div className="bg-white rounded-xl p-6 hover-lift">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Users className="w-6 h-6 text-blue-600" />
@@ -300,7 +300,7 @@ export default function UsersManagementPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
+          <div className="bg-white rounded-xl p-6 hover-lift">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
                 <User className="w-6 h-6 text-green-600" />
@@ -318,7 +318,7 @@ export default function UsersManagementPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
+          <div className="bg-white rounded-xl p-6 hover-lift">
             <div className="flex items-center">
               <div className="p-2 bg-red-100 rounded-lg">
                 <Shield className="w-6 h-6 text-red-600" />
@@ -337,7 +337,7 @@ export default function UsersManagementPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
+          <div className="bg-white rounded-xl p-6 hover-lift">
             <div className="flex items-center">
               <div className="p-2 bg-purple-100 rounded-lg">
                 <GraduationCap className="w-6 h-6 text-purple-600" />
@@ -357,7 +357,7 @@ export default function UsersManagementPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="bg-white rounded-xl p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -395,7 +395,7 @@ export default function UsersManagementPage() {
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="bg-white rounded-xl overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -524,7 +524,7 @@ export default function UsersManagementPage() {
       {/* Add User Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div className="relative top-20 mx-auto p-5 border w-96 rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Tambah User Baru
@@ -635,7 +635,7 @@ export default function UsersManagementPage() {
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div className="relative top-20 mx-auto p-5 border w-96 rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Edit User

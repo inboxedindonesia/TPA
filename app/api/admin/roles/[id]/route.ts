@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
+import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
+import { logActivity } from "@/lib/activityLogger";
 
 export async function PUT(
   request: NextRequest,
@@ -86,6 +88,23 @@ export async function PUT(
 
     client.release();
 
+    // Log UPDATE ROLE activity
+    try {
+      const actor =
+        (await getUserFromRequest(request)) || getFallbackUserInfo();
+      await logActivity({
+        user_id: actor.userId,
+        user_name: actor.userName,
+        user_role: actor.userRole,
+        action: "UPDATE",
+        entity_type: "ROLE",
+        entity_id: roleId,
+        entity_name: name,
+      });
+    } catch (e) {
+      console.error("Failed to log activity (update role):", e);
+    }
+
     return NextResponse.json(result.rows[0]);
   } catch (error) {
     console.error("Error updating role:", error);
@@ -136,6 +155,23 @@ export async function DELETE(
     await client.query("DELETE FROM roles WHERE id = $1", [roleId]);
 
     client.release();
+
+    // Log DELETE ROLE activity
+    try {
+      const actor =
+        (await getUserFromRequest(request)) || getFallbackUserInfo();
+      await logActivity({
+        user_id: actor.userId,
+        user_name: actor.userName,
+        user_role: actor.userRole,
+        action: "DELETE",
+        entity_type: "ROLE",
+        entity_id: roleId,
+        entity_name: roleId,
+      });
+    } catch (e) {
+      console.error("Failed to log activity (delete role):", e);
+    }
 
     return NextResponse.json({ message: "Role berhasil dihapus" });
   } catch (error) {

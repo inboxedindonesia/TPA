@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
+import { logTestStarted } from "@/lib/activityLogger";
+import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -158,6 +160,23 @@ export async function POST(request: NextRequest) {
           name: newSession.testName,
           duration: newSession.testDuration,
         };
+      }
+
+      // Get user info from request
+      const userInfo =
+        (await getUserFromRequest(request)) || getFallbackUserInfo();
+
+      // Log activity
+      try {
+        await logTestStarted(
+          userInfo.userId,
+          userInfo.userName,
+          userInfo.userRole,
+          testId,
+          newSession.testName || "Unknown Test"
+        );
+      } catch (error) {
+        console.error("Error logging activity:", error);
       }
 
       return NextResponse.json(newSession, { status: 201 });

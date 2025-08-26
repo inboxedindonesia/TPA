@@ -44,7 +44,7 @@ export default function KelolaTesPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setTests(data.tests || []);
+        setTests(Array.isArray(data) ? data : data.tests || []);
       } else {
         setError("Gagal memuat data tes");
       }

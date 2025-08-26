@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
 import bcrypt from "bcryptjs";
+import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
+import { logActivity } from "@/lib/activityLogger";
 
 export async function GET(request: NextRequest) {
   const client = await pool.connect();
@@ -127,6 +129,32 @@ export async function POST(request: NextRequest) {
     `,
       [userId, name, email, hashedPassword, role]
     );
+
+    // Server-side activity log (CREATE USER)
+    try {
+      const actor =
+        (await getUserFromRequest(request)) || getFallbackUserInfo();
+      const ipAddress =
+        request.headers.get("x-forwarded-for") ||
+        request.headers.get("x-real-ip") ||
+        "unknown";
+      const userAgent = request.headers.get("user-agent") || "unknown";
+
+      await logActivity({
+        user_id: actor.userId,
+        user_name: actor.userName,
+        user_role: actor.userRole,
+        action: "CREATE",
+        entity_type: "USER",
+        entity_id: userId,
+        entity_name: name,
+        details: { email },
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      });
+    } catch (e) {
+      console.error("Failed to log activity (create user):", e);
+    }
 
     return NextResponse.json({
       message: "User berhasil ditambahkan",

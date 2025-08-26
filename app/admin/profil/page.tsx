@@ -140,8 +140,17 @@ export default function AdminProfilePage() {
     }
   };
 
-  const handleLogout = () => {
-    if (confirm("Apakah Anda yakin ingin keluar?")) {
+  const handleLogout = async () => {
+    if (!confirm("Apakah Anda yakin ingin keluar?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+      }
+    } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       router.push("/login");

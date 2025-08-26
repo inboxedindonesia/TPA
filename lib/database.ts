@@ -1,15 +1,16 @@
 import { Pool } from "pg";
+import bcrypt from "bcryptjs";
 
-// Database configuration
+// Supabase/PostgreSQL configuration using DATABASE_URL
 const dbConfig = {
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5432"),
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "tpa_universitas",
+  connectionString: process.env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
 };
 
 // Create connection pool
@@ -68,19 +69,40 @@ export async function initDatabase() {
         id VARCHAR(255) PRIMARY KEY,
         question TEXT NOT NULL,
         type VARCHAR(50) NOT NULL,
-        options TEXT NOT NULL,
+        options TEXT, -- Changed to nullable
         "correctAnswer" VARCHAR(255) NOT NULL,
         category VARCHAR(100) NOT NULL,
         difficulty VARCHAR(50) NOT NULL,
         explanation TEXT,
         "order" INTEGER DEFAULT 0,
         points INTEGER DEFAULT 1,
-        "testId" VARCHAR(255) NOT NULL,
         "creatorId" VARCHAR(255) NOT NULL,
         "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY ("testId") REFERENCES tests(id) ON DELETE CASCADE,
+        -- TPA specific fields
+        kategori VARCHAR(100),
+        subkategori VARCHAR(100),
+        tipeJawaban VARCHAR(50) DEFAULT 'TEXT',
+        gambar VARCHAR(500),
+        gambarJawaban TEXT,
+        tipeSoal VARCHAR(50) DEFAULT 'PILIHAN_GANDA',
+        levelKesulitan VARCHAR(50) DEFAULT 'SEDANG',
+        deskripsi TEXT,
+        allowMultipleAnswers BOOLEAN DEFAULT FALSE,
         FOREIGN KEY ("creatorId") REFERENCES users(id)
+      )
+    `);
+
+    // Create test_questions table (junction table for many-to-many relationship)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS test_questions (
+        id SERIAL PRIMARY KEY,
+        test_id VARCHAR(255) NOT NULL,
+        question_id VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(test_id, question_id),
+        FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
+        FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
       )
     `);
 
@@ -117,6 +139,25 @@ export async function initDatabase() {
       )
     `);
 
+    // Create activity_logs table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255),
+        user_name VARCHAR(255),
+        user_role VARCHAR(50),
+        action VARCHAR(100) NOT NULL,
+        entity_type VARCHAR(50) NOT NULL,
+        entity_id VARCHAR(255),
+        entity_name VARCHAR(255),
+        details JSONB,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
     client.release();
     console.log("✅ Database tables created successfully!");
     return true;
@@ -139,7 +180,6 @@ export async function seedDatabase() {
 
     if (adminResult.rows.length === 0) {
       // Create admin user
-      const bcrypt = require("bcryptjs");
       const adminPassword = await bcrypt.hash("admin123", 10);
 
       await client.query(
@@ -150,8 +190,29 @@ export async function seedDatabase() {
       // Create user
       const userPassword = await bcrypt.hash("user123", 10);
       await client.query(
-        "INSERT INTO users (id, name, email, password, role) VALUES ($1, $2, $3, $4, $5)",
-        ["user-1", "Ahmad Fauzi", "user@tpa.com", userPassword, "PESERTA"]
+        `INSERT INTO users (
+          id, name, email, password, role, nim, fakultas, prodi, tempat_lahir, tanggal_lahir, jenis_kelamin, phone, alamat, agama, angkatan, tahun_masuk
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+        )`,
+        [
+          "user-1",
+          "Ahmad Fauzi",
+          "user@tpa.com",
+          userPassword,
+          "PESERTA",
+          "12345678",
+          "Fakultas Teknik",
+          "Teknik Informatika",
+          "Bandung",
+          "2002-01-15",
+          "Laki-laki",
+          "08123456789",
+          "Jl. Merdeka No. 1, Bandung",
+          "Islam",
+          "2021",
+          "2021",
+        ]
       );
 
       // Create test
@@ -274,5 +335,4 @@ export async function seedDatabase() {
     return false;
   }
 }
-
 export default pool;

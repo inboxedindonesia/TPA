@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { Pool } from "pg";
+import pool from "@/lib/database";
+import { logUserLogin } from "@/lib/activityLogger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,14 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create database connection
-    const pool = new Pool({
-      host: "localhost",
-      port: 5432,
-      user: "postgres",
-      password: "",
-      database: "tpa_universitas",
-    });
+    // Use shared pool from lib/database
 
     try {
       const client = await pool.connect();
@@ -40,7 +34,6 @@ export async function POST(request: NextRequest) {
       const users = result.rows;
       if (users.length === 0) {
         client.release();
-        await pool.end();
         return NextResponse.json(
           { error: "Email atau password salah" },
           { status: 401 }
@@ -48,13 +41,23 @@ export async function POST(request: NextRequest) {
       }
 
       const user = users[0];
+      // Validasi: hanya user yang sudah verifikasi OTP (is_verified = TRUE) yang bisa login
+      if (!user.is_verified) {
+        client.release();
+        return NextResponse.json(
+          {
+            error:
+              "Akun belum diverifikasi. Silakan cek email Anda untuk verifikasi OTP.",
+          },
+          { status: 403 }
+        );
+      }
 
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
 
       if (!isValidPassword) {
         client.release();
-        await pool.end();
         return NextResponse.json(
           { error: "Email atau password salah" },
           { status: 401 }
@@ -68,20 +71,47 @@ export async function POST(request: NextRequest) {
         { expiresIn: "24h" }
       );
 
+      // Log login activity
+      try {
+        const ipAddress =
+          request.headers.get("x-forwarded-for") ||
+          request.headers.get("x-real-ip") ||
+          "unknown";
+        const userAgent = request.headers.get("user-agent") || "unknown";
+
+        await logUserLogin(
+          user.id,
+          user.name,
+          user.role_name || "USER",
+          ipAddress,
+          userAgent
+        );
+      } catch (error) {
+        console.error("Error logging login activity:", error);
+      }
+
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
 
       client.release();
-      await pool.end();
 
-      return NextResponse.json({
+      // Set JWT as HttpOnly cookie
+      const response = NextResponse.json({
         message: "Login berhasil",
         user: userWithoutPassword,
         token,
       });
+      response.cookies.set({
+        name: "token",
+        value: token,
+        httpOnly: true,
+        path: "/",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24, // 1 day
+      });
+      return response;
     } catch (dbError) {
       console.error("Database error:", dbError);
-      await pool.end();
       return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
   } catch (error) {

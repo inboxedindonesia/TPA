@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
 import bcrypt from "bcryptjs";
+import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
+import { logActivity } from "@/lib/activityLogger";
 
 export async function PUT(
   request: NextRequest,
@@ -95,6 +97,23 @@ export async function PUT(
       );
     }
 
+    // Log UPDATE USER activity
+    try {
+      const actor =
+        (await getUserFromRequest(request)) || getFallbackUserInfo();
+      await logActivity({
+        user_id: actor.userId,
+        user_name: actor.userName,
+        user_role: actor.userRole,
+        action: "UPDATE",
+        entity_type: "USER",
+        entity_id: userId,
+        entity_name: name,
+      });
+    } catch (e) {
+      console.error("Failed to log activity (update user):", e);
+    }
+
     return NextResponse.json({
       message: "User berhasil diupdate",
     });
@@ -141,6 +160,23 @@ export async function DELETE(
 
     // Delete user
     await client.query("DELETE FROM users WHERE id = $1", [userId]);
+
+    // Log DELETE USER activity
+    try {
+      const actor =
+        (await getUserFromRequest(request)) || getFallbackUserInfo();
+      await logActivity({
+        user_id: actor.userId,
+        user_name: actor.userName,
+        user_role: actor.userRole,
+        action: "DELETE",
+        entity_type: "USER",
+        entity_id: userId,
+        entity_name: userId,
+      });
+    } catch (e) {
+      console.error("Failed to log activity (delete user):", e);
+    }
 
     return NextResponse.json({
       message: "User berhasil dihapus",

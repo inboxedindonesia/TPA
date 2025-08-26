@@ -1,70 +1,94 @@
 #!/usr/bin/env node
 
-const {
-  initDatabase,
-  seedDatabase,
-  testConnection,
-} = require("./lib/database.ts");
+const { Pool } = require("pg");
+const fs = require("fs");
+const path = require("path");
 
-async function setupDatabase() {
-  console.log("🚀 Setting up TPA Universitas Database...\n");
+// Database configuration
+const dbConfig = {
+  host: process.env.DB_HOST || "localhost",
+  port: parseInt(process.env.DB_PORT || "5432"),
+  user: process.env.DB_USER || "postgres",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "tpa_universitas",
+};
 
+const pool = new Pool(dbConfig);
+
+async function updateDatabaseSchema() {
   try {
-    // Test connection
-    console.log("1. Testing database connection...");
-    const isConnected = await testConnection();
-    if (!isConnected) {
-      console.log(
-        "❌ Database connection failed. Please check your MySQL setup."
-      );
-      console.log("\n💡 Troubleshooting:");
-      console.log("   1. Install XAMPP: https://www.apachefriends.org/");
-      console.log("   2. Start MySQL in XAMPP Control Panel");
-      console.log("   3. Create database 'tpa_universitas' in phpMyAdmin");
-      console.log("   4. Make sure MySQL is running on localhost:3306");
-      process.exit(1);
+    const client = await pool.connect();
+
+    // Create uploads directory structure
+    const uploadsDir = path.join(process.cwd(), "public", "uploads");
+    const questionsDir = path.join(uploadsDir, "questions");
+    const answersDir = path.join(uploadsDir, "answers");
+
+    // Create directories if they don't exist
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+      console.log("✅ Created uploads directory");
     }
 
-    // Initialize tables
-    console.log("2. Creating database tables...");
-    const tablesCreated = await initDatabase();
-    if (!tablesCreated) {
-      console.log("❌ Failed to create tables.");
-      process.exit(1);
+    if (!fs.existsSync(questionsDir)) {
+      fs.mkdirSync(questionsDir, { recursive: true });
+      console.log("✅ Created questions upload directory");
     }
 
-    // Seed data
-    console.log("3. Seeding initial data...");
-    const dataSeeded = await seedDatabase();
-    if (!dataSeeded) {
-      console.log("❌ Failed to seed data.");
-      process.exit(1);
+    if (!fs.existsSync(answersDir)) {
+      fs.mkdirSync(answersDir, { recursive: true });
+      console.log("✅ Created answers upload directory");
     }
 
-    console.log("\n✅ Database setup completed successfully!");
-    console.log("\n📊 Database Info:");
-    console.log("   Host: localhost");
-    console.log("   Port: 3306");
-    console.log("   Database: tpa_universitas");
-    console.log("   Username: root");
-    console.log("   Password: (empty)");
+    // Update database schema
+    console.log("🔧 Updating database schema...");
 
-    console.log("\n🔐 Login Credentials:");
-    console.log("   Admin: admin@tpa.com / admin123");
-    console.log("   User: user@tpa.com / user123");
+    // Add new TPA-specific columns to questions table
+    const alterQueries = [
+      // Add new columns if they don't exist
+      `ALTER TABLE questions ADD COLUMN IF NOT EXISTS kategori VARCHAR(100)`,
+      `ALTER TABLE questions ADD COLUMN IF NOT EXISTS subkategori VARCHAR(100)`,
+      `ALTER TABLE questions ADD COLUMN IF NOT EXISTS tipeJawaban VARCHAR(50) DEFAULT 'TEXT'`,
+      `ALTER TABLE questions ADD COLUMN IF NOT EXISTS gambar VARCHAR(500)`,
+      `ALTER TABLE questions ADD COLUMN IF NOT EXISTS gambarJawaban TEXT`,
+      `ALTER TABLE questions ADD COLUMN IF NOT EXISTS tipeSoal VARCHAR(50) DEFAULT 'PILIHAN_GANDA'`,
+      `ALTER TABLE questions ADD COLUMN IF NOT EXISTS levelKesulitan VARCHAR(50) DEFAULT 'SEDANG'`,
+      `ALTER TABLE questions ADD COLUMN IF NOT EXISTS deskripsi TEXT`,
 
-    console.log("\n🌐 Access Points:");
-    console.log("   Application: http://localhost:3000");
-    console.log("   phpMyAdmin: http://localhost/phpmyadmin");
+      // Make options nullable (for TPA questions that might not have text options)
+      `ALTER TABLE questions ALTER COLUMN options DROP NOT NULL`,
+      `ALTER TABLE questions ADD COLUMN IF NOT EXISTS allowMultipleAnswers BOOLEAN DEFAULT FALSE`,
+    ];
 
-    console.log("\n🚀 Next steps:");
-    console.log("   1. Start development server: npm run dev");
-    console.log("   2. Open: http://localhost:3000");
-    console.log("   3. Login with admin credentials");
+    for (const query of alterQueries) {
+      try {
+        await client.query(query);
+        console.log(`✅ Executed: ${query}`);
+      } catch (error) {
+        console.log(`⚠️  Skipped (column might already exist): ${query}`);
+      }
+    }
+
+    client.release();
+    console.log("✅ Database schema updated successfully!");
+    return true;
   } catch (error) {
-    console.error("❌ Setup failed:", error);
-    process.exit(1);
+    console.error("❌ Error updating database schema:", error);
+    return false;
   }
 }
 
-setupDatabase();
+// Run the update
+updateDatabaseSchema()
+  .then((success) => {
+    if (success) {
+      console.log("🎉 Database setup completed successfully!");
+    } else {
+      console.log("💥 Database setup failed!");
+    }
+    process.exit(success ? 0 : 1);
+  })
+  .catch((error) => {
+    console.error("💥 Unexpected error:", error);
+    process.exit(1);
+  });

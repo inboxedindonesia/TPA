@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Mail, Lock, GraduationCap } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  GraduationCap,
+  AlertTriangle,
+} from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,6 +33,7 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
+        credentials: "include",
       });
 
       const data = await response.json();
@@ -160,6 +168,15 @@ export default function LoginPage() {
                   "Masuk"
                 )}
               </button>
+            </div>
+            <div className="text-center mt-4">
+              <span className="text-sm text-gray-600">Belum punya akun? </span>
+              <a
+                href="/register"
+                className="text-primary-600 hover:text-primary-500 font-medium transition-colors duration-200"
+              >
+                Register
+              </a>
             </div>
           </form>
         </div>

@@ -10,6 +10,7 @@ import {
   BarChart3,
   User,
   Shield,
+  History,
 } from "lucide-react";
 
 interface AdminHeaderProps {
@@ -52,10 +53,22 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
     };
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+      }
+    } catch (e) {
+      // ignore log errors, proceed with client logout
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
   };
 
   const isActive = (path: string) => {
@@ -66,7 +79,10 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/admin/dashboard"
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+          >
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
@@ -78,7 +94,7 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
                 <p className="text-xs text-gray-500">{currentTime}</p>
               )}
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center space-x-6">
             {/* Navigation Links */}
@@ -121,6 +137,7 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
                     <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
                       Menu User
                     </div>
+
                     <Link
                       href="/admin/users"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -136,6 +153,14 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
                     >
                       <Shield className="w-4 h-4 mr-2" />
                       Manajemen Peran
+                    </Link>
+                    <Link
+                      href="/admin/activities"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsUserDropdownOpen(false)}
+                    >
+                      <History className="w-4 h-4 mr-2" />
+                      Log Pengguna
                     </Link>
                     <div className="border-t border-gray-100">
                       <button

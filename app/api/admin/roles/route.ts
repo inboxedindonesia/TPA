@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
+import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
+import { logActivity } from "@/lib/activityLogger";
 
 export async function GET() {
   try {
@@ -109,6 +111,23 @@ export async function POST(request: NextRequest) {
     );
 
     client.release();
+
+    // Log CREATE ROLE activity
+    try {
+      const actor =
+        (await getUserFromRequest(request)) || getFallbackUserInfo();
+      await logActivity({
+        user_id: actor.userId,
+        user_name: actor.userName,
+        user_role: actor.userRole,
+        action: "CREATE",
+        entity_type: "ROLE",
+        entity_id: result.rows[0].id,
+        entity_name: result.rows[0].name,
+      });
+    } catch (e) {
+      console.error("Failed to log activity (create role):", e);
+    }
 
     return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error) {

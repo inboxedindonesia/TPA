@@ -63,8 +63,18 @@ export default function RegisterPage() {
         return;
       }
 
-      // Redirect ke login setelah registrasi berhasil
-      router.push("/login?message=Registrasi berhasil! Silakan login.");
+      // Log register activity
+      try {
+        const { ClientActivityLogger } = await import(
+          "@/lib/clientActivityLogger"
+        );
+        await ClientActivityLogger.logAuth(data.user.id, "REGISTER");
+      } catch (logError) {
+        console.error("Error logging register activity:", logError);
+      }
+
+      // Redirect ke halaman verifikasi OTP setelah registrasi berhasil
+      router.push(`/verify-otp?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       setError("Terjadi kesalahan saat registrasi");
     } finally {
@@ -77,15 +87,6 @@ export default function RegisterPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="card p-8 shadow-2xl">
           {/* Back button */}
-          <div className="mb-6">
-            <Link
-              href="/"
-              className="inline-flex items-center text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Kembali ke Beranda
-            </Link>
-          </div>
 
           <div className="text-center">
             <div className="mx-auto h-12 w-12 bg-gradient-to-r from-green-600 to-green-700 rounded-full flex items-center justify-center mb-4">
@@ -94,15 +95,6 @@ export default function RegisterPage() {
             <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
               Daftar Akun Baru
             </h2>
-            <p className="text-gray-600">
-              Atau{" "}
-              <Link
-                href="/login"
-                className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
-              >
-                masuk ke akun yang sudah ada
-              </Link>
-            </p>
           </div>
 
           <form
@@ -301,22 +293,7 @@ export default function RegisterPage() {
                     Memproses...
                   </>
                 ) : (
-                  <>
-                    Daftar
-                    <svg
-                      className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 7l5 5m0 0l-5 5m5-5H6"
-                      />
-                    </svg>
-                  </>
+                  <>Daftar</>
                 )}
               </button>
             </div>
@@ -340,6 +317,15 @@ export default function RegisterPage() {
               </p>
             </div>
           </form>
+          <div className="text-center mt-4">
+            <span className="text-sm text-gray-600">Sudah punya akun? </span>
+            <a
+              href="/login"
+              className="text-primary-600 hover:text-primary-500 font-medium transition-colors duration-200"
+            >
+              Login
+            </a>
+          </div>
         </div>
       </div>
     </div>

@@ -5,72 +5,150 @@ export async function GET(request: NextRequest) {
   const client = await pool.connect();
 
   try {
+    console.log("Starting stats API call...");
+
     // Total soal
+    console.log("Querying total soal...");
     const totalSoalRes = await client.query(
       "SELECT COUNT(*) as count FROM questions"
     );
     const totalSoal = parseInt(totalSoalRes.rows[0].count);
+    console.log("Total soal:", totalSoal);
 
     // Soal baru (dibuat dalam 30 hari terakhir)
+    console.log("Querying soal baru...");
     const soalBaruRes = await client.query(`
       SELECT COUNT(*) as count 
       FROM questions 
       WHERE "createdAt" >= NOW() - INTERVAL '30 days'
     `);
     const soalBaru = parseInt(soalBaruRes.rows[0].count);
+    console.log("Soal baru:", soalBaru);
 
     // Soal aktif (yang digunakan dalam tes aktif)
+    console.log("Querying soal aktif...");
     const soalAktifRes = await client.query(`
-      SELECT COUNT(DISTINCT q.id) as count 
-      FROM questions q 
-      INNER JOIN tests t ON q."testId" = t.id 
+      SELECT COUNT(*) as count
+      FROM test_questions tq
+      INNER JOIN questions q ON tq.question_id = q.id
+      INNER JOIN tests t ON tq.test_id = t.id
       WHERE t."isActive" = true
     `);
     const soalAktif = parseInt(soalAktifRes.rows[0].count);
+    console.log("Soal aktif:", soalAktif);
 
     // Rata-rata kesulitan (dummy data untuk contoh)
     const rataRataKesulitan = 6.5; // Ini bisa dihitung dari field difficulty jika ada
 
-    // Daftar soal dengan statistik
+    // Pagination
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const offset = (page - 1) * limit;
+
+    console.log(`Fetching daftar soal... page=${page}, limit=${limit}`);
+    // Daftar soal dengan statistik - paginated
     const daftarSoalRes = await client.query(
       `
       SELECT 
-        q.id,
-        q.question,
-        q.category,
-        COALESCE(q.difficulty, 'Sedang') as difficulty,
-        q."createdAt",
-        COUNT(ts.id) as "usageCount",
-        COALESCE(AVG(ts.score), 0) as "successRate"
-      FROM questions q
-      LEFT JOIN tests t ON q."testId" = t.id
-      LEFT JOIN test_sessions ts ON t.id = ts."testId" AND ts.status = $1
-      GROUP BY q.id, q.question, q.category, q.difficulty, q."createdAt"
-      ORDER BY q."createdAt" DESC
-      LIMIT 20
+        id,
+        question,
+        category,
+        COALESCE(difficulty, 'Sedang') as difficulty,
+        "createdAt",
+        options,
+        "correctAnswer",
+        kategori,
+        subkategori,
+        tipejawaban,
+        gambar,
+        gambarjawaban,
+        tipesoal,
+        levelkesulitan,
+        deskripsi
+      FROM questions
+      ORDER BY "createdAt" DESC
+      LIMIT $1 OFFSET $2
     `,
-      ["COMPLETED"]
+      [limit, offset]
     );
+    console.log("Daftar soal rows:", daftarSoalRes.rows.length);
 
-    const daftarSoal = daftarSoalRes.rows.map((row) => ({
-      id: row.id,
-      question: row.question,
-      category: row.category || "Umum",
-      difficulty: row.difficulty,
-      createdAt: row.createdAt,
-      usageCount: parseInt(row.usagecount) || 0,
-      successRate: parseFloat(row.successrate).toFixed(1) || "0.0",
-    }));
+    const daftarSoal = daftarSoalRes.rows.map((row) => {
+      let options = null;
+      let gambarJawaban = null;
 
+      try {
+        if (row.options) {
+          options = JSON.parse(row.options);
+        }
+      } catch (error) {
+        console.error("Error parsing options for question", row.id, error);
+        options = null;
+      }
+
+      try {
+        if (row.gambarJawaban) {
+          gambarJawaban = JSON.parse(row.gambarJawaban);
+        }
+      } catch (error) {
+        console.error(
+          "Error parsing gambarJawaban for question",
+          row.id,
+          error
+        );
+        gambarJawaban = null;
+      }
+
+      return {
+        id: row.id,
+        question: row.question,
+        category: row.category || "Umum",
+        difficulty: row.difficulty,
+        createdAt: row.createdAt,
+        usageCount: 0,
+        successRate: "0.0",
+        options: options,
+        correctAnswer: (() => {
+          try {
+            // Try to parse as JSON for multiple answers
+            const parsed = JSON.parse(row.correctAnswer);
+            return Array.isArray(parsed) ? parsed : row.correctAnswer;
+          } catch {
+            // If parsing fails, return as string
+            return row.correctAnswer;
+          }
+        })(),
+        kategori: row.kategori,
+        subkategori: row.subkategori,
+        tipeJawaban: row.tipejawaban,
+        gambar: row.gambar,
+        gambarJawaban: gambarJawaban,
+        tipeSoal: row.tipesoal,
+        levelKesulitan: row.levelkesulitan,
+        deskripsi: row.deskripsi,
+        allowMultipleAnswers: false, // Default value for now
+      };
+    });
+
+    console.log("Returning response...");
     return NextResponse.json({
       totalSoal,
       soalBaru,
       soalAktif,
       rataRataKesulitan,
       daftarSoal,
+      page,
+      limit,
+      totalPages: Math.ceil(totalSoal / limit),
     });
   } catch (error) {
     console.error("Error fetching soal stats:", error);
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : "Unknown",
+    });
     return NextResponse.json(
       { error: "Gagal mengambil data statistik soal" },
       { status: 500 }

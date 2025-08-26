@@ -40,9 +40,8 @@ body {
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-md border border-gray-100
-           transition-shadow duration-200 ease-in-out
-           hover:shadow-lg;
+    @apply bg-white rounded-xl border border-gray-100
+           transition-shadow duration-200 ease-in-out;
   }
 
   .input-field {
@@ -222,9 +221,8 @@ body {
 
 /* Dashboard specific styles */
 .stats-card {
-  @apply bg-white rounded-xl shadow-md border border-gray-100 p-6
-         transition-shadow duration-200 ease-in-out
-         hover:shadow-lg;
+  @apply bg-white rounded-xl border border-gray-100 p-6
+         transition-shadow duration-200 ease-in-out;
 }
 
 .table-row-hover {
@@ -273,4 +271,93 @@ body {
 
 .clickable-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom components */
+.stats-card {
+  @apply bg-white rounded-lg p-6 transition-all duration-200;
+}
+
+.card {
+  @apply bg-white rounded-lg;
+}
+
+.hover-lift {
+  @apply transition-transform duration-200 hover:-translate-y-1;
+}
+
+.btn-primary {
+  @apply px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors;
+}
+
+.btn-secondary {
+  @apply px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors;
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Smooth transitions for tab switching */
+.transition-all {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Hover effects */
+.hover\:bg-gray-50:hover {
+  background-color: #f9fafb;
+}
+
+/* Card animations */
+.card {
+  transition: all 0.2s ease-in-out;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* RSuite DateRangePicker: disable hover highlight, allow click only */
+.rs-picker-daterange-menu .rs-calendar-table-cell:hover,
+.rs-picker-daterange-menu
+  .rs-calendar-table-cell:hover
+  .rs-calendar-table-cell-content {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Remove hover preview range shading (keep start/end states) */
+.rs-picker-daterange-menu
+  .rs-calendar-table-cell-in-range:not(
+    .rs-calendar-table-cell-selected-start
+  ):not(.rs-calendar-table-cell-selected-end) {
+  background-color: transparent !important;
+}
+
+/* Scoped version: apply only when menuClassName="no-hover-range" */
+.no-hover-range .rs-calendar-table-cell:hover,
+.no-hover-range .rs-calendar-table-cell:hover .rs-calendar-table-cell-content {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.no-hover-range
+  .rs-calendar-table-cell-in-range:not(
+    .rs-calendar-table-cell-selected-start
+  ):not(.rs-calendar-table-cell-selected-end) {
+  background-color: transparent !important;
 }

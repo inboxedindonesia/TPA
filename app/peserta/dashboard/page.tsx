@@ -7,14 +7,14 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  LogOut,
-  GraduationCap,
-  BarChart3,
   Play,
   Eye,
   Calendar,
   Target,
+  BarChart3,
+  Repeat,
 } from "lucide-react";
+import PesertaHeader from "../../components/PesertaHeader";
 
 interface Test {
   id: string;
@@ -26,6 +26,8 @@ interface Test {
   createdAt: string;
   participantCount: number;
   averageScore: number;
+  attemptCount?: number;
+  maxAttempts?: number;
 }
 
 interface TestResult {
@@ -69,7 +71,9 @@ export default function PesertaDashboard() {
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/peserta/dashboard");
+      const response = await fetch("/api/peserta/dashboard", {
+        credentials: "include",
+      });
 
       if (!response.ok) {
         throw new Error("Gagal mengambil data dashboard");
@@ -85,10 +89,20 @@ export default function PesertaDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+      }
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -173,33 +187,8 @@ export default function PesertaDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <GraduationCap className="w-6 h-6 text-blue-600" />
-              </div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                TPA Universitas - Peserta
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Selamat datang, Ahmad Fauzi
-              </span>
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Header Peserta */}
+      <PesertaHeader handleLogout={handleLogout} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
@@ -320,8 +309,15 @@ export default function PesertaDashboard() {
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div className="flex items-center text-sm text-gray-600">
-                            <BookOpen className="w-4 h-4 mr-2" />
-                            {test.totalQuestions} soal
+                            <Repeat className="w-4 h-4 mr-2" />
+                            {typeof test.maxAttempts === "number" &&
+                            test.maxAttempts > 0
+                              ? ` ${
+                                  typeof test.attemptCount === "number"
+                                    ? test.attemptCount
+                                    : 0
+                                }/${test.maxAttempts}`
+                              : ""}
                           </div>
                           <div className="flex items-center text-sm text-gray-600">
                             <Clock className="w-4 h-4 mr-2" />
@@ -329,13 +325,26 @@ export default function PesertaDashboard() {
                           </div>
                         </div>
 
-                        <Link
-                          href={`/peserta/tes/${test.id}`}
-                          className="w-full btn-primary flex items-center justify-center"
-                        >
-                          <Play className="w-4 h-4 mr-2" />
-                          Mulai Tes
-                        </Link>
+                        {test.maxAttempts !== undefined &&
+                        test.maxAttempts > 0 &&
+                        test.attemptCount !== undefined &&
+                        test.attemptCount >= test.maxAttempts ? (
+                          <button
+                            className="w-full flex items-center justify-center bg-gray-300 text-gray-500 font-semibold py-2 px-4 rounded-lg cursor-not-allowed"
+                            disabled
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Tes sudah selesai diambil
+                          </button>
+                        ) : (
+                          <Link
+                            href={`/peserta/tes/${test.id}`}
+                            className="w-full btn-primary flex items-center justify-center"
+                          >
+                            <Play className="w-4 h-4 mr-2" />
+                            Ambil Tes
+                          </Link>
+                        )}
                       </div>
                     ))}
                   </div>
