@@ -4,15 +4,12 @@ import bcrypt from "bcryptjs";
 import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 import { logActivity } from "@/lib/activityLogger";
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }: any) {
   const client = await pool.connect();
 
   try {
     const { name, email, password, role } = await request.json();
-    const userId = params.id;
+    const userId = params["id"];
 
     // Validasi input
     if (!name || !email || !role) {
@@ -128,14 +125,11 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: any) {
   const client = await pool.connect();
 
   try {
-    const userId = params.id;
+    const userId = params["id"];
 
     // Cek apakah user ada
     const existingUser = await client.query(

@@ -3,12 +3,9 @@ import pool from "@/lib/database";
 import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 
 // Endpoint: /api/test-sessions/[sessionId]/submit
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { sessionId: string } }
-) {
+export async function POST(request: Request, { params }: any) {
   try {
-    const sessionId = params.sessionId;
+    const sessionId = params["sessionId"];
     const { answers } = await request.json();
 
     console.log("[DEBUG] sessionId:", sessionId);

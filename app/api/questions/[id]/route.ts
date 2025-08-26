@@ -3,12 +3,9 @@ import pool from "@/lib/database";
 import { promises as fs } from "fs";
 import path from "path";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: any) {
   try {
-    const questionId = params.id;
+    const questionId = params["id"];
 
     if (!questionId) {
       return NextResponse.json(
@@ -46,12 +43,9 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }: any) {
   try {
-    const questionId = params.id;
+    const questionId = params["id"];
     const formData = await request.formData();
 
     if (!questionId) {
@@ -215,12 +209,9 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: any) {
   try {
-    const questionId = params.id;
+    const questionId = params["id"];
 
     if (!questionId) {
       return NextResponse.json(

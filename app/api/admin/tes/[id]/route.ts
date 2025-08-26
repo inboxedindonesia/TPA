@@ -3,12 +3,9 @@ import pool from "@/lib/database";
 import { logTestDeleted } from "@/lib/activityLogger";
 import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: Request, { params }: any) {
   try {
-    const { id } = await params;
+    const id = params["id"];
 
     // Validate ID
     if (!id) {

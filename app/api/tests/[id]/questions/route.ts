@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: any) {
   try {
-    const testId = params.id;
+    const testId = params["id"];
     const client = await pool.connect();
 
     try {

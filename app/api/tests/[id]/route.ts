@@ -1,9 +1,6 @@
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: any) {
   try {
-  const { id } = await params;
+    const id = params["id"];
     if (!id) {
       return NextResponse.json(
         { error: "ID tes tidak valid" },
@@ -38,12 +35,9 @@ import pool from "@/lib/database";
 import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 import { logTestDeleted, logTestUpdated } from "@/lib/activityLogger";
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: Request, { params }: any) {
   try {
-    const { id } = await params;
+    const id = params["id"];
 
     if (!id) {
       return NextResponse.json(
