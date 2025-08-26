@@ -5,11 +5,11 @@ import { logActivity } from "@/lib/activityLogger";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const { name, description, permissions, status } = await request.json();
-    const roleId = params.id;
+    const roleId = context.params.id;
 
     // Validasi input
     if (!name || !description) {
