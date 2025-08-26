@@ -4,12 +4,9 @@ import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 import { randomUUID } from "crypto";
 
 // POST /api/test-sessions/start/[testId]
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { testId: string } }
-) {
+export async function POST(request: Request, { params }: any) {
   try {
-    const { testId } = await params;
+    const testId = params["testId"];
     // Ambil user dari token atau fallback
     const user = (await getUserFromRequest(request)) || getFallbackUserInfo();
 
