@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 import pool from "./database";
 
+// import { NextRequest } from "next/server";
 export interface UserInfo {
   userId: string;
   userName: string;
@@ -21,7 +22,7 @@ export interface UserInfo {
 }
 
 export async function getUserFromRequest(
-  request: NextRequest
+  request: Request
 ): Promise<UserInfo | null> {
   try {
     // Get authorization header
