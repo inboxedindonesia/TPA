@@ -5,28 +5,28 @@ export async function GET(request: NextRequest) {
   const client = await pool.connect();
 
   try {
-    console.log("Starting stats API call...");
+    // ...log dihapus...
 
     // Total soal
-    console.log("Querying total soal...");
+    // ...log dihapus...
     const totalSoalRes = await client.query(
       "SELECT COUNT(*) as count FROM questions"
     );
     const totalSoal = parseInt(totalSoalRes.rows[0].count);
-    console.log("Total soal:", totalSoal);
+    // ...log dihapus...
 
     // Soal baru (dibuat dalam 30 hari terakhir)
-    console.log("Querying soal baru...");
+    // ...log dihapus...
     const soalBaruRes = await client.query(`
       SELECT COUNT(*) as count 
       FROM questions 
       WHERE "createdAt" >= NOW() - INTERVAL '30 days'
     `);
     const soalBaru = parseInt(soalBaruRes.rows[0].count);
-    console.log("Soal baru:", soalBaru);
+    // ...log dihapus...
 
     // Soal aktif (yang digunakan dalam tes aktif)
-    console.log("Querying soal aktif...");
+    // ...log dihapus...
     const soalAktifRes = await client.query(`
       SELECT COUNT(*) as count
       FROM test_questions tq
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       WHERE t."isActive" = true
     `);
     const soalAktif = parseInt(soalAktifRes.rows[0].count);
-    console.log("Soal aktif:", soalAktif);
+    // ...log dihapus...
 
     // Rata-rata kesulitan (dummy data untuk contoh)
     const rataRataKesulitan = 6.5; // Ini bisa dihitung dari field difficulty jika ada
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10", 10);
     const offset = (page - 1) * limit;
 
-    console.log(`Fetching daftar soal... page=${page}, limit=${limit}`);
+    // ...log dihapus...
     // Daftar soal dengan statistik - paginated
     const daftarSoalRes = await client.query(
       `
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     `,
       [limit, offset]
     );
-    console.log("Daftar soal rows:", daftarSoalRes.rows.length);
+    // ...log dihapus...
 
     const daftarSoal = daftarSoalRes.rows.map((row) => {
       let options = null;
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    console.log("Returning response...");
+    // ...log dihapus...
     return NextResponse.json({
       totalSoal,
       soalBaru,

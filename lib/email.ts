@@ -12,11 +12,42 @@ export async function sendOtpEmail(to: string, otp: string) {
     },
   });
 
+  // Pisahkan setiap angka OTP ke dalam kotak
+  const otpBoxes = String(otp)
+    .split("")
+    .map(
+      (digit) =>
+        `<span style="display:inline-block;width:40px;height:48px;line-height:48px;margin:0 4px;background:#2563eb;color:#fff;font-size:28px;font-weight:700;border-radius:8px;text-align:center;letter-spacing:2px;">${digit}</span>`
+    )
+    .join("");
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const verifyLink = `${baseUrl}/verify-otp?email=${encodeURIComponent(to)}`;
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
     subject: "Kode OTP Verifikasi Akun TPA Universitas",
-    text: `Kode OTP Anda: ${otp}`,
-    html: `<p>Kode OTP Anda: <b>${otp}</b></p>`,
+    text: `Kode OTP Anda: ${otp}\n\nKlik link berikut untuk verifikasi: ${verifyLink}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; background: #f4f6fb; padding: 32px;">
+        <div style="max-width: 480px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #0001; padding: 32px;">
+          <div style="text-align:center; margin-bottom: 24px;">
+            <img src='https://upload.wikimedia.org/wikipedia/commons/6/6b/Universitas_Indonesia_logo.png' alt='Logo Universitas' style='height:48px; margin-bottom:12px;' />
+            <h2 style="color:#2d3a4a; margin:0 0 8px 0;">Kode OTP Verifikasi</h2>
+            <p style="color:#4b5563; margin:0;">Gunakan kode berikut untuk verifikasi akun TPA Universitas Anda.</p>
+          </div>
+          <div style="text-align:center; margin: 24px 0;">
+            ${otpBoxes}
+          </div>
+          <p style="color:#6b7280; font-size:14px; text-align:center;">Kode OTP berlaku selama 10 menit.</p>
+          <div style="text-align:center; margin: 24px 0;">
+            <a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">Verifikasi Akun</a>
+            <p style="color:#6b7280; font-size:13px; margin-top:8px;">Atau buka link berikut: <br/><a href="${verifyLink}">${verifyLink}</a></p>
+          </div>
+          <hr style="margin:32px 0; border:none; border-top:1px solid #e5e7eb;" />
+          <div style="color:#9ca3af; font-size:12px; text-align:center;">&copy; ${new Date().getFullYear()} TPA Universitas</div>
+        </div>
+      </div>
+    `,
   });
 }

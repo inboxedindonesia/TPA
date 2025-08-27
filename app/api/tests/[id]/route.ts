@@ -1,6 +1,7 @@
 export async function GET(request: Request, { params }: any) {
   try {
-    const id = params["id"];
+    const awaitedParams = await params;
+    const id = awaitedParams["id"];
     if (!id) {
       return NextResponse.json(
         { error: "ID tes tidak valid" },
@@ -10,15 +11,44 @@ export async function GET(request: Request, { params }: any) {
 
     const client = await pool.connect();
     try {
-      const query = `SELECT * FROM tests WHERE id = $1`;
-      const result = await client.query(query, [id]);
-      if (result.rows.length === 0) {
+      const url = new URL(request.url);
+      const withSections = url.searchParams.get("withSections") === "true";
+      const testQuery = `SELECT * FROM tests WHERE id = $1`;
+      const testResult = await client.query(testQuery, [id]);
+      if (testResult.rows.length === 0) {
         return NextResponse.json(
           { error: "Tes tidak ditemukan" },
           { status: 404 }
         );
       }
-      return NextResponse.json(result.rows[0]);
+      const test = testResult.rows[0];
+      if (!withSections) {
+        return NextResponse.json(test);
+      }
+      // Ambil sections dan soal per section (Supabase: kolom testId, bukan test_id)
+      const sectionQuery = `SELECT * FROM sections WHERE testid = $1 ORDER BY "order" ASC, createdat ASC`;
+      const sectionResult = await client.query(sectionQuery, [id]);
+      const sections = [];
+      for (const section of sectionResult.rows) {
+        // Ambil soal untuk section ini (pakai sectionId di tabel questions)
+        const questionsQuery = `
+          SELECT q.* FROM test_questions tq
+          INNER JOIN questions q ON tq.question_id = q.id
+          WHERE tq.test_id = $1 AND tq.section_id = $2
+          ORDER BY q."order" ASC, q."createdAt" ASC
+        `;
+        const questionsResult = await client.query(questionsQuery, [
+          id,
+          section.id,
+        ]);
+        sections.push({
+          id: section.id,
+          name: section.name,
+          duration: section.duration,
+          questions: questionsResult.rows,
+        });
+      }
+      return NextResponse.json({ ...test, sections });
     } finally {
       client.release();
     }

@@ -130,10 +130,9 @@ export async function POST(request: NextRequest) {
           ) {
             for (const questionId of section.questionIds) {
               await client.query(
-                `INSERT INTO test_questions (test_id, question_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-                [testId, questionId]
+                `INSERT INTO test_questions (test_id, question_id, section_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+                [testId, questionId, sectionId]
               );
-              // Jika ingin menyimpan sectionId di relasi, tambahkan kolom section_id di test_questions dan tambahkan di sini
             }
           }
         }

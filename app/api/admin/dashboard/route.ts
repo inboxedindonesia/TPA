@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
 
 export async function GET(request: NextRequest) {
-    // Daftar peserta lengkap
+  // Daftar peserta lengkap
   // (Deklarasi dihapus, sudah ada di dalam blok utama function)
-    const client = await pool.connect();
+  const client = await pool.connect();
 
-      // Daftar peserta lengkap
-      const daftarPesertaRes = await client.query(`
+  // Daftar peserta lengkap
+  const daftarPesertaRes = await client.query(`
         SELECT u.id, u.name, u.email, u.registration_id, u.is_verified, u."createdAt"
         FROM users u
         JOIN roles r ON u.role_id = r.id
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         ORDER BY u."createdAt" DESC
         LIMIT 100
       `);
-      const daftarPeserta = daftarPesertaRes.rows;
+  const daftarPeserta = daftarPesertaRes.rows;
 
   try {
     // Total peserta (users dengan role Peserta)
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       tesListRes.rows.map((row) => ({
         id: row.id,
         nama: row.name,
-        jumlahSoal: parseInt(row.jumlahsoal) || 0,
+        jumlahSoal: parseInt(row.jumlahSoal ?? row.jumlahsoal) || 0,
         durasi: row.duration,
         status: row.status ? "aktif" : "nonaktif",
         peserta: parseInt(row.peserta) || 0,

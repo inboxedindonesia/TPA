@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       const allUsersResult = await client.query(
         'SELECT u.id, u.name, u.email, r.name as role FROM users u LEFT JOIN roles r ON u.role_id = r.id ORDER BY u."createdAt" DESC'
       );
-      console.log("All users in database:", allUsersResult.rows);
+      // ...log dihapus...
 
       // Get total participants (only users with role = 'Peserta')
       const totalPesertaResult = await client.query(`

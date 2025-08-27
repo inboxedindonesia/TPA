@@ -44,10 +44,9 @@ export async function POST(request: NextRequest) {
       const userId = `user-${Date.now()}`;
       const today = new Date();
       const yyyymmdd = today.toISOString().slice(0, 10).replace(/-/g, "");
-      // Cari registration_id terbesar hari ini
+      // Cari registration_id terbesar (tidak reset harian)
       const maxResult = await client.query(
-        "SELECT registration_id FROM users WHERE registration_id LIKE $1 ORDER BY registration_id DESC LIMIT 1",
-        [`UMB-${yyyymmdd}-%`]
+        "SELECT registration_id FROM users WHERE registration_id LIKE 'UMB-%' ORDER BY registration_id DESC LIMIT 1"
       );
       let nextNumber = 1;
       if (maxResult.rows.length > 0) {

@@ -169,14 +169,22 @@ export default function LoginPage() {
                 )}
               </button>
             </div>
-            <div className="text-center mt-4">
-              <span className="text-sm text-gray-600">Belum punya akun? </span>
+            <div className="flex flex-col items-center gap-2 mt-4">
               <a
-                href="/register"
-                className="text-primary-600 hover:text-primary-500 font-medium transition-colors duration-200"
+                href="/forgot-password"
+                className="text-sm text-blue-600 hover:underline"
               >
-                Register
+                Lupa password?
               </a>
+              <span className="text-sm text-gray-600">
+                Belum punya akun?{" "}
+                <a
+                  href="/register"
+                  className="text-primary-600 hover:text-primary-500 font-medium transition-colors duration-200"
+                >
+                  Register
+                </a>
+              </span>
             </div>
           </form>
         </div>

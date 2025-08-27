@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { BookOpen, Plus, Trash2, Eye } from "lucide-react";
+import { BookOpen, Plus, Trash2 } from "lucide-react";
 import AdminHeader from "@/app/components/AdminHeader";
 import QuestionSelector from "@/app/components/QuestionSelector";
 import FeedbackModal from "@/app/components/FeedbackModal";
@@ -20,8 +20,15 @@ interface Question {
   multipleAnswer: boolean;
   createdAt: string;
   updatedAt: string;
-  addedAt?: string;
+  usageCount?: number;
+  avgScore?: number;
 }
+
+type Section = {
+  name: string;
+  duration: number;
+  questions: Question[];
+};
 
 export default function EditTestPage() {
   const router = useRouter();
@@ -31,15 +38,22 @@ export default function EditTestPage() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    duration: 60,
-    totalQuestions: 0,
     isActive: true,
+    maxAttempts: 1,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [testQuestions, setTestQuestions] = useState<Question[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [activeSectionIdx, setActiveSectionIdx] = useState<number | null>(null);
   const [showQuestionSelector, setShowQuestionSelector] = useState(false);
+  const [showSectionModal, setShowSectionModal] = useState(false);
+  const [sectionNameInput, setSectionNameInput] = useState("");
+  const [sectionDurationInput, setSectionDurationInput] = useState(10);
+  const [showEditSectionModal, setShowEditSectionModal] = useState(false);
+  const [editSectionIdx, setEditSectionIdx] = useState<number | null>(null);
+  const [editSectionNameValue, setEditSectionNameValue] = useState("");
+  const [editSectionDurationValue, setEditSectionDurationValue] = useState(10);
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -50,33 +64,38 @@ export default function EditTestPage() {
   const [modalMessage, setModalMessage] = useState("");
 
   useEffect(() => {
-    fetchTest();
-    fetchTestQuestions();
+    fetchTestWithSections();
   }, [testId]);
 
-  const fetchTest = async () => {
+  const fetchTestWithSections = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
         router.push("/login");
         return;
       }
-
-      const response = await fetch(`/api/tests/${testId}`, {
+      const response = await fetch(`/api/tests/${testId}?withSections=true`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
       if (response.ok) {
         const test = await response.json();
         setFormData({
           name: test.name,
           description: test.description || "",
-          duration: test.duration,
-          totalQuestions: test.totalQuestions,
           isActive: test.isActive,
+          maxAttempts: test.maxAttempts ?? 1,
         });
+        setSections(
+          Array.isArray(test.sections)
+            ? test.sections.map((s: any) => ({
+                name: s.name,
+                duration: s.duration,
+                questions: Array.isArray(s.questions) ? s.questions : [],
+              }))
+            : []
+        );
       } else {
         setError("Gagal memuat data tes");
       }
@@ -84,18 +103,6 @@ export default function EditTestPage() {
       setError("Terjadi kesalahan server");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchTestQuestions = async () => {
-    try {
-      const response = await fetch(`/api/tests/${testId}/questions`);
-      if (response.ok) {
-        const data = await response.json();
-        setTestQuestions(data.questions || []);
-      }
-    } catch (error) {
-      console.error("Error fetching test questions:", error);
     }
   };
 
@@ -116,38 +123,88 @@ export default function EditTestPage() {
     }));
   };
 
-  const handleQuestionSelect = async (questions: Question[]) => {
-    try {
-      const response = await fetch(`/api/tests/${testId}/questions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          questionIds: questions.map((q) => q.id),
-        }),
-      });
+  // Section logic
+  const handleAddSection = () => {
+    if (!sectionNameInput.trim() || !sectionDurationInput) return;
+    setSections((prev) => [
+      ...prev,
+      {
+        name: sectionNameInput.trim(),
+        duration: sectionDurationInput,
+        questions: [],
+      },
+    ]);
+    setSectionNameInput("");
+    setSectionDurationInput(10);
+    setShowSectionModal(false);
+  };
 
-      if (response.ok) {
-        const data = await response.json();
-        showFeedback(
-          "success",
-          "Berhasil",
-          `${data.addedCount} soal berhasil ditambahkan ke tes`
-        );
-        fetchTestQuestions(); // Refresh questions
-        fetchTest(); // Refresh test data
-      } else {
-        const errorData = await response.json();
-        showFeedback(
-          "error",
-          "Gagal",
-          errorData.error || "Gagal menambahkan soal ke tes"
-        );
-      }
-    } catch (error) {
-      showFeedback("error", "Error", "Terjadi kesalahan server");
+  const handleEditSection = (
+    idx: number,
+    newName: string,
+    newDuration: number
+  ) => {
+    setSections((prev) =>
+      prev.map((s, i) =>
+        i === idx ? { ...s, name: newName, duration: newDuration } : s
+      )
+    );
+  };
+
+  const openEditSectionModal = (
+    idx: number,
+    currentName: string,
+    currentDuration: number
+  ) => {
+    setEditSectionIdx(idx);
+    setEditSectionNameValue(currentName);
+    setEditSectionDurationValue(currentDuration);
+    setShowEditSectionModal(true);
+  };
+
+  const handleEditSectionSave = () => {
+    if (
+      editSectionIdx !== null &&
+      editSectionNameValue.trim() &&
+      editSectionDurationValue > 0
+    ) {
+      handleEditSection(
+        editSectionIdx,
+        editSectionNameValue.trim(),
+        editSectionDurationValue
+      );
     }
+    setShowEditSectionModal(false);
+  };
+
+  const handleEditSectionDuration = (idx: number, newDuration: number) => {
+    setSections((prev) =>
+      prev.map((s, i) => (i === idx ? { ...s, duration: newDuration } : s))
+    );
+  };
+
+  const handleRemoveSection = (idx: number) => {
+    setSections((prev) => prev.filter((_, i) => i !== idx));
+    if (activeSectionIdx === idx) setActiveSectionIdx(null);
+  };
+
+  // Question per section
+  const handleQuestionSelect = (questions: Question[]) => {
+    if (activeSectionIdx === null) return;
+    setSections((prev) =>
+      prev.map((s, i) => (i === activeSectionIdx ? { ...s, questions } : s))
+    );
+    setShowQuestionSelector(false);
+  };
+
+  const handleRemoveQuestion = (sectionIdx: number, questionId: string) => {
+    setSections((prev) =>
+      prev.map((s, i) =>
+        i === sectionIdx
+          ? { ...s, questions: s.questions.filter((q) => q.id !== questionId) }
+          : s
+      )
+    );
   };
 
   const showFeedback = (
@@ -163,9 +220,24 @@ export default function EditTestPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (sections.length === 0) {
+      showFeedback(
+        "warning",
+        "Peringatan",
+        "Buat minimal satu section dan pilih soal untuk setiap section"
+      );
+      return;
+    }
+    if (sections.some((s) => s.questions.length === 0)) {
+      showFeedback(
+        "warning",
+        "Peringatan",
+        "Setiap section harus memiliki minimal satu soal"
+      );
+      return;
+    }
     setSaving(true);
     setError("");
-
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`/api/tests/${testId}`, {
@@ -174,13 +246,20 @@ export default function EditTestPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          duration: sections.reduce((sum, s) => sum + (s.duration || 0), 0),
+          sections: sections.map((s) => ({
+            name: s.name,
+            duration: s.duration,
+            questionIds: s.questions.map((q) => q.id),
+          })),
+        }),
       });
-
       if (response.ok) {
         showFeedback("success", "Berhasil", "Tes berhasil diperbarui!");
         setTimeout(() => {
-          router.push("/admin/tes/kelola");
+          router.push("/admin/dashboard");
         }, 2000);
       } else {
         const errorData = await response.json();
@@ -217,30 +296,6 @@ export default function EditTestPage() {
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category?.toUpperCase()) {
-      case "MATEMATIKA":
-        return "bg-blue-100 text-blue-800";
-      case "BAHASA_INDONESIA":
-        return "bg-purple-100 text-purple-800";
-      case "GENERAL_KNOWLEDGE":
-        return "bg-orange-100 text-orange-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat data tes...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       <AdminHeader />
@@ -258,7 +313,6 @@ export default function EditTestPage() {
                     {error}
                   </div>
                 )}
-
                 {/* Nama Tes */}
                 <div>
                   <label
@@ -278,7 +332,6 @@ export default function EditTestPage() {
                     placeholder="Contoh: TPA Matematika Dasar"
                   />
                 </div>
-
                 {/* Deskripsi */}
                 <div>
                   <label
@@ -298,27 +351,22 @@ export default function EditTestPage() {
                   />
                 </div>
 
-                {/* Durasi */}
-                <div>
-                  <label
-                    htmlFor="duration"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Durasi (menit) *
+                {/* Durasi Tes */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Durasi Tes
                   </label>
-                  <input
-                    type="number"
-                    id="duration"
-                    name="duration"
-                    value={formData.duration}
-                    onChange={handleInputChange}
-                    min="1"
-                    max="300"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <div className="text-gray-700 text-sm">
+                    Durasi total tes akan diambil dari penjumlahan seluruh
+                    durasi section.
+                    <br />
+                    <span className="font-semibold">
+                      Total durasi:{" "}
+                      {sections.reduce((sum, s) => sum + (s.duration || 0), 0)}{" "}
+                      menit
+                    </span>
+                  </div>
                 </div>
-
                 {/* Status Aktif */}
                 <div>
                   <label className="flex items-center">
@@ -334,7 +382,248 @@ export default function EditTestPage() {
                     </span>
                   </label>
                 </div>
-
+                {/* Jumlah Percobaan (maxAttempts) */}
+                <div>
+                  <label
+                    htmlFor="maxAttempts"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Batas Percobaan Tes (default 1, 0 = tak terbatas)
+                  </label>
+                  <input
+                    type="number"
+                    id="maxAttempts"
+                    name="maxAttempts"
+                    value={formData.maxAttempts}
+                    onChange={handleInputChange}
+                    min="0"
+                    max="20"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                {/* Section List */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Section Tes
+                    </label>
+                    <button
+                      type="button"
+                      className="flex items-center px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                      onClick={() => setShowSectionModal(true)}
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Tambah Section
+                    </button>
+                  </div>
+                  {sections.length === 0 ? (
+                    <div className="text-gray-400 text-sm italic">
+                      Belum ada section
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {sections.map((section, idx) => (
+                        <div
+                          key={idx}
+                          className="border rounded-lg p-3 bg-gray-50"
+                        >
+                          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2">
+                            <div className="flex-1">
+                              <div className="font-semibold text-blue-800">
+                                {section.name}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                Durasi: {section.duration} menit &bull;{" "}
+                                {section.questions.length} soal
+                              </div>
+                            </div>
+                            <div className="flex flex-row flex-wrap items-end gap-1 mt-2 md:mt-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openEditSectionModal(
+                                    idx,
+                                    section.name,
+                                    section.duration
+                                  )
+                                }
+                                className="text-blue-600 hover:underline text-xs ml-1"
+                              >
+                                Edit Section
+                              </button>
+                              {/* Modal Edit Section */}
+                              {showEditSectionModal &&
+                                editSectionIdx === idx && (
+                                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+                                    <div className="bg-white rounded-lg p-6 w-full max-w-xs shadow-lg">
+                                      <h2 className="text-lg font-semibold mb-4">
+                                        Edit Section
+                                      </h2>
+                                      <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                          Nama Section
+                                        </label>
+                                        <input
+                                          type="text"
+                                          className="w-full border px-3 py-2 rounded"
+                                          placeholder="Nama section"
+                                          value={editSectionNameValue}
+                                          onChange={(e) =>
+                                            setEditSectionNameValue(
+                                              e.target.value
+                                            )
+                                          }
+                                          autoFocus
+                                        />
+                                      </div>
+                                      <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                          Durasi (menit)
+                                        </label>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          className="w-full border px-3 py-2 rounded"
+                                          value={editSectionDurationValue}
+                                          onChange={(e) =>
+                                            setEditSectionDurationValue(
+                                              parseInt(e.target.value) || 1
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                      <div className="flex justify-end gap-2">
+                                        <button
+                                          className="px-3 py-1 text-gray-600 hover:text-gray-900"
+                                          onClick={() =>
+                                            setShowEditSectionModal(false)
+                                          }
+                                        >
+                                          Batal
+                                        </button>
+                                        <button
+                                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                          onClick={handleEditSectionSave}
+                                          disabled={
+                                            !editSectionNameValue.trim() ||
+                                            editSectionDurationValue < 1
+                                          }
+                                        >
+                                          Simpan
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSection(idx)}
+                                className="text-red-600 hover:underline text-xs ml-1"
+                              >
+                                Hapus
+                              </button>
+                              <button
+                                type="button"
+                                className="text-blue-600 hover:underline text-xs ml-1"
+                                onClick={() => {
+                                  setActiveSectionIdx(idx);
+                                  setShowQuestionSelector(true);
+                                }}
+                              >
+                                Pilih Soal
+                              </button>
+                            </div>
+                          </div>
+                          {/* List soal per section */}
+                          {section.questions.length === 0 ? (
+                            <div className="text-xs text-gray-400 italic">
+                              Belum ada soal
+                            </div>
+                          ) : (
+                            <ul className="space-y-1 mt-2">
+                              {section.questions.map((q, qidx) => (
+                                <li
+                                  key={q.id}
+                                  className="flex items-center justify-between text-xs bg-white rounded px-2 py-1 border"
+                                >
+                                  <span>
+                                    {qidx + 1}. {truncateText(q.question, 40)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="ml-2 text-red-400 hover:text-red-700"
+                                    onClick={() =>
+                                      handleRemoveQuestion(idx, q.id)
+                                    }
+                                    title="Hapus soal"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Modal Section */}
+                {showSectionModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-xs shadow-lg">
+                      <h2 className="text-lg font-semibold mb-4">
+                        Tambah Section
+                      </h2>
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Nama Section
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full border px-3 py-2 rounded"
+                          placeholder="Nama section"
+                          value={sectionNameInput}
+                          onChange={(e) => setSectionNameInput(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Durasi (menit)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="w-full border px-3 py-2 rounded"
+                          value={sectionDurationInput}
+                          onChange={(e) =>
+                            setSectionDurationInput(
+                              parseInt(e.target.value) || 1
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          className="px-3 py-1 text-gray-600 hover:text-gray-900"
+                          onClick={() => setShowSectionModal(false)}
+                        >
+                          Batal
+                        </button>
+                        <button
+                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          onClick={handleAddSection}
+                          disabled={
+                            !sectionNameInput.trim() || sectionDurationInput < 1
+                          }
+                        >
+                          Simpan
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {/* Action Buttons */}
                 <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
                   <button
@@ -355,112 +644,26 @@ export default function EditTestPage() {
               </form>
             </div>
           </div>
-
-          {/* Soal Section */}
+          {/* Info Box */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Soal Tes
-                </h3>
-                <button
-                  onClick={() => setShowQuestionSelector(true)}
-                  className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Tambah Soal
-                </button>
-              </div>
-
-              <div className="mb-4">
-                <p className="text-sm text-gray-600">
-                  {testQuestions.length} soal dalam tes ini
-                </p>
-              </div>
-
-              {testQuestions.length === 0 ? (
-                <div className="text-center py-8">
-                  <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 text-sm">
-                    Belum ada soal dalam tes ini
-                  </p>
-                  <p className="text-gray-400 text-xs mt-1">
-                    Klik "Tambah Soal" untuk menambahkan soal dari bank soal
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {testQuestions.map((question, index) => (
-                    <div
-                      key={question.id}
-                      className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className="text-xs font-medium text-gray-500">
-                              #{index + 1}
-                            </span>
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getCategoryColor(
-                                question.category
-                              )}`}
-                            >
-                              {question.category}
-                            </span>
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDifficultyColor(
-                                question.difficulty
-                              )}`}
-                            >
-                              {question.difficulty}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-900">
-                            {truncateText(question.question)}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2 ml-2">
-                          <button
-                            className="text-blue-500 hover:text-blue-700"
-                            title="Lihat detail"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Info Box */}
             <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-lg font-medium text-blue-900 mb-2">
-                💡 Tips Edit Tes
+                💡 Tips Membuat Tes
               </h3>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Anda dapat menambah soal dari bank soal</li>
-                <li>• Soal yang sudah ada tidak akan terduplikasi</li>
-                <li>• Total soal akan diupdate otomatis</li>
+                <li>• Bagi tes ke dalam beberapa section sesuai kebutuhan</li>
+                <li>
+                  • Berikan nama yang jelas dan deskriptif untuk setiap section
+                </li>
+                <li>
+                  • Pilih soal dari bank soal yang tersedia untuk setiap section
+                </li>
                 <li>• Nonaktifkan tes jika sedang dalam maintenance</li>
               </ul>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Question Selector Modal */}
-      <QuestionSelector
-        isOpen={showQuestionSelector}
-        onClose={() => setShowQuestionSelector(false)}
-        onSelect={handleQuestionSelect}
-        testId={testId}
-        existingQuestionIds={testQuestions.map((q) => q.id)}
-      />
-
-      {/* Feedback Modal */}
       <FeedbackModal
         isOpen={showModal}
         type={modalType}
@@ -469,6 +672,16 @@ export default function EditTestPage() {
         onClose={() => setShowModal(false)}
         autoClose={modalType !== "warning"}
         autoCloseDelay={3000}
+      />
+      <QuestionSelector
+        isOpen={showQuestionSelector}
+        onClose={() => setShowQuestionSelector(false)}
+        onSelect={handleQuestionSelect}
+        existingQuestionIds={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.questions.map((q) => q.id) || []
+            : []
+        }
       />
     </div>
   );

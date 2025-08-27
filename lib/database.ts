@@ -33,6 +33,18 @@ export async function testConnection() {
 export async function initDatabase() {
   try {
     const client = await pool.connect();
+    // Create password_resets table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        token VARCHAR(255) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
 
     // Create users table
     await client.query(`

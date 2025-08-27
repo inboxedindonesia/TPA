@@ -1,3 +1,4 @@
+// The pagination UI for Tes and Peserta should be placed inside the AdminDashboard component's return statement, after the relevant tables.
 "use client";
 
 import { useState, useEffect } from "react";
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 import AdminHeader from "../../components/AdminHeader";
 import FeedbackModal from "../../components/FeedbackModal";
+import TesDetailModal from "../../components/TesDetailModal";
 
 interface DashboardData {
   totalSoal: number;
@@ -38,6 +40,65 @@ interface DashboardData {
 }
 
 export default function AdminDashboard() {
+  // Pagination state for Tes and Peserta
+  const [tesPage, setTesPage] = useState(1);
+  const [tesTotalPages, setTesTotalPages] = useState(1);
+  const [pesertaPage, setPesertaPage] = useState(1);
+  const [pesertaTotalPages, setPesertaTotalPages] = useState(1);
+
+  // Pagination handlers
+  const handlePrevTesPage = () => {
+    if (tesPage > 1) setTesPage(tesPage - 1);
+  };
+  const handleNextTesPage = () => {
+    if (tesPage < tesTotalPages) setTesPage(tesPage + 1);
+  };
+  const handlePrevPesertaPage = () => {
+    if (pesertaPage > 1) setPesertaPage(pesertaPage - 1);
+  };
+  const handleNextPesertaPage = () => {
+    if (pesertaPage < pesertaTotalPages) setPesertaPage(pesertaPage + 1);
+  };
+
+  // Fetch paginated Tes data
+  useEffect(() => {
+    const fetchTesData = async () => {
+      try {
+        const res = await fetch(`/api/admin/stats/tes?page=${tesPage}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDashboardData((prev) => ({
+            ...prev,
+            tesList: data.tesList || [],
+          }));
+          setTesTotalPages(data.totalPages || 1);
+        }
+      } catch (err) {
+        // handle error
+      }
+    };
+    fetchTesData();
+  }, [tesPage]);
+
+  // Fetch paginated Peserta data
+  useEffect(() => {
+    const fetchPesertaData = async () => {
+      try {
+        const res = await fetch(`/api/admin/stats/peserta?page=${pesertaPage}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDashboardData((prev) => ({
+            ...prev,
+            daftarPeserta: data.daftarPeserta || [],
+          }));
+          setPesertaTotalPages(data.totalPages || 1);
+        }
+      } catch (err) {
+        // handle error
+      }
+    };
+    fetchPesertaData();
+  }, [pesertaPage]);
   // Navigasi halaman soal
   const handlePrevSoalPage = () => {
     if (soalPage > 1) setSoalPage(soalPage - 1);
@@ -86,6 +147,10 @@ export default function AdminDashboard() {
   const [viewSoalModal, setViewSoalModal] = useState({
     isOpen: false,
     question: null as any,
+  });
+  const [tesDetailModal, setTesDetailModal] = useState({
+    isOpen: false,
+    tes: null as any,
   });
 
   useEffect(() => {
@@ -267,18 +332,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleViewTes = async (tes: any) => {
-    try {
-      // Navigasi ke halaman detail tes
-      router.push(`/admin/tes/view/${tes.id}`);
-    } catch (error) {
-      setFeedbackModal({
-        isOpen: true,
-        type: "error",
-        title: "Error",
-        message: "Gagal membuka detail tes",
-      });
-    }
+  const handleViewTes = (tes: any) => {
+    setTesDetailModal({ isOpen: true, tes });
   };
 
   const handleEditTes = async (tes: any) => {
@@ -407,6 +462,11 @@ export default function AdminDashboard() {
         testResults={detailModal.testResults}
       />
 
+      <TesDetailModal
+        isOpen={tesDetailModal.isOpen}
+        onClose={() => setTesDetailModal({ isOpen: false, tes: null })}
+        tes={tesDetailModal.tes}
+      />
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-8">
         {/* Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-8">
@@ -463,6 +523,7 @@ export default function AdminDashboard() {
             onClick={() => {
               setActiveTab("soal");
               setActiveStats("");
+              fetchDashboardData();
             }}
           >
             <div className="flex flex-col items-center text-center">
@@ -506,6 +567,7 @@ export default function AdminDashboard() {
             onClick={() => {
               setActiveTab("tes");
               setActiveStats("");
+              fetchDashboardData();
             }}
           >
             <div className="flex flex-col items-center text-center">
@@ -549,6 +611,7 @@ export default function AdminDashboard() {
             onClick={() => {
               setActiveStats("peserta");
               setActiveTab("");
+              fetchDashboardData();
             }}
           >
             <div className="flex flex-col items-center text-center">
@@ -707,13 +770,6 @@ export default function AdminDashboard() {
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Tambah Soal
-                    </Link>
-                    <Link
-                      href="/admin/soal/bank-soal"
-                      className="btn-secondary flex items-center"
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      Bank Soal
                     </Link>
                     <div className="relative">
                       <input
@@ -928,13 +984,6 @@ export default function AdminDashboard() {
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Buat Tes Baru
-                    </Link>
-                    <Link
-                      href="/admin/tes/kelola"
-                      className="btn-secondary flex items-center"
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Kelola Tes
                     </Link>
                     <div className="relative">
                       <input
