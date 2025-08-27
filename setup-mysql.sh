@@ -46,7 +46,7 @@ echo "📝 Creating .env.local file..."
 cat > .env.local << EOF
 DATABASE_URL="mysql://tpa_user:tpa_password@localhost:3306/tpa_universitas"
 JWT_SECRET="your-super-secret-jwt-key-for-development"
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="https://tpa-seven.vercel.app"
 NEXTAUTH_SECRET="your-nextauth-secret-key"
 EOF
 
@@ -82,5 +82,5 @@ echo "   (jika XAMPP/WAMP terinstall)"
 echo ""
 echo "🚀 Next steps:"
 echo "   1. Start development server: npm run dev"
-echo "   2. Access: http://localhost:3000"
+echo "   2. Access: https://tpa-seven.vercel.app"
 echo "   3. Login with: admin@tpa.com / admin123" 

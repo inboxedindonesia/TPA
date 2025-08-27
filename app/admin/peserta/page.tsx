@@ -107,7 +107,7 @@ export default function AdminPeserta() {
 
   const handleViewPeserta = async (peserta: any) => {
     // Fetch detail peserta & test results
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://tpa-seven.vercel.app";
     const res = await fetch(
       `${baseUrl}/api/admin/stats/peserta?id=${peserta.id}`,
       { credentials: "include" }

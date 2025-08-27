@@ -21,7 +21,8 @@ export async function sendOtpEmail(to: string, otp: string) {
     )
     .join("");
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL || "https://tpa-seven.vercel.app";
   const verifyLink = `${baseUrl}/verify-otp?email=${encodeURIComponent(to)}`;
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,

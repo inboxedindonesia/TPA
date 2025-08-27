@@ -32,7 +32,6 @@ function VerifyOtpInner() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const inputsRef = Array.from({ length: 6 }, () => useState(null));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");

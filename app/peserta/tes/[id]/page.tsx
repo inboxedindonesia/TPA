@@ -77,11 +77,15 @@ export default function TakeTestPage() {
           localStorage.removeItem("autoSubmitted");
           localStorage.removeItem("autoSessionId");
           localStorage.removeItem("autoAnswers");
-          window.location.replace("http://localhost:3000/peserta/dashboard");
+          window.location.replace(
+            "https://tpa-seven.vercel.app/peserta/dashboard"
+          );
         });
       } else {
         localStorage.removeItem("autoSubmitted");
-        window.location.replace("http://localhost:3000/peserta/dashboard");
+        window.location.replace(
+          "https://tpa-seven.vercel.app/peserta/dashboard"
+        );
       }
     }
   }, []);
@@ -273,7 +277,9 @@ export default function TakeTestPage() {
       if (response.ok) {
         setHasSubmitted(true);
         if (auto) {
-          window.location.replace("http://localhost:3000/peserta/dashboard");
+          window.location.replace(
+            "https://tpa-seven.vercel.app/peserta/dashboard"
+          );
         } else {
           alert("Tes berhasil diselesaikan!");
           router.replace(`/peserta/dashboard`);

@@ -405,7 +405,8 @@ export default function AdminDashboard() {
   });
 
   const handleViewPeserta = async (peserta: any) => {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "https://tpa-seven.vercel.app";
     try {
       const res = await fetch(
         `${baseUrl}/api/admin/stats/peserta?id=${peserta.id}`,
