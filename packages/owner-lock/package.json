@@ -1,0 +1,25 @@
+{
+  "name": "@nalendramuhammad/owner-lock",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "private": false,
+  "license": "UNLICENSED",
+  "description": "Owner-only activation token verifier for self-lockdown (ES256, WebCrypto)",
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nalendramuhammad/owner-lock.git"
+  },
+  "bin": {
+    "owner-lock": "src/cli.mjs"
+  }
+}

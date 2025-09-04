@@ -3,6 +3,7 @@ import { useState } from "react";
 
 export default function UploadLicensePage() {
   const [licenseKey, setLicenseKey] = useState("");
+  const [activationToken, setActivationToken] = useState("");
   const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -19,7 +20,7 @@ export default function UploadLicensePage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">Input License Key</h1>
+      <h1 className="text-2xl font-bold mb-4">Activation & License</h1>
       <form
         onSubmit={handleSubmit}
         className="flex flex-col gap-4 w-full max-w-xs p-4 bg-white rounded shadow border"
@@ -40,6 +41,33 @@ export default function UploadLicensePage() {
           Submit
         </button>
       </form>
+      <div className="mt-8 w-full max-w-xs p-4 bg-white rounded shadow border">
+        <h2 className="font-semibold mb-2 text-sm">Owner Activation Token</h2>
+        <textarea
+          value={activationToken}
+          onChange={(e) => setActivationToken(e.target.value)}
+          rows={4}
+          className="border rounded p-2 text-sm resize-none w-full"
+          placeholder="Paste owner activation token (from owner)"
+        />
+        <button
+          onClick={async () => {
+            const res = await fetch("/api/owner-activate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ activationToken }),
+            });
+            const data = await res.json();
+            setMessage(
+              data.message || (res.ok ? "Activated" : "Activation failed")
+            );
+            if (res.ok) window.location.href = "/";
+          }}
+          className="bg-emerald-600 text-white px-4 py-2 rounded text-sm font-semibold mt-3"
+        >
+          Activate
+        </button>
+      </div>
       {message && <p className="mt-4 text-red-600 text-sm">{message}</p>}
     </div>
   );
