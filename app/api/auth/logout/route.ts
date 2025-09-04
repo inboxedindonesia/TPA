@@ -16,10 +16,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       success: true,
       message: "Logout berhasil",
     });
+    // Clear auth cookie
+    res.cookies.set("token", "", {
+      httpOnly: true,
+      path: "/",
+      maxAge: 0,
+      sameSite: "lax",
+    });
+    return res;
   } catch (error) {
     console.error("Error in logout:", error);
     return NextResponse.json(

@@ -64,9 +64,17 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Generate JWT token
+      // Generate roles array
+      let roles: string[] = [];
+      if (user.role_id) {
+        roles = [user.role_id];
+      } else if (user.role_name) {
+        roles = [user.role_name];
+      }
+
+      // Generate JWT token dengan field roles
       const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role_name },
+        { userId: user.id, email: user.email, roles },
         "your-super-secret-jwt-key-for-development",
         { expiresIn: "24h" }
       );
@@ -78,11 +86,10 @@ export async function POST(request: NextRequest) {
           request.headers.get("x-real-ip") ||
           "unknown";
         const userAgent = request.headers.get("user-agent") || "unknown";
-
         await logUserLogin(
           user.id,
           user.name,
-          user.role_name || "USER",
+          roles.length > 0 ? roles[0] : "USER",
           ipAddress,
           userAgent
         );
@@ -90,8 +97,9 @@ export async function POST(request: NextRequest) {
         console.error("Error logging login activity:", error);
       }
 
-      // Remove password from response
+      // Remove password from response dan tambahkan roles
       const { password: _, ...userWithoutPassword } = user;
+      userWithoutPassword.roles = roles;
 
       client.release();
 
@@ -101,18 +109,19 @@ export async function POST(request: NextRequest) {
         user: userWithoutPassword,
         token,
       });
-      response.cookies.set({
-        name: "token",
-        value: token,
+      response.cookies.set("token", token, {
         httpOnly: true,
         path: "/",
         sameSite: "lax",
         maxAge: 60 * 60 * 24, // 1 day
       });
       return response;
-    } catch (dbError) {
-      console.error("Database error:", dbError);
-      return NextResponse.json({ error: "Database error" }, { status: 500 });
+    } catch (error) {
+      console.error("Database or login logic error:", error);
+      return NextResponse.json(
+        { error: "Terjadi kesalahan server" },
+        { status: 500 }
+      );
     }
   } catch (error) {
     console.error("Login error:", error);

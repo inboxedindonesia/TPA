@@ -41,7 +41,19 @@ export async function POST(request: NextRequest) {
         [userId, otp, expiresAt]
       );
       // Kirim email OTP
-      await sendOtpEmail(email, otp);
+      try {
+        await sendOtpEmail(email, otp);
+      } catch (e: any) {
+        client.release();
+        console.error("Resend OTP email failed:", e?.message || e);
+        return NextResponse.json(
+          {
+            error:
+              "Gagal mengirim OTP ke email. Mohon periksa konfigurasi email/server.",
+          },
+          { status: 500 }
+        );
+      }
       client.release();
       return NextResponse.json({
         message: "OTP baru telah dikirim ke email Anda.",

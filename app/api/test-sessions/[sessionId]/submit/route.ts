@@ -3,13 +3,10 @@ import pool from "@/lib/database";
 import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 
 // Endpoint: /api/test-sessions/[sessionId]/submit
-export async function POST(request: Request, { params }: any) {
+export async function POST(request: Request, context: any) {
   try {
-    const sessionId = params["sessionId"];
+    const { sessionId } = await context.params;
     const { answers } = await request.json();
-
-    console.log("[DEBUG] sessionId:", sessionId);
-    console.log("[DEBUG] answers:", answers);
 
     if (!sessionId || !answers || typeof answers !== "object") {
       console.error("[ERROR] Data tidak lengkap", { sessionId, answers });
@@ -65,7 +62,6 @@ export async function POST(request: Request, { params }: any) {
         [session.testId]
       );
       const questions = questionsRes.rows;
-      console.log("[DEBUG] questions:", questions);
       let score = 0;
       let maxScore = 0;
       for (const q of questions) {
@@ -74,29 +70,38 @@ export async function POST(request: Request, { params }: any) {
         maxScore += point;
         // Jawaban benar bisa array/string, samakan format
         let correct = false;
-        try {
-          const correctAnswer =
-            typeof q.correctAnswer === "string"
-              ? JSON.parse(q.correctAnswer)
-              : q.correctAnswer;
-          if (Array.isArray(correctAnswer)) {
-            correct = Array.isArray(userAnswer)
-              ? JSON.stringify(userAnswer.sort()) ===
-                JSON.stringify(correctAnswer.sort())
-              : correctAnswer.includes(userAnswer);
+        let correctAnswer = q.correctAnswer;
+        if (typeof correctAnswer === "string") {
+          const trimmed = correctAnswer.trim();
+          if (
+            (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+            (trimmed.startsWith("{") && trimmed.endsWith("}"))
+          ) {
+            try {
+              correctAnswer = JSON.parse(trimmed);
+            } catch (e) {
+              console.error("[ERROR] Gagal parse correctAnswer:", trimmed, e);
+              correctAnswer = trimmed;
+            }
           } else {
-            correct = userAnswer == correctAnswer;
+            // Bukan JSON, gunakan string apa adanya
+            correctAnswer = trimmed;
           }
-        } catch (e) {
-          console.error("[ERROR] Parsing correctAnswer", e, q);
-          correct = userAnswer == q.correctAnswer;
+        }
+        if (Array.isArray(correctAnswer)) {
+          correct = Array.isArray(userAnswer)
+            ? JSON.stringify(userAnswer.sort()) ===
+              JSON.stringify(correctAnswer.sort())
+            : correctAnswer.includes(userAnswer);
+        } else {
+          correct = userAnswer == correctAnswer;
         }
         if (correct) score += point;
       }
 
       // Update status sesi, skor, dan maxScore
       await client.query(
-        'UPDATE test_sessions SET status = $1, "endTime" = NOW(), score = $2, "maxScore" = $3 WHERE id = $4',
+        `UPDATE test_sessions SET status = $1, "endTime" = (NOW() AT TIME ZONE 'Asia/Jakarta'), score = $2, "maxScore" = $3 WHERE id = $4`,
         ["COMPLETED", score, maxScore, sessionId]
       );
 

@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       const insertQuery = `
         INSERT INTO test_sessions (
           id, "userId", "testId", status, "startTime"
-        ) VALUES ($1, $2, $3, $4, NOW())
+        ) VALUES ($1, $2, $3, $4, (NOW() AT TIME ZONE 'Asia/Jakarta'))
       `;
 
       const insertParams = [sessionId, userId, testId, "ONGOING"];

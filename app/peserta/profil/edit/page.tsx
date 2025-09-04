@@ -119,7 +119,6 @@ export default function EditProfilePage() {
   };
 
   const handleLogout = async () => {
-    if (!confirm("Apakah Anda yakin ingin keluar?")) return;
     try {
       const token = localStorage.getItem("token");
       if (token) {

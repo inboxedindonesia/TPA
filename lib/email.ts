@@ -1,16 +1,39 @@
 import nodemailer from "nodemailer";
 
-export async function sendOtpEmail(to: string, otp: string) {
+function buildTransport() {
+  const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT) || 587;
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
+  const user = process.env.SMTP_USER || "";
+  const pass = process.env.SMTP_PASS || "";
+
+  if (!host && user.includes("@gmail.com")) {
+    // Fallback to Gmail service if host not provided
+    return nodemailer.createTransport({
+      service: "gmail",
+      auth: { user, pass },
+    });
+  }
+
+  if (!host) {
+    throw new Error(
+      "SMTP_HOST tidak diatur. Set SMTP_HOST atau gunakan akun Gmail di SMTP_USER."
+    );
+  }
+
+  return nodemailer.createTransport({
+    host,
     port,
-    secure: port === 465, // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+    secure: port === 465, // true for 465, false for 587/others
+    auth: { user, pass },
   });
+}
+
+export async function sendOtpEmail(to: string, otp: string) {
+  const transporter = buildTransport();
+  // Verify connection when possible (no-op on some providers)
+  try {
+    await transporter.verify();
+  } catch {}
 
   // Pisahkan setiap angka OTP ke dalam kotak
   const otpBoxes = String(otp)
@@ -24,12 +47,17 @@ export async function sendOtpEmail(to: string, otp: string) {
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL || "https://tpa-seven.vercel.app";
   const verifyLink = `${baseUrl}/verify-otp?email=${encodeURIComponent(to)}`;
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to,
-    subject: "Kode OTP Verifikasi Akun TPA Universitas",
-    text: `Kode OTP Anda: ${otp}\n\nKlik link berikut untuk verifikasi: ${verifyLink}`,
-    html: `
+  try {
+    await transporter.sendMail({
+      from:
+        process.env.SMTP_FROM ||
+        (process.env.SMTP_USER
+          ? `TPA Universitas <${process.env.SMTP_USER}>`
+          : undefined),
+      to,
+      subject: "Kode OTP Verifikasi Akun TPA Universitas",
+      text: `Kode OTP Anda: ${otp}\n\nKlik link berikut untuk verifikasi: ${verifyLink}`,
+      html: `
       <div style="font-family: Arial, sans-serif; background: #f4f6fb; padding: 32px;">
         <div style="max-width: 480px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #0001; padding: 32px;">
           <div style="text-align:center; margin-bottom: 24px;">
@@ -50,5 +78,10 @@ export async function sendOtpEmail(to: string, otp: string) {
         </div>
       </div>
     `,
-  });
+    });
+  } catch (err: any) {
+    // Surface clearer error for caller/logs
+    const reason = err?.response || err?.message || "Gagal mengirim email";
+    throw new Error(`OTP email gagal dikirim: ${reason}`);
+  }
 }

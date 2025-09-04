@@ -9,8 +9,6 @@ import {
   AlertCircle,
   Play,
   Eye,
-  Calendar,
-  Target,
   BarChart3,
   Repeat,
 } from "lucide-react";
@@ -193,7 +191,7 @@ export default function PesertaDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
+          <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <BookOpen className="w-6 h-6 text-blue-600" />
@@ -207,7 +205,7 @@ export default function PesertaDashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
+          <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
                 <CheckCircle className="w-6 h-6 text-green-600" />
@@ -220,8 +218,30 @@ export default function PesertaDashboard() {
               </div>
             </div>
           </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Play className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Tes Bisa Diambil
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {
+                    dashboardData.availableTests.filter((t) =>
+                      t.maxAttempts === undefined ||
+                      t.maxAttempts === null ||
+                      t.maxAttempts <= 0
+                        ? true
+                        : (t.attemptCount ?? 0) < t.maxAttempts
+                    ).length
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center">
               <div className="p-2 bg-yellow-100 rounded-lg">
                 <BarChart3 className="w-6 h-6 text-yellow-600" />
@@ -232,20 +252,6 @@ export default function PesertaDashboard() {
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {dashboardData.averageScore.toFixed(1)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Target className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Target</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {dashboardData.targetScore}%
                 </p>
               </div>
             </div>
@@ -290,7 +296,7 @@ export default function PesertaDashboard() {
                     {dashboardData.availableTests.map((test) => (
                       <div
                         key={test.id}
-                        className="bg-gray-50 rounded-lg p-6 hover-lift"
+                        className="bg-gray-50 rounded-lg p-6"
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div>
@@ -375,7 +381,7 @@ export default function PesertaDashboard() {
                     {dashboardData.testResults.map((result) => (
                       <div
                         key={result.id}
-                        className="bg-gray-50 rounded-lg p-6 hover-lift"
+                        className="bg-gray-50 rounded-lg p-6"
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div>

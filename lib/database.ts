@@ -39,9 +39,9 @@ export async function initDatabase() {
         id SERIAL PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL,
         token VARCHAR(255) NOT NULL,
-        expires_at TIMESTAMP NOT NULL,
-        used BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL,
+  used BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -53,9 +53,9 @@ export async function initDatabase() {
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role VARCHAR(50) DEFAULT 'PESERTA',
-        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  role VARCHAR(50) DEFAULT 'PESERTA',
+  "createdAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
+  "updatedAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta')
       )
     `);
 
@@ -67,10 +67,10 @@ export async function initDatabase() {
         description TEXT,
         duration INTEGER NOT NULL,
         "totalQuestions" INTEGER DEFAULT 0,
-        "isActive" BOOLEAN DEFAULT TRUE,
+  "isActive" BOOLEAN DEFAULT TRUE,
         "creatorId" VARCHAR(255) NOT NULL,
-        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "createdAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
+  "updatedAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         FOREIGN KEY ("creatorId") REFERENCES users(id)
       )
     `);
@@ -87,10 +87,10 @@ export async function initDatabase() {
         difficulty VARCHAR(50) NOT NULL,
         explanation TEXT,
         "order" INTEGER DEFAULT 0,
-        points INTEGER DEFAULT 1,
+  points INTEGER DEFAULT 1,
         "creatorId" VARCHAR(255) NOT NULL,
-        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "createdAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
+  "updatedAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         -- TPA specific fields
         kategori VARCHAR(100),
         subkategori VARCHAR(100),
@@ -111,7 +111,7 @@ export async function initDatabase() {
         id SERIAL PRIMARY KEY,
         test_id VARCHAR(255) NOT NULL,
         question_id VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         UNIQUE(test_id, question_id),
         FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
         FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
@@ -122,15 +122,15 @@ export async function initDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS test_sessions (
         id VARCHAR(255) PRIMARY KEY,
-        status VARCHAR(50) DEFAULT 'ONGOING',
-        "startTime" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  status VARCHAR(50) DEFAULT 'ONGOING',
+  "startTime" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         "endTime" TIMESTAMP NULL,
         score INTEGER DEFAULT 0,
         "maxScore" INTEGER DEFAULT 0,
         "userId" VARCHAR(255) NOT NULL,
         "testId" VARCHAR(255) NOT NULL,
-        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "createdAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
+  "updatedAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         FOREIGN KEY ("userId") REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY ("testId") REFERENCES tests(id) ON DELETE CASCADE
       )
@@ -142,8 +142,8 @@ export async function initDatabase() {
         id VARCHAR(255) PRIMARY KEY,
         "selectedAnswer" VARCHAR(255) NOT NULL,
         "isCorrect" BOOLEAN DEFAULT FALSE,
-        "pointsEarned" INTEGER DEFAULT 0,
-        "answeredAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "pointsEarned" INTEGER DEFAULT 0,
+  "answeredAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         "sessionId" VARCHAR(255) NOT NULL,
         "questionId" VARCHAR(255) NOT NULL,
         FOREIGN KEY ("sessionId") REFERENCES test_sessions(id) ON DELETE CASCADE,
@@ -165,7 +165,7 @@ export async function initDatabase() {
         details JSONB,
         ip_address VARCHAR(45),
         user_agent TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       )
     `);

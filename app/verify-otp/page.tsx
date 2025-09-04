@@ -53,11 +53,8 @@ function VerifyOtpInner() {
         setError(data.error || "OTP salah atau sudah kadaluarsa");
         return;
       }
-      setSuccess("Verifikasi berhasil! Silakan login.");
-      setTimeout(
-        () => router.push("/login?message=Verifikasi berhasil! Silakan login."),
-        2000
-      );
+      setSuccess("Verifikasi berhasil! Lanjutkan melengkapi biodata.");
+      setTimeout(() => router.push("/register?step=2"), 1200);
     } catch (err) {
       setError("Terjadi kesalahan saat verifikasi");
     } finally {

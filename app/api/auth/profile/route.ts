@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "../../../../lib/auth";
+import fs from "fs";
+import path from "path";
 
 export async function GET(req: Request) {
   try {
@@ -9,7 +11,28 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.json({ user });
+    // Normalize keys for client consumption
+    return NextResponse.json({
+      user: {
+        id: user.userId,
+        name: user.userName,
+        email: user.userEmail,
+        role: user.userRole,
+        createdAt: user.createdAt,
+        tempat_lahir: user.tempat_lahir,
+        tanggal_lahir: user.tanggal_lahir,
+        jenis_kelamin: user.jenis_kelamin,
+        alamat: user.alamat,
+        asal_sekolah: user.asal_sekolah,
+        provinsi_sekolah: user.provinsi_sekolah,
+        jurusan: user.jurusan,
+        foto: user.foto,
+        nik: user.nik,
+        jenjang: user.jenjang,
+        registration_id: user.registration_id,
+        is_verified: user.is_verified,
+      },
+    });
   } catch (e) {
     return NextResponse.json(
       { error: "Internal server error" },
@@ -26,27 +49,70 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const contentType = (req.headers.get("content-type") || "").toLowerCase();
     // Ambil field yang boleh diupdate
     const allowedFields = [
       "name",
       "email",
-      "nim",
-      "fakultas",
-      "prodi",
       "tempat_lahir",
       "tanggal_lahir",
       "jenis_kelamin",
-      "phone",
       "alamat",
-      "agama",
-      "angkatan",
-      "tahun_masuk",
+      "asal_sekolah",
+      "provinsi_sekolah",
+      "jurusan",
+      "foto",
+      "nik",
+      "jenjang",
     ];
     const updates: Record<string, any> = {};
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        updates[field] = body[field];
+
+    if (contentType.includes("multipart/form-data")) {
+      const form = await (req as any).formData();
+      for (const field of allowedFields) {
+        if (field === "foto") continue; // tangani terpisah
+        const val = form.get(field);
+        if (val !== null && val !== undefined && String(val) !== "") {
+          updates[field] = String(val);
+        }
+      }
+
+      // Foto upload
+      const f = form.get("foto");
+      if (f && typeof f === "object" && "arrayBuffer" in f) {
+        try {
+          const file = f as unknown as File;
+          const uploadDir = path.join(
+            process.cwd(),
+            "public",
+            "uploads",
+            "users"
+          );
+          await fs.promises.mkdir(uploadDir, { recursive: true });
+          const originalName = (file as any).name || "foto";
+          const extFromName = path.extname(originalName);
+          const type = (file as any).type || "";
+          const fallbackExt = type.includes("png")
+            ? ".png"
+            : type.includes("webp")
+            ? ".webp"
+            : ".jpg";
+          const ext = extFromName || fallbackExt;
+          const fileName = `${user.userId}${ext}`;
+          const filePath = path.join(uploadDir, fileName);
+          const buffer = Buffer.from(await (file as any).arrayBuffer());
+          await fs.promises.writeFile(filePath, buffer);
+          updates["foto"] = path.posix.join("uploads", "users", fileName);
+        } catch (e) {
+          console.error("Gagal menyimpan foto:", e);
+        }
+      }
+    } else {
+      const body = await req.json();
+      for (const field of allowedFields) {
+        if ((body as any)[field] !== undefined) {
+          updates[field] = (body as any)[field];
+        }
       }
     }
     if (Object.keys(updates).length === 0) {
@@ -77,17 +143,17 @@ export async function PUT(req: Request) {
         email: updatedUser.email,
         role: updatedUser.role,
         createdAt: updatedUser.createdAt,
-        nim: updatedUser.nim,
-        fakultas: updatedUser.fakultas,
-        prodi: updatedUser.prodi,
         tempat_lahir: updatedUser.tempat_lahir,
         tanggal_lahir: updatedUser.tanggal_lahir,
         jenis_kelamin: updatedUser.jenis_kelamin,
-        phone: updatedUser.phone,
         alamat: updatedUser.alamat,
-        agama: updatedUser.agama,
-        angkatan: updatedUser.angkatan,
-        tahun_masuk: updatedUser.tahun_masuk,
+        asal_sekolah: updatedUser.asal_sekolah,
+        provinsi_sekolah: updatedUser.provinsi_sekolah,
+        jurusan: updatedUser.jurusan,
+        foto: updatedUser.foto,
+        nik: updatedUser.nik,
+        jenjang: updatedUser.jenjang,
+        registration_id: updatedUser.registration_id,
       },
     });
   } catch (e) {

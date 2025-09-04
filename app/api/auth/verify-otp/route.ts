@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
+import jwt from "jsonwebtoken";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,8 +46,34 @@ export async function POST(request: NextRequest) {
       await client.query(`UPDATE users SET is_verified = TRUE WHERE id = $1`, [
         userId,
       ]);
+
+      // Ambil data user untuk membuat token
+      const userResult = await client.query(
+        `SELECT u.*, r.name as role_name FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.id = $1`,
+        [userId]
+      );
+      const user = userResult.rows[0];
+      const roles: string[] = user?.role_id
+        ? [user.role_id]
+        : user?.role_name
+        ? [user.role_name]
+        : [];
+
+      const token = jwt.sign(
+        { userId: userId, email, roles },
+        "your-super-secret-jwt-key-for-development",
+        { expiresIn: "24h" }
+      );
+
       client.release();
-      return NextResponse.json({ message: "Verifikasi berhasil" });
+      const response = NextResponse.json({ message: "Verifikasi berhasil" });
+      response.cookies.set("token", token, {
+        httpOnly: true,
+        path: "/",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24,
+      });
+      return response;
     } catch (err) {
       client.release();
       console.error("OTP verify error:", err);

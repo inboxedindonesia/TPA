@@ -11,6 +11,8 @@ import {
   User,
   Shield,
   History,
+  Key,
+  KeyRound,
 } from "lucide-react";
 
 interface AdminHeaderProps {
@@ -21,19 +23,41 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
   const pathname = usePathname();
   const [username, setUsername] = useState("Admin");
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isOnPrem, setIsOnPrem] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Get user info from localStorage
-    const userInfo = localStorage.getItem("user");
-    if (userInfo) {
-      try {
-        const user = JSON.parse(userInfo);
-        setUsername(user.name || "Admin");
-      } catch (error) {
-        console.error("Error parsing user info:", error);
-        setUsername("Admin");
+    if (typeof window !== "undefined") {
+      const userInfo = localStorage.getItem("user");
+      let userRoles = [];
+      let detectedAdmin = false;
+      if (userInfo) {
+        try {
+          const user = JSON.parse(userInfo);
+          setUsername(user.name || "Admin");
+          // Deteksi admin dari berbagai kemungkinan struktur user object
+          if (Array.isArray(user.roles)) {
+            userRoles = user.roles;
+            detectedAdmin = userRoles.includes("role-admin");
+          } else if (user.role_id) {
+            userRoles = [user.role_id];
+            detectedAdmin = user.role_id === "role-admin";
+          } else if (user.role) {
+            userRoles = [user.role];
+            detectedAdmin = user.role === "role-admin";
+          } else {
+            userRoles = [];
+            detectedAdmin = false;
+          }
+        } catch (error) {
+          console.error("Error parsing user info:", error);
+          setUsername("Admin");
+        }
       }
+      setIsAdmin(detectedAdmin);
+      setIsOnPrem(process.env.NEXT_PUBLIC_IS_ONPREM === "true");
     }
   }, []);
 
@@ -74,6 +98,8 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
   const isActive = (path: string) => {
     return pathname === path;
   };
+
+  // ...existing code...
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -161,6 +187,24 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
                     >
                       <History className="w-4 h-4 mr-2" />
                       Log Pengguna
+                    </Link>
+                    {isAdmin && !isOnPrem && (
+                      <Link
+                        href="/admin/generate-license"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsUserDropdownOpen(false)}
+                      >
+                        <KeyRound className="w-4 h-4 mr-2" />
+                        Generate License Key
+                      </Link>
+                    )}
+                    <Link
+                      href="/admin/license"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsUserDropdownOpen(false)}
+                    >
+                      <Key className="w-4 h-4 mr-2" />
+                      Manajemen Lisensi
                     </Link>
                     <div className="border-t border-gray-100">
                       <button

@@ -76,8 +76,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, duration, creatorId, maxAttempts, sections } =
-      body;
+    const {
+      name,
+      description,
+      duration,
+      creatorId,
+      maxAttempts,
+      tabLeaveLimit,
+      sections,
+    } = body;
 
     // Validasi input
     if (!name || !duration || !creatorId) {
@@ -98,8 +105,8 @@ export async function POST(request: NextRequest) {
       // Pastikan kolom maxAttempts sudah ada di tabel tests
       const insertQuery = `
         INSERT INTO tests (
-          id, name, description, duration, "creatorId", "isActive", "maxAttempts"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          id, name, description, duration, "creatorId", "isActive", "maxAttempts", "tabLeaveLimit"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `;
 
       const insertParams = [
@@ -110,6 +117,7 @@ export async function POST(request: NextRequest) {
         creatorId,
         true,
         typeof maxAttempts === "number" ? maxAttempts : 1,
+        typeof tabLeaveLimit === "number" ? tabLeaveLimit : 3,
       ];
 
       await client.query(insertQuery, insertParams);
@@ -160,6 +168,7 @@ export async function POST(request: NextRequest) {
           name: newTest.creatorName,
           email: newTest.creatorEmail,
         };
+        newTest.tabLeaveLimit = newTest.tabLeaveLimit;
       }
 
       // Get user info from request

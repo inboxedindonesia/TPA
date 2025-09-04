@@ -8,17 +8,19 @@ export interface UserInfo {
   userName: string;
   userRole: string;
   userEmail: string;
-  nim?: string;
-  fakultas?: string;
-  prodi?: string;
+  createdAt?: string;
   tempat_lahir?: string;
   tanggal_lahir?: string;
   jenis_kelamin?: string;
-  phone?: string;
   alamat?: string;
-  agama?: string;
-  angkatan?: string;
-  tahun_masuk?: string;
+  asal_sekolah?: string;
+  provinsi_sekolah?: string;
+  jurusan?: string;
+  foto?: string;
+  nik?: string;
+  jenjang?: string;
+  registration_id?: string;
+  is_verified?: boolean;
 }
 
 export async function getUserFromRequest(
@@ -97,7 +99,9 @@ export async function getUserFromDatabase(
 
     const query = `
       SELECT u.id, u.name, u.email, r.name as role_name,
-        u.nim, u.fakultas, u.prodi, u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin, u.phone, u.alamat, u.agama, u.angkatan, u.tahun_masuk
+  u."createdAt",
+  u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin, u.alamat,
+    u.asal_sekolah, u.provinsi_sekolah, u.jurusan, u.foto, u.nik, u.jenjang, u.registration_id, u.is_verified
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1
@@ -117,17 +121,19 @@ export async function getUserFromDatabase(
       userName: user.name,
       userRole: user.role_name || "USER",
       userEmail: user.email,
-      nim: user.nim,
-      fakultas: user.fakultas,
-      prodi: user.prodi,
+      createdAt: user.createdAt,
       tempat_lahir: user.tempat_lahir,
       tanggal_lahir: user.tanggal_lahir,
       jenis_kelamin: user.jenis_kelamin,
-      phone: user.phone,
       alamat: user.alamat,
-      agama: user.agama,
-      angkatan: user.angkatan,
-      tahun_masuk: user.tahun_masuk,
+      asal_sekolah: user.asal_sekolah,
+      provinsi_sekolah: user.provinsi_sekolah,
+      jurusan: user.jurusan,
+      foto: user.foto,
+      nik: user.nik,
+      jenjang: user.jenjang,
+      registration_id: user.registration_id,
+      is_verified: user.is_verified,
     };
   } catch (error) {
     console.error("Error getting user from database:", error);

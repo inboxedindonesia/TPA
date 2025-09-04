@@ -12,6 +12,7 @@ interface PesertaHeaderProps {
 const PesertaHeader: React.FC<PesertaHeaderProps> = ({ handleLogout }) => {
   const [username, setUsername] = useState<string>("Peserta");
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
@@ -127,7 +128,7 @@ const PesertaHeader: React.FC<PesertaHeaderProps> = ({ handleLogout }) => {
                       <button
                         onClick={() => {
                           setIsUserDropdownOpen(false);
-                          handleLogout();
+                          setShowLogoutModal(true);
                         }}
                         className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                       >
@@ -142,6 +143,42 @@ const PesertaHeader: React.FC<PesertaHeaderProps> = ({ handleLogout }) => {
           </div>
         </div>
       </div>
+      {/* Logout Confirm Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowLogoutModal(false)}
+          />
+          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Konfirmasi Keluar
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Apakah Anda yakin ingin keluar?
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => {
+                    setShowLogoutModal(false);
+                    handleLogout();
+                  }}
+                  className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+                >
+                  Keluar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

@@ -43,9 +43,23 @@ export default function LoginPage() {
         return;
       }
 
-      // Simpan token ke localStorage
+      // Simpan token dan user awal
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Segera refresh user dari API profil (normalized keys)
+      try {
+        const profRes = await fetch("/api/auth/profile", {
+          headers: { Authorization: `Bearer ${data.token}` },
+          credentials: "include",
+        });
+        if (profRes.ok) {
+          const prof = await profRes.json();
+          if (prof && prof.user) {
+            localStorage.setItem("user", JSON.stringify(prof.user));
+          }
+        }
+      } catch {}
 
       // Redirect berdasarkan role
       if (data.user.role_name === "Administrator") {

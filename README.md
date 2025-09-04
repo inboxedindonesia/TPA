@@ -1,3 +1,13 @@
+## Pengaturan Mode On-Premise
+
+Untuk mengaktifkan atau menonaktifkan mode on-premise, ubah nilai variabel berikut di file `.env`:
+
+```
+NEXT_PUBLIC_IS_ONPREM=false
+```
+
+Jangan ubah nilai ini di kode. Semua pengecekan mode on-premise hanya mengambil dari environment variable.
+
 # TPA Universitas - Platform Tes Potensi Akademik
 
 Platform Tes Potensi Akademik untuk Masuk Universitas dengan fitur multiple answers dan manajemen soal yang lengkap.

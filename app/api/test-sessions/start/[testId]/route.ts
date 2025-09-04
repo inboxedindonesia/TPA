@@ -4,9 +4,9 @@ import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
 import { randomUUID } from "crypto";
 
 // POST /api/test-sessions/start/[testId]
-export async function POST(request: Request, { params }: any) {
+export async function POST(request: Request, context: any) {
   try {
-    const testId = params["testId"];
+    const { testId } = await context.params;
     // Ambil user dari token atau fallback
     const user = (await getUserFromRequest(request)) || getFallbackUserInfo();
 
@@ -71,11 +71,10 @@ export async function POST(request: Request, { params }: any) {
         }
       }
       // Buat sesi baru
-      const newNow = new Date();
       const sessionId = randomUUID();
       const res = await client.query(
-        `INSERT INTO test_sessions (id, "userId", "testId", status, "startTime") VALUES ($1, $2, $3, 'ONGOING', $4) RETURNING *`,
-        [sessionId, user.userId, testId, newNow]
+        `INSERT INTO test_sessions (id, "userId", "testId", status, "startTime") VALUES ($1, $2, $3, 'ONGOING', (NOW() AT TIME ZONE 'Asia/Jakarta')) RETURNING *`,
+        [sessionId, user.userId, testId]
       );
       return NextResponse.json({ session: res.rows[0] });
     } finally {
