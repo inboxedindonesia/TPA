@@ -407,7 +407,6 @@ export default function TakeTestPage() {
         const questionsData = await questionsResponse.json();
         // Debug log untuk response API
         if (typeof window !== "undefined") {
-          // eslint-disable-next-line no-console
           console.log("[DEBUG] questionsData:", questionsData);
         }
         // Cek beberapa kemungkinan struktur response

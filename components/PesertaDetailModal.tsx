@@ -15,11 +15,11 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
   peserta,
   testResults,
 }) => {
-  if (!isOpen) return null;
-  
   const modalRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
+    if (!isOpen) return;
+    
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
         onClose();
@@ -30,7 +30,9 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [onClose]);
+  }, [onClose, isOpen]);
+
+  if (!isOpen) return null;
   
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";

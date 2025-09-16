@@ -416,15 +416,13 @@ export default function DetailHasilTesPesertaPage() {
 
     // Rekomendasi berdasarkan kategori terlemah
     if (categoryBreakdown) {
-      const categories = Object.entries(categoryBreakdown);
+      const categories = Object.entries(categoryBreakdown) as [string, CategoryBreakdown][];
       const weakestCategory = categories.reduce((prev, current) =>
-        (prev[1] as any).percentage < (current[1] as any).percentage
-          ? prev
-          : current
+        prev[1].percentage < current[1].percentage ? prev : current
       );
 
       const categoryName = getCategoryName(weakestCategory[0]);
-      const categoryPercentage = (weakestCategory[1] as any).percentage;
+      const categoryPercentage = weakestCategory[1].percentage;
 
       if (categoryPercentage < 60) {
         recommendations.push(
@@ -957,12 +955,12 @@ export default function DetailHasilTesPesertaPage() {
                                 const categories = Object.entries(
                                   categoryBreakdown
                                 ).filter(
-                                  ([name, data]) => (data as any).maxScore > 0
-                                );
+                                  ([name, data]) => data.maxScore > 0
+                                ) as [string, CategoryBreakdown][];
                                 const categoryPercentages = categories.map(
                                   ([name, data]) => ({
                                     name: getCategoryName(name),
-                                    percentage: (data as any).percentage,
+                                    percentage: data.percentage,
                                   })
                                 );
 
@@ -1087,15 +1085,15 @@ export default function DetailHasilTesPesertaPage() {
                                 const categories = Object.entries(
                                   categoryBreakdown
                                 ).filter(
-                                  ([name, data]) => (data as any).maxScore > 0
-                                );
+                                  ([name, data]) => data.maxScore > 0
+                                ) as [string, CategoryBreakdown][];
                                 const categoryAnalysis = categories
                                   .map(([name, data]) => ({
                                     name: getCategoryName(name),
                                     key: name,
-                                    percentage: (data as any).percentage,
-                                    score: (data as any).score,
-                                    maxScore: (data as any).maxScore,
+                                    percentage: data.percentage,
+                                    score: data.score,
+                                    maxScore: data.maxScore,
                                   }))
                                   .sort((a, b) => a.percentage - b.percentage); // Urutkan dari terlemah
 
