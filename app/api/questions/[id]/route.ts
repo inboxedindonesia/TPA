@@ -5,7 +5,8 @@ import path from "path";
 
 export async function GET(request: Request, { params }: any) {
   try {
-    const questionId = params["id"];
+    const resolvedParams = await params;
+    const questionId = resolvedParams["id"];
 
     if (!questionId) {
       return NextResponse.json(
@@ -45,7 +46,8 @@ export async function GET(request: Request, { params }: any) {
 
 export async function PUT(request: Request, { params }: any) {
   try {
-    const questionId = params["id"];
+    const resolvedParams = await params;
+    const questionId = resolvedParams["id"];
     const formData = await request.formData();
 
     if (!questionId) {
@@ -82,6 +84,26 @@ export async function PUT(request: Request, { params }: any) {
       const allowMultipleAnswers =
         formData.get("allowMultipleAnswers") === "true";
 
+      // Debug: log received form data
+      console.log("API received form data:", {
+        kategori,
+        subkategori,
+        pertanyaan,
+        tipeSoal,
+        tipeJawaban,
+        levelKesulitan,
+        deskripsi,
+        allowMultipleAnswers
+      });
+
+      // Validate required fields
+      if (!kategori || !subkategori || !pertanyaan || !tipeSoal || !tipeJawaban || !levelKesulitan) {
+        return NextResponse.json(
+          { error: "Missing required fields: kategori, subkategori, pertanyaan, tipeSoal, tipeJawaban, levelKesulitan" },
+          { status: 400 }
+        );
+      }
+
       // Handle file uploads
       const gambar = formData.get("gambar") as File | null;
       let gambarPath = null;
@@ -103,12 +125,26 @@ export async function PUT(request: Request, { params }: any) {
       let options = null;
       const gambarJawabanPaths = [];
 
+      console.log("Processing answers for tipeSoal:", tipeSoal, "tipeJawaban:", tipeJawaban);
+
       if (tipeSoal === "PILIHAN_GANDA") {
         if (tipeJawaban === "TEXT") {
-          const pilihanJawaban = JSON.parse(
-            formData.get("pilihanJawaban") as string
-          );
-          options = pilihanJawaban;
+          const pilihanJawabanStr = formData.get("pilihanJawaban") as string;
+          console.log("Raw pilihanJawaban string:", pilihanJawabanStr);
+          
+          if (pilihanJawabanStr) {
+            try {
+              const pilihanJawaban = JSON.parse(pilihanJawabanStr);
+              options = pilihanJawaban;
+              console.log("Parsed pilihanJawaban:", options);
+            } catch (e) {
+              console.error("Error parsing pilihanJawaban:", e);
+              return NextResponse.json(
+                { error: "Invalid pilihanJawaban format" },
+                { status: 400 }
+              );
+            }
+          }
         } else {
           // Handle image answers - check for existing images
           const existingGambarJawaban = formData.get(
@@ -116,9 +152,12 @@ export async function PUT(request: Request, { params }: any) {
           ) as string;
           let existingImages = [];
 
+          console.log("Raw existingGambarJawaban:", existingGambarJawaban);
+
           if (existingGambarJawaban) {
             try {
               existingImages = JSON.parse(existingGambarJawaban);
+              console.log("Parsed existingImages:", existingImages);
             } catch (e) {
               console.error("Error parsing existing images:", e);
               existingImages = [];
@@ -150,11 +189,32 @@ export async function PUT(request: Request, { params }: any) {
             }
           }
           options = gambarJawabanPaths;
+          console.log("Final gambarJawabanPaths:", gambarJawabanPaths);
         }
       }
 
       // Handle correct answer
-      const jawabanBenar = JSON.parse(formData.get("jawabanBenar") as string);
+      const jawabanBenarStr = formData.get("jawabanBenar") as string;
+      console.log("Raw jawabanBenar string:", jawabanBenarStr);
+      
+      let jawabanBenar;
+      if (jawabanBenarStr) {
+        try {
+          jawabanBenar = JSON.parse(jawabanBenarStr);
+          console.log("Parsed jawabanBenar:", jawabanBenar);
+        } catch (e) {
+          console.error("Error parsing jawabanBenar:", e);
+          return NextResponse.json(
+            { error: "Invalid jawabanBenar format" },
+            { status: 400 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: "jawabanBenar is required" },
+          { status: 400 }
+        );
+      }
 
       // Update the question
       const updateQuery = `
@@ -164,7 +224,7 @@ export async function PUT(request: Request, { params }: any) {
           kategori = $2,
           subkategori = $3,
           options = $4,
-          correctAnswer = $5,
+          "correctAnswer" = $5,
           tipeSoal = $6,
           tipeJawaban = $7,
           levelKesulitan = $8,
@@ -211,7 +271,8 @@ export async function PUT(request: Request, { params }: any) {
 
 export async function DELETE(request: Request, { params }: any) {
   try {
-    const questionId = params["id"];
+    const resolvedParams = await params;
+    const questionId = resolvedParams["id"];
 
     if (!questionId) {
       return NextResponse.json(

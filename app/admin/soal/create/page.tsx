@@ -171,19 +171,14 @@ export default function CreateQuestionPage() {
     }));
   };
 
-  const handleAnswerSelection = (answer: string, isSelected: boolean) => {
-    // For text answers, don't allow selection if answer is empty
+  const handleAnswerSelection = (answerIndex: number, isSelected: boolean) => {
+    // Get the actual answer value based on answer type
+    let actualAnswer = "";
     if (formData.tipeJawaban === "TEXT") {
-      const index = parseInt(answer);
-      if (!formData.pilihanJawaban[index] || formData.pilihanJawaban[index].trim() === "") {
-        return;
-      }
-    } else {
-      // For image answers, check if the image exists
-      const index = parseInt(answer);
-      if (!formData.gambarJawaban[index]) {
-        return; // Don't allow selection if no image uploaded
-      }
+      actualAnswer = formData.pilihanJawaban[answerIndex] || "";
+    } else if (formData.tipeJawaban === "IMAGE") {
+      // For images, we'll use the image path or a placeholder
+      actualAnswer = formData.gambarJawaban[answerIndex] ? `image_${answerIndex}` : "";
     }
 
     if (formData.allowMultipleAnswers) {
@@ -191,14 +186,14 @@ export default function CreateQuestionPage() {
       setFormData((prev) => ({
         ...prev,
         jawabanBenar: isSelected
-          ? prev.jawabanBenar.filter((ans) => ans !== answer)
-          : [...prev.jawabanBenar, answer],
+          ? prev.jawabanBenar.filter((ans) => ans !== actualAnswer)
+          : [...prev.jawabanBenar, actualAnswer],
       }));
     } else {
       // Single answer mode - replace selection
       setFormData((prev) => ({
         ...prev,
-        jawabanBenar: isSelected ? [] : [answer],
+        jawabanBenar: isSelected ? [] : [actualAnswer],
       }));
     }
   };
@@ -273,8 +268,8 @@ export default function CreateQuestionPage() {
       // Check if all selected answers are valid
       const validAnswerOptions =
         formData.tipeJawaban === "TEXT"
-          ? formData.pilihanJawaban.map((_, index) => index.toString())
-          : formData.gambarJawaban.map((_, index) => index.toString()).filter((_, index) => formData.gambarJawaban[index] !== null);
+          ? formData.pilihanJawaban.filter((option) => option.trim() !== "")
+          : formData.gambarJawaban.map((_, index) => `image_${index}`).filter((_, index) => formData.gambarJawaban[index] !== null);
 
       const invalidAnswers = formData.jawabanBenar.filter(
         (answer) => !validAnswerOptions.includes(answer)
@@ -698,15 +693,14 @@ export default function CreateQuestionPage() {
                           type="checkbox"
                           name={`jawabanBenar_${index}`}
                           value={index.toString()}
-                          checked={formData.jawabanBenar.includes(index.toString())}
-                          disabled={!option || option.trim() === ""} // Disable if empty
+                          checked={formData.jawabanBenar.includes(formData.pilihanJawaban[index])}
                           onChange={() =>
                             handleAnswerSelection(
-                              index.toString(),
-                              formData.jawabanBenar.includes(index.toString())
+                              index,
+                              formData.jawabanBenar.includes(formData.pilihanJawaban[index])
                             )
                           }
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 disabled:opacity-50"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                         />
                         <input
                           type="text"
@@ -719,6 +713,11 @@ export default function CreateQuestionPage() {
                           )}`}
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
+                        {formData.jawabanBenar.includes(formData.pilihanJawaban[index]) && option.trim() !== "" && (
+                          <span className="text-sm text-green-600 font-medium">
+                            ✓ Benar
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -745,15 +744,14 @@ export default function CreateQuestionPage() {
                           type="checkbox"
                           name={`jawabanBenar_${index}`}
                           value={index.toString()}
-                          checked={formData.jawabanBenar.includes(index.toString())}
-                          disabled={!image} // Disable if no image uploaded
+                          checked={formData.jawabanBenar.includes(`image_${index}`)}
                           onChange={() =>
                             handleAnswerSelection(
-                              index.toString(),
-                              formData.jawabanBenar.includes(index.toString())
+                              index,
+                              formData.jawabanBenar.includes(`image_${index}`)
                             )
                           }
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 disabled:opacity-50"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                         />
                         <input
                           type="file"

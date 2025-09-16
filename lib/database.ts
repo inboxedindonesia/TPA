@@ -4,9 +4,14 @@ import bcrypt from "bcryptjs";
 // Supabase/PostgreSQL configuration using DATABASE_URL
 const dbConfig = {
   connectionString: process.env.DATABASE_URL,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  max: 10, // Reduced max connections for better stability
+  idleTimeoutMillis: 60000, // Increased idle timeout to 60 seconds
+  connectionTimeoutMillis: 10000, // Increased connection timeout to 10 seconds
+  acquireTimeoutMillis: 10000, // Added acquire timeout
+  createTimeoutMillis: 10000, // Added create timeout
+  destroyTimeoutMillis: 5000, // Added destroy timeout
+  reapIntervalMillis: 1000, // Added reap interval
+  createRetryIntervalMillis: 200, // Added retry interval
   ssl:
     process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: false }
@@ -16,16 +21,34 @@ const dbConfig = {
 // Create connection pool
 const pool = new Pool(dbConfig);
 
-// Test connection
+// Test connection with better error handling
 export async function testConnection() {
+  let client;
   try {
-    const client = await pool.connect();
-    console.log("✅ Database connected successfully!");
-    client.release();
+    console.log("🔄 Testing database connection...");
+    client = await pool.connect();
+    
+    // Test with a simple query
+    const result = await client.query('SELECT NOW() as current_time');
+    console.log("✅ Database connected successfully!", result.rows[0]);
+    
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Database connection failed:", error);
+    
+    // Log more specific error information
+    if (error.code) {
+      console.error("Error code:", error.code);
+    }
+    if (error.message) {
+      console.error("Error message:", error.message);
+    }
+    
     return false;
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 }
 

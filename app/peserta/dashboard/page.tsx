@@ -107,6 +107,18 @@ export default function PesertaDashboard() {
     }
   };
 
+  // Fungsi untuk mendeteksi apakah tes memiliki periode unlimited
+  const isUnlimitedPeriod = (availableUntil?: string) => {
+    if (!availableUntil) return false;
+    try {
+      const endDate = new Date(availableUntil);
+      const unlimitedDate = new Date('2099-12-31');
+      return endDate.getFullYear() >= unlimitedDate.getFullYear();
+    } catch {
+      return false;
+    }
+  };
+
   const handleLogout = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -316,17 +328,21 @@ export default function PesertaDashboard() {
                         className="bg-gray-50 rounded-xl p-7 min-h-[220px]"
                       >
                         <div className="flex items-start justify-between mb-4">
-                          <div>
+                          <div className="min-h-[4rem]">
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">
                               {test.name}
                             </h3>
-                            <p className="text-gray-600 text-sm mb-4">
+                            <p className="text-gray-600 text-sm mb-2">
                               {test.description}
                             </p>
-                            <p className="text-gray-600 text-xs">
-                              Periode: {formatWIBDateTime(test.availableFrom)} —{" "}
-                              {formatWIBDateTime(test.availableUntil)} WIB
-                            </p>
+                            {!isUnlimitedPeriod(test.availableUntil) ? (
+                              <p className="text-gray-600 text-xs">
+                                Periode: {formatWIBDateTime(test.availableFrom)} —{" "}
+                                {formatWIBDateTime(test.availableUntil)} WIB
+                              </p>
+                            ) : (
+                              <div className="h-4"></div>
+                            )}
                           </div>
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             <Play className="w-3 h-3 mr-1" />

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import PesertaHeader from "../../../components/PesertaHeader";
+import { generateTestResultPDF } from "@/lib/pdfGenerator";
 
 interface Answer {
   id: string;
@@ -416,7 +417,10 @@ export default function DetailHasilTesPesertaPage() {
 
     // Rekomendasi berdasarkan kategori terlemah
     if (categoryBreakdown) {
-      const categories = Object.entries(categoryBreakdown) as [string, CategoryBreakdown][];
+      const categories = Object.entries(categoryBreakdown) as [
+        string,
+        CategoryBreakdown
+      ][];
       const weakestCategory = categories.reduce((prev, current) =>
         prev[1].percentage < current[1].percentage ? prev : current
       );
@@ -496,12 +500,29 @@ export default function DetailHasilTesPesertaPage() {
             >
               🔄 Refresh Halaman
             </button>
-            <button
-              onClick={() => router.back()}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              ← Kembali
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => {
+                  if (session) {
+                    const pdf = generateTestResultPDF(session);
+                    pdf.save(
+                      `Hasil_Tes_${session.user_name || "Peserta"}_${
+                        new Date().toISOString().split("T")[0]
+                      }.pdf`
+                    );
+                  }
+                }}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+              >
+                📄 Download PDF
+              </button>
+              <button
+                onClick={() => router.back()}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                ← Kembali
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -532,12 +553,29 @@ export default function DetailHasilTesPesertaPage() {
             >
               🔄 Refresh Halaman
             </button>
-            <button
-              onClick={() => router.back()}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              ← Kembali
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => {
+                  if (session) {
+                    const pdf = generateTestResultPDF(session);
+                    pdf.save(
+                      `Hasil_Tes_${
+                        (session as TestSession).user_name || "Peserta"
+                      }_${new Date().toISOString().split("T")[0]}.pdf`
+                    );
+                  }
+                }}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+              >
+                📄 Download PDF
+              </button>
+              <button
+                onClick={() => router.back()}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                ← Kembali
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -565,12 +603,51 @@ export default function DetailHasilTesPesertaPage() {
                 Detail lengkap hasil tes Anda
               </p>
             </div>
-            <button
-              onClick={() => router.back()}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              ← Kembali
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => {
+                  if (session) {
+                    const pdf = generateTestResultPDF(session);
+                    const blob = pdf.output("blob");
+                    const fileName = `Hasil_Tes_${
+                      session.user_name || "Peserta"
+                    }_${new Date().toISOString().split("T")[0]}.pdf`;
+
+                    // Create URL for the PDF blob
+                    const pdfUrl = URL.createObjectURL(blob);
+
+                    // Open PDF in new window/tab
+                    const previewWindow = window.open(pdfUrl, "_blank");
+
+                    if (previewWindow) {
+                      // Set window title
+                      previewWindow.document.title = fileName;
+
+                      // Clean up URL after some time
+                      setTimeout(() => {
+                        URL.revokeObjectURL(pdfUrl);
+                      }, 60000); // Clean up after 1 minute
+                    } else {
+                      // If popup is blocked, show alert and offer direct download
+                      alert(
+                        "Popup diblokir oleh browser. PDF akan diunduh langsung."
+                      );
+                      pdf.save(fileName);
+                      URL.revokeObjectURL(pdfUrl);
+                    }
+                  }
+                }}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Unduh PDF
+              </button>
+              <button
+                onClick={() => router.back()}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                ← Kembali
+              </button>
+            </div>
           </div>
         </div>
 
@@ -808,7 +885,7 @@ export default function DetailHasilTesPesertaPage() {
                       <h3 className="text-lg font-medium text-gray-900 mb-6">
                         Komponen TPA
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                         {Object.entries(session.categoryBreakdown)
                           .filter(([category, data]) => data.maxScore > 0)
                           .map(([category, data]) => (

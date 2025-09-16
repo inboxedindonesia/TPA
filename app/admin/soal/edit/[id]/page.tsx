@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { use } from "react";
+import AdminHeader from "@/app/components/AdminHeader";
 import FeedbackModal from "@/app/components/FeedbackModal";
 
 export default function EditQuestionPage({
@@ -147,61 +148,46 @@ export default function EditQuestionPage({
           // Parse pilihanJawaban properly
           let pilihanJawaban = ["", "", "", ""];
           let gambarJawaban = ["", "", "", ""];
+          let existingGambarJawaban = ["", "", "", ""];
 
+          // Parse options field
           if (question.options) {
-            if (typeof question.options === "string") {
-              try {
-                const parsedOptions = JSON.parse(question.options);
-                if (question.tipeJawaban === "IMAGE") {
-                  gambarJawaban = parsedOptions;
+            try {
+              const parsedOptions = typeof question.options === "string" 
+                ? JSON.parse(question.options) 
+                : question.options;
+              
+              if (Array.isArray(parsedOptions)) {
+                if (question.tipejawaban === "IMAGE") {
+                  existingGambarJawaban = parsedOptions;
                 } else {
                   pilihanJawaban = parsedOptions;
                 }
-              } catch (e) {
-                console.error("Error parsing options:", e);
-                pilihanJawaban = ["", "", "", ""];
-                gambarJawaban = ["", "", "", ""];
               }
-            } else if (Array.isArray(question.options)) {
-              if (question.tipeJawaban === "IMAGE") {
-                gambarJawaban = question.options;
-              } else {
-                pilihanJawaban = question.options;
-              }
+            } catch (e) {
+              console.error("Error parsing options:", e);
             }
           }
 
-          // Parse gambarJawaban field if it exists
+          // Parse gambarjawaban field if it exists (prioritize this for IMAGE type)
           if (question.gambarjawaban) {
             try {
-              const parsedGambarJawaban = JSON.parse(question.gambarjawaban);
+              const parsedGambarJawaban = typeof question.gambarjawaban === "string"
+                ? JSON.parse(question.gambarjawaban)
+                : question.gambarjawaban;
+              
               if (Array.isArray(parsedGambarJawaban)) {
-                gambarJawaban = parsedGambarJawaban;
-                console.log("Parsed gambarjawaban:", gambarJawaban);
+                existingGambarJawaban = parsedGambarJawaban;
+                console.log("Parsed gambarjawaban:", existingGambarJawaban);
               }
             } catch (e) {
               console.error("Error parsing gambarjawaban:", e);
             }
           }
 
-          // If tipeJawaban is IMAGE, prioritize gambarjawaban over options
-          if (question.tipejawaban === "IMAGE" && question.gambarjawaban) {
-            try {
-              const parsedGambarJawaban = JSON.parse(question.gambarjawaban);
-              if (Array.isArray(parsedGambarJawaban)) {
-                gambarJawaban = parsedGambarJawaban;
-                console.log(
-                  "Using gambarjawaban for IMAGE type:",
-                  gambarJawaban
-                );
-              }
-            } catch (e) {
-              console.error("Error parsing gambarjawaban for IMAGE type:", e);
-            }
-          }
-
-          // Debug: log final gambarJawaban array
-          console.log("Final gambarJawaban array:", gambarJawaban);
+          // Debug: log final arrays
+          console.log("Final pilihanJawaban array:", pilihanJawaban);
+          console.log("Final existingGambarJawaban array:", existingGambarJawaban);
 
           setFormData({
             kategori: question.kategori || "",
@@ -223,7 +209,7 @@ export default function EditQuestionPage({
           // Simpan gambar yang sudah ada
           setExistingImages({
             gambar: question.gambar || "",
-            gambarJawaban: gambarJawaban,
+            gambarJawaban: existingGambarJawaban,
           });
         } else {
           setError("Gagal memuat data soal");
@@ -425,8 +411,8 @@ export default function EditQuestionPage({
       // Check if all selected answers are valid
       const validAnswerOptions =
         formData.tipeJawaban === "TEXT"
-          ? formData.pilihanJawaban
-          : formData.gambarJawaban.map((_, index) => `gambar_${index}`);
+          ? formData.pilihanJawaban.filter((option) => option.trim() !== "")
+          : formData.gambarJawaban.map((_, index) => `image_${index}`).filter((_, index) => formData.gambarJawaban[index] !== null);
 
       const invalidAnswers = formData.jawabanBenar.filter(
         (answer) => !validAnswerOptions.includes(answer)
@@ -452,7 +438,7 @@ export default function EditQuestionPage({
     }
 
     try {
-      const token = "test-token"; // In production, get from auth context
+      const token = localStorage.getItem("token") || "test-token";
       const submitData = new FormData();
 
       submitData.append("kategori", formData.kategori);
@@ -466,6 +452,20 @@ export default function EditQuestionPage({
         "allowMultipleAnswers",
         formData.allowMultipleAnswers.toString()
       );
+
+      // Debug: log form data being sent
+      console.log("Form data being sent:", {
+        kategori: formData.kategori,
+        subkategori: formData.subkategori,
+        pertanyaan: formData.pertanyaan,
+        tipeSoal: formData.tipeSoal,
+        tipeJawaban: formData.tipeJawaban,
+        levelKesulitan: formData.levelKesulitan,
+        deskripsi: formData.deskripsi,
+        jawabanBenar: formData.jawabanBenar,
+        pilihanJawaban: formData.pilihanJawaban,
+        existingImages: existingImages
+      });
 
       if (formData.tipeSoal === "PILIHAN_GANDA") {
         if (formData.tipeJawaban === "TEXT") {
@@ -524,6 +524,9 @@ export default function EditQuestionPage({
         body: submitData,
       });
 
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+
       if (response.ok) {
         // Log activity for updating question
         try {
@@ -546,20 +549,22 @@ export default function EditQuestionPage({
         );
         router.push("/admin/dashboard");
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: "Gagal memperbarui soal" }));
+        console.error("API Error Response:", errorData);
         setError(errorData.error || "Gagal memperbarui soal");
         showFeedback(
           "error",
           "Gagal memperbarui soal",
-          errorData.error || "Gagal memperbarui soal"
+          errorData.error || "Terjadi kesalahan saat memperbarui soal"
         );
       }
     } catch (error) {
+      console.error("Submit Error:", error);
       setError("Terjadi kesalahan server");
       showFeedback(
         "error",
         "Gagal memperbarui soal",
-        "Terjadi kesalahan server"
+        "Terjadi kesalahan saat memperbarui soal"
       );
     } finally {
       setLoading(false);
@@ -580,28 +585,21 @@ export default function EditQuestionPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Edit Soal TPA
-              </h1>
-              <p className="mt-2 text-gray-600">Perbarui soal yang sudah ada</p>
-            </div>
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              ← Kembali
-            </button>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="min-h-screen bg-gray-50 pb-8">
+      <AdminHeader />
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Form Section */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-xl p-6">
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  Edit Soal TPA
+                </h1>
+                <p className="text-gray-600">
+                  Perbarui soal yang sudah ada di bank soal TPA Universitas
+                </p>
+              </div>
           <form
             onSubmit={handleSubmit}
             className="space-y-6"
@@ -883,18 +881,34 @@ export default function EditQuestionPage({
                           type="checkbox"
                           name={`jawabanBenar_${index}`}
                           value={option}
-                          checked={(Array.isArray(formData.jawabanBenar)
-                            ? formData.jawabanBenar
-                            : []
-                          ).includes(option)}
+                          checked={(() => {
+                            const jawabanBenar = Array.isArray(formData.jawabanBenar) ? formData.jawabanBenar : [];
+                            // Handle double-encoded JSON format
+                            const parsedAnswers = jawabanBenar.flatMap(answer => {
+                              try {
+                                // Try to parse if it's a JSON string
+                                return typeof answer === 'string' && answer.startsWith('[') ? JSON.parse(answer) : [answer];
+                              } catch {
+                                return [answer];
+                              }
+                            });
+                            return parsedAnswers.includes(option);
+                          })()}
                           disabled={!option || option.trim() === ""} // Disable if empty
                           onChange={() =>
                             handleAnswerSelection(
                               option,
-                              (Array.isArray(formData.jawabanBenar)
-                                ? formData.jawabanBenar
-                                : []
-                              ).includes(option)
+                              (() => {
+                                const jawabanBenar = Array.isArray(formData.jawabanBenar) ? formData.jawabanBenar : [];
+                                const parsedAnswers = jawabanBenar.flatMap(answer => {
+                                  try {
+                                    return typeof answer === 'string' && answer.startsWith('[') ? JSON.parse(answer) : [answer];
+                                  } catch {
+                                    return [answer];
+                                  }
+                                });
+                                return parsedAnswers.includes(option);
+                              })()
                             )
                           }
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 disabled:opacity-50"
@@ -937,10 +951,19 @@ export default function EditQuestionPage({
                                 <span className="text-sm text-gray-700">
                                   {option}
                                 </span>
-                                {(Array.isArray(formData.jawabanBenar)
-                                  ? formData.jawabanBenar
-                                  : []
-                                ).includes(option) && (
+                                {(() => {
+                                  const jawabanBenar = Array.isArray(formData.jawabanBenar) ? formData.jawabanBenar : [];
+                                  // Handle double-encoded JSON format
+                                  const parsedAnswers = jawabanBenar.flatMap(answer => {
+                                    try {
+                                      // Try to parse if it's a JSON string
+                                      return typeof answer === 'string' && answer.startsWith('[') ? JSON.parse(answer) : [answer];
+                                    } catch {
+                                      return [answer];
+                                    }
+                                  });
+                                  return parsedAnswers.includes(option);
+                                })() && (
                                   <span className="text-green-600 text-sm">
                                     ✓ Benar
                                   </span>
@@ -977,21 +1000,21 @@ export default function EditQuestionPage({
                         <input
                           type="checkbox"
                           name={`jawabanBenar_${index}`}
-                          value={`gambar_${index}`}
+                          value={`image_${index}`}
                           checked={(Array.isArray(formData.jawabanBenar)
                             ? formData.jawabanBenar
                             : []
-                          ).includes(`gambar_${index}`)}
+                          ).includes(`image_${index}`)}
                           disabled={
                             !image && !existingImages.gambarJawaban[index]
                           } // Disable if no image uploaded or existing
                           onChange={() =>
                             handleAnswerSelection(
-                              `gambar_${index}`,
+                              `image_${index}`,
                               (Array.isArray(formData.jawabanBenar)
                                 ? formData.jawabanBenar
                                 : []
-                              ).includes(`gambar_${index}`)
+                              ).includes(`image_${index}`)
                             )
                           }
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 disabled:opacity-50"
@@ -1069,6 +1092,15 @@ export default function EditQuestionPage({
                                 <div className="text-xs text-gray-500 mt-1">
                                   Path: {imagePath}
                                 </div>
+                                {/* Checkmark untuk jawaban benar */}
+                                {(Array.isArray(formData.jawabanBenar)
+                                  ? formData.jawabanBenar
+                                  : []
+                                ).includes(index.toString()) && (
+                                  <span className="text-sm text-green-600 font-medium ml-2">
+                                    ✓ Benar
+                                  </span>
+                                )}
                               </div>
                             )
                         )}
@@ -1253,23 +1285,52 @@ export default function EditQuestionPage({
             </div>
 
             {/* Submit */}
-            <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-200">
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors font-medium"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {loading ? "Menyimpan..." : "Simpan Perubahan"}
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Menyimpan...
+                  </>
+                ) : (
+                  "Simpan Perubahan"
+                )}
               </button>
             </div>
           </form>
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className="lg:col-span-1">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-blue-900 mb-2">
+                💡 Tips Edit Soal
+              </h3>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Pastikan kategori dan subkategori sesuai dengan materi soal</li>
+                <li>• Upload gambar baru jika diperlukan untuk soal kategori Tes Gambar</li>
+                <li>• Periksa kembali jawaban benar setelah mengubah pilihan</li>
+                <li>• Sesuaikan level kesulitan berdasarkan kompleksitas soal</li>
+                <li>• Gunakan multiple answers jika soal memiliki lebih dari satu jawaban benar</li>
+                <li>• Tambahkan deskripsi untuk memberikan instruksi tambahan</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
       <FeedbackModal
