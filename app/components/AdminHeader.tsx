@@ -40,13 +40,20 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
           // Deteksi admin dari berbagai kemungkinan struktur user object
           if (Array.isArray(user.roles)) {
             userRoles = user.roles;
-            detectedAdmin = userRoles.includes("role-admin");
+            detectedAdmin = userRoles.some(
+              (r: string) =>
+                typeof r === "string" && r.toLowerCase().includes("admin")
+            );
           } else if (user.role_id) {
             userRoles = [user.role_id];
-            detectedAdmin = user.role_id === "role-admin";
+            detectedAdmin =
+              typeof user.role_id === "string" &&
+              user.role_id.toLowerCase().includes("admin");
           } else if (user.role) {
             userRoles = [user.role];
-            detectedAdmin = user.role === "role-admin";
+            detectedAdmin =
+              typeof user.role === "string" &&
+              user.role.toLowerCase().includes("admin");
           } else {
             userRoles = [];
             detectedAdmin = false;

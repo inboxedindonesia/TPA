@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const isActive = searchParams.get("isActive");
+    const now = searchParams.get("now"); // optional override for testing
 
     const client = await pool.connect();
 
@@ -20,7 +21,8 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT ts.id) as "sessionCount"
         FROM tests t
         LEFT JOIN users u ON t."creatorId" = u.id
-        LEFT JOIN questions q ON t.id = q."testId"
+        LEFT JOIN test_questions tq ON t.id = tq.test_id
+        LEFT JOIN questions q ON tq.question_id = q.id
         LEFT JOIN test_sessions ts ON t.id = ts."testId"
         WHERE 1=1
       `;
@@ -31,6 +33,9 @@ export async function GET(request: NextRequest) {
         query += ` AND t."isActive" = $1`;
         params.push(isActive === "true");
       }
+
+      // Filter by availability window if requested via isActive=true implicitly for peserta
+      // We won't change default behavior here; consumers can filter themselves.
 
       query += ` GROUP BY t.id ORDER BY t."createdAt" DESC`;
 
@@ -58,6 +63,8 @@ export async function GET(request: NextRequest) {
         sessions: Array.from({ length: row.sessionCount }, (_, i) => ({
           id: `s-${i}`,
         })),
+        availableFrom: row.availableFrom,
+        availableUntil: row.availableUntil,
       }));
 
       return NextResponse.json(tests);
@@ -80,16 +87,62 @@ export async function POST(request: NextRequest) {
       name,
       description,
       duration,
-      creatorId,
       maxAttempts,
       tabLeaveLimit,
+      minimumScore,
       sections,
+      availableFrom,
+      availableUntil,
     } = body;
 
-    // Validasi input
-    if (!name || !duration || !creatorId) {
+    // Ambil user dari request (lebih aman daripada mengandalkan body)
+    const userInfo = (await getUserFromRequest(request)) || null;
+    if (!userInfo || !userInfo.userId) {
       return NextResponse.json(
-        { error: "Name, duration, dan creatorId harus diisi" },
+        { error: "Unauthorized: user tidak ditemukan" },
+        { status: 401 }
+      );
+    }
+
+    // Validasi input
+    if (!name || !duration) {
+      return NextResponse.json(
+        { error: "Name dan duration harus diisi" },
+        { status: 400 }
+      );
+    }
+
+    // Periode wajib diisi dan valid
+    if (!availableFrom || !availableUntil) {
+      return NextResponse.json(
+        { error: "Periode tes (mulai & berakhir) wajib diisi" },
+        { status: 400 }
+      );
+    }
+    const fromISO = ((): string | null => {
+      const m =
+        typeof availableFrom === "string" &&
+        availableFrom.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+      return m ? `${m[1]}T${m[2]}:00+07:00` : null;
+    })();
+    const untilISO = ((): string | null => {
+      const m =
+        typeof availableUntil === "string" &&
+        availableUntil.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+      return m ? `${m[1]}T${m[2]}:00+07:00` : null;
+    })();
+    if (!fromISO || !untilISO) {
+      return NextResponse.json(
+        { error: "Format periode tidak valid" },
+        { status: 400 }
+      );
+    }
+    if (new Date(fromISO).getTime() > new Date(untilISO).getTime()) {
+      return NextResponse.json(
+        {
+          error:
+            "Periode mulai harus sebelum atau sama dengan periode berakhir",
+        },
         { status: 400 }
       );
     }
@@ -97,6 +150,51 @@ export async function POST(request: NextRequest) {
     const client = await pool.connect();
 
     try {
+      await client.query("BEGIN");
+      // Soft-migration: ensure required schema parts exist for older DBs
+      await client.query(
+        `ALTER TABLE tests ADD COLUMN IF NOT EXISTS "maxAttempts" INTEGER DEFAULT 1`
+      );
+      await client.query(
+        `ALTER TABLE tests ADD COLUMN IF NOT EXISTS "tabLeaveLimit" INTEGER DEFAULT 3`
+      );
+      await client.query(
+        `ALTER TABLE tests ADD COLUMN IF NOT EXISTS "availableFrom" TIMESTAMP NULL`
+      );
+      await client.query(
+        `ALTER TABLE tests ADD COLUMN IF NOT EXISTS "availableUntil" TIMESTAMP NULL`
+      );
+      await client.query(
+        `ALTER TABLE tests ADD COLUMN IF NOT EXISTS "minimumScore" INTEGER DEFAULT 60`
+      );
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS sections (
+          id SERIAL PRIMARY KEY,
+          testId VARCHAR(255) NOT NULL,
+          name VARCHAR(255) NOT NULL,
+          duration INTEGER NOT NULL,
+          "order" INTEGER NOT NULL,
+          "createdAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
+          "updatedAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
+          CONSTRAINT fk_sections_test FOREIGN KEY (testId) REFERENCES tests(id) ON DELETE CASCADE
+        )
+      `);
+      await client.query(
+        `ALTER TABLE test_questions ADD COLUMN IF NOT EXISTS section_id INTEGER`
+      );
+      await client.query(`
+        DO $$
+        BEGIN
+          BEGIN
+            ALTER TABLE test_questions
+              ADD CONSTRAINT fk_tq_section FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE;
+          EXCEPTION WHEN duplicate_object THEN
+            -- constraint already exists
+            NULL;
+          END;
+        END $$;
+      `);
+
       // Generate unique ID
       const testId = `test-${Date.now()}-${Math.random()
         .toString(36)
@@ -105,19 +203,37 @@ export async function POST(request: NextRequest) {
       // Pastikan kolom maxAttempts sudah ada di tabel tests
       const insertQuery = `
         INSERT INTO tests (
-          id, name, description, duration, "creatorId", "isActive", "maxAttempts", "tabLeaveLimit"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          id, name, description, duration, "creatorId", "isActive", "maxAttempts", "tabLeaveLimit", "minimumScore", "availableFrom", "availableUntil"
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9,
+          ($10::timestamptz AT TIME ZONE 'Asia/Jakarta'),
+          ($11::timestamptz AT TIME ZONE 'Asia/Jakarta')
+        )
       `;
+
+      // Normalize incoming datetime-local strings to timestamp in WIB by assuming input is local time
+      // and converting to Asia/Jakarta. If values are empty/invalid, store nulls.
+      const parseToISO = (value: any) => {
+        if (!value || typeof value !== "string") return null;
+        // Expect value like 'YYYY-MM-DDTHH:mm' from input type=datetime-local
+        const m = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+        if (!m) return null;
+        // Treat as Asia/Jakarta local time by appending +07:00 offset
+        return `${m[1]}T${m[2]}:00+07:00`;
+      };
 
       const insertParams = [
         testId,
         name,
         description || null,
         parseInt(duration),
-        creatorId,
+        userInfo.userId,
         true,
         typeof maxAttempts === "number" ? maxAttempts : 1,
         typeof tabLeaveLimit === "number" ? tabLeaveLimit : 3,
+        typeof minimumScore === "number" ? minimumScore : 60,
+        fromISO || null,
+        untilISO || null,
       ];
 
       await client.query(insertQuery, insertParams);
@@ -145,7 +261,6 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-
       // Fetch the created test with creator data
       const result = await client.query(
         `
@@ -169,11 +284,9 @@ export async function POST(request: NextRequest) {
           email: newTest.creatorEmail,
         };
         newTest.tabLeaveLimit = newTest.tabLeaveLimit;
+        newTest.availableFrom = newTest.availableFrom;
+        newTest.availableUntil = newTest.availableUntil;
       }
-
-      // Get user info from request
-      const userInfo =
-        (await getUserFromRequest(request)) || getFallbackUserInfo();
 
       // Log activity
       try {
@@ -188,12 +301,18 @@ export async function POST(request: NextRequest) {
         console.error("Error logging activity:", error);
       }
 
+      await client.query("COMMIT");
       return NextResponse.json(newTest, { status: 201 });
     } finally {
+      try {
+        await client.query("ROLLBACK");
+      } catch {}
       client.release();
     }
   } catch (error) {
-    console.error("Error creating test:", error);
+    // Log detail error postgres jika ada
+    const e: any = error;
+    console.error("Error creating test:", e?.message || e, e?.code, e?.detail);
     return NextResponse.json(
       { error: "Terjadi kesalahan saat membuat tes" },
       { status: 500 }

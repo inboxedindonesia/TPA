@@ -236,8 +236,27 @@ export async function DELETE(request: Request, { params }: any) {
         );
       }
 
-      // Delete the question
+      // Get all tests that contain this question before deletion
+      const testsQuery = `
+        SELECT DISTINCT test_id FROM test_questions WHERE question_id = $1
+      `;
+      const testsResult = await client.query(testsQuery, [questionId]);
+      const affectedTestIds = testsResult.rows.map(row => row.test_id);
+
+      // Delete the question (CASCADE will delete from test_questions)
       await client.query("DELETE FROM questions WHERE id = $1", [questionId]);
+
+      // Update totalQuestions for all affected tests
+      for (const testId of affectedTestIds) {
+        const updateTestQuery = `
+          UPDATE tests 
+          SET "totalQuestions" = (
+            SELECT COUNT(*) FROM test_questions WHERE test_id = $1
+          )
+          WHERE id = $1
+        `;
+        await client.query(updateTestQuery, [testId]);
+      }
 
       console.log(`Question ${questionId} deleted successfully`);
       return NextResponse.json(

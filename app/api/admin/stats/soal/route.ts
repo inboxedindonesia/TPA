@@ -65,7 +65,8 @@ export async function GET(request: NextRequest) {
         gambarjawaban,
         tipesoal,
         levelkesulitan,
-        deskripsi
+        deskripsi,
+        COALESCE(points, 1) as points
       FROM questions
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
@@ -127,6 +128,7 @@ export async function GET(request: NextRequest) {
         tipeSoal: row.tipesoal,
         levelKesulitan: row.levelkesulitan,
         deskripsi: row.deskripsi,
+        points: row.points || 1,
         allowMultipleAnswers: false, // Default value for now
       };
     });

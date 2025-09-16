@@ -127,6 +127,7 @@ async function handleFormDataRequest(request: NextRequest) {
     const deskripsi = formData.get("deskripsi") as string;
     const jawabanBenarStr = formData.get("jawabanBenar") as string;
     const allowMultipleAnswers = formData.get("allowMultipleAnswers") as string;
+    const poinStr = formData.get("poin") as string;
 
     // Parse jawabanBenar as JSON for multiple answers support
     let jawabanBenar: string | string[] = "";
@@ -144,6 +145,15 @@ async function handleFormDataRequest(request: NextRequest) {
       jawabanBenar = jawabanBenarStr;
     }
 
+    // Parse poin value
+    let poin = 1; // Default value
+    if (poinStr) {
+      const parsedPoin = parseInt(poinStr, 10);
+      if (!isNaN(parsedPoin) && parsedPoin > 0) {
+        poin = parsedPoin;
+      }
+    }
+
     console.log("Received form data:", {
       kategori,
       subkategori,
@@ -154,6 +164,7 @@ async function handleFormDataRequest(request: NextRequest) {
       deskripsi,
       jawabanBenar,
       allowMultipleAnswers,
+      poin,
     });
 
     // Validate required fields
@@ -289,10 +300,10 @@ async function handleFormDataRequest(request: NextRequest) {
       const insertQuery = `
         INSERT INTO questions (
           id, question, type, options, "correctAnswer", category, 
-          difficulty, explanation, "order", points, "testId", "creatorId",
+          difficulty, explanation, "order", points, "creatorId",
           kategori, subkategori, tipeJawaban, gambar, gambarJawaban,
           tipeSoal, levelKesulitan, deskripsi
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       `;
 
       const insertParams = [
@@ -307,8 +318,7 @@ async function handleFormDataRequest(request: NextRequest) {
         levelKesulitan, // Use levelKesulitan as difficulty
         deskripsi || null,
         1, // Default order
-        1, // Default points
-        "test-1", // Default test ID - you might want to make this configurable
+        poin, // Use parsed points value
         creatorId,
         kategori,
         subkategori,
@@ -332,10 +342,8 @@ async function handleFormDataRequest(request: NextRequest) {
         `
         SELECT 
           q.*,
-          t.name as "testName",
           u.name as "creatorName"
         FROM questions q
-        LEFT JOIN tests t ON q."testId" = t.id
         LEFT JOIN users u ON q."creatorId" = u.id
         WHERE q.id = $1
       `,
@@ -437,12 +445,10 @@ async function handleJsonRequest(request: NextRequest) {
         `
         SELECT 
           q.*,
-          t.name as "testName",
           u.name as "creatorName"
         FROM questions q
-        LEFT JOIN tests t ON q.testId = t.id
-        LEFT JOIN users u ON q.creatorId = u.id
-        WHERE q.id = ?
+        LEFT JOIN users u ON q."creatorId" = u.id
+        WHERE q.id = $1
       `,
         [questionId]
       );

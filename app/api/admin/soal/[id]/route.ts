@@ -126,9 +126,28 @@ export async function DELETE(request: Request, { params }: any) {
       const questionText =
         questionResult.rows[0]?.question || "Unknown Question";
 
-      // Delete question
+      // Get all tests that contain this question before deletion
+      const testsQuery = `
+        SELECT DISTINCT test_id FROM test_questions WHERE question_id = $1
+      `;
+      const testsResult = await client.query(testsQuery, [id]);
+      const affectedTestIds = testsResult.rows.map(row => row.test_id);
+
+      // Delete question (CASCADE will delete from test_questions)
       const deleteQuery = "DELETE FROM questions WHERE id = $1";
       await client.query(deleteQuery, [id]);
+
+      // Update totalQuestions for all affected tests
+      for (const testId of affectedTestIds) {
+        const updateTestQuery = `
+          UPDATE tests 
+          SET "totalQuestions" = (
+            SELECT COUNT(*) FROM test_questions WHERE test_id = $1
+          )
+          WHERE id = $1
+        `;
+        await client.query(updateTestQuery, [testId]);
+      }
 
       return NextResponse.json(
         { message: "Soal berhasil dihapus" },

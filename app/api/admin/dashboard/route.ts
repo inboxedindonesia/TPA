@@ -8,14 +8,28 @@ export async function GET(request: NextRequest) {
 
   // Daftar peserta lengkap
   const daftarPesertaRes = await client.query(`
-        SELECT u.id, u.name, u.email, u.registration_id, u.is_verified, u."createdAt"
+        SELECT 
+          u.id, 
+          u.name, 
+          u.email, 
+          u.registration_id, 
+          u.is_verified, 
+          u."createdAt",
+          COUNT(ts.id) as total_tests,
+          AVG(ts.score) as average_score
         FROM users u
         JOIN roles r ON u.role_id = r.id
+        LEFT JOIN test_sessions ts ON u.id = ts."userId" AND ts.status = 'COMPLETED'
         WHERE r.name = 'Peserta'
+        GROUP BY u.id, u.name, u.email, u.registration_id, u.is_verified, u."createdAt"
         ORDER BY u."createdAt" DESC
         LIMIT 100
       `);
-  const daftarPeserta = daftarPesertaRes.rows;
+  const daftarPeserta = daftarPesertaRes.rows.map((row) => ({
+    ...row,
+    totalTests: parseInt(row.total_tests) || 0,
+    averageScore: row.average_score ? parseFloat(row.average_score).toFixed(1) : "0.0"
+  }));
 
   try {
     // Total peserta (users dengan role Peserta)

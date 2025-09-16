@@ -8,7 +8,76 @@ export async function GET(request: NextRequest) {
   const client = await pool.connect();
 
   try {
-    const usersRes = await client.query(`
+    const { searchParams } = new URL(request.url);
+    const all = searchParams.get('all') === 'true';
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const roleFilter = searchParams.get('roleFilter') || '';
+    const offset = (page - 1) * limit;
+
+    // If all=true, return all users for stats
+    if (all) {
+      const allUsersQuery = `
+        SELECT 
+          u.id,
+          u.name,
+          u.email,
+          u.role_id,
+          r.name as role_name,
+          u."createdAt"
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        ORDER BY u."createdAt" DESC
+      `;
+      const allUsersRes = await client.query(allUsersQuery);
+      
+      const users = allUsersRes.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: row.role_id || row.role,
+        roleName: row.role_name,
+        createdAt: row.createdAt,
+        lastLogin: null,
+        status: "active",
+      }));
+      
+      return NextResponse.json({ users });
+    }
+
+    // Build WHERE conditions
+    let whereConditions = [];
+    let queryParams = [];
+    let paramIndex = 1;
+
+    if (search) {
+      whereConditions.push(`(u.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`);
+      queryParams.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    if (roleFilter && roleFilter !== 'all') {
+      whereConditions.push(`u.role_id = $${paramIndex}`);
+      queryParams.push(roleFilter);
+      paramIndex++;
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    // Get total count with filters
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+      ${whereClause}
+    `;
+    const countRes = await client.query(countQuery, queryParams);
+    const totalUsers = parseInt(countRes.rows[0].total);
+    const totalPages = Math.ceil(totalUsers / limit);
+
+    // Get paginated users with filters
+    const usersQuery = `
       SELECT 
         u.id,
         u.name,
@@ -18,8 +87,12 @@ export async function GET(request: NextRequest) {
         u."createdAt"
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
+      ${whereClause}
       ORDER BY u."createdAt" DESC
-    `);
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    queryParams.push(limit, offset);
+    const usersRes = await client.query(usersQuery, queryParams);
 
     const users = usersRes.rows.map((row) => ({
       id: row.id,
@@ -34,6 +107,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       users,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalUsers,
+        limit
+      }
     });
   } catch (error) {
     console.error("Error fetching users:", error);

@@ -23,6 +23,22 @@ interface Test {
   isActive: boolean;
 }
 
+// Format category name to be more user-friendly
+const formatCategoryName = (category: string) => {
+  switch (category?.toUpperCase()) {
+    case "TES_VERBAL":
+      return "Tes Verbal";
+    case "TES_GAMBAR":
+      return "Tes Gambar";
+    case "TES_LOGIKA":
+      return "Tes Logika";
+    case "TES_ANGKA":
+      return "Tes Angka";
+    default:
+      return category?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || category;
+  }
+};
+
 export default function TestQuestionsPage() {
   const router = useRouter();
   const params = useParams();
@@ -304,7 +320,7 @@ export default function TestQuestionsPage() {
                             question.category
                           )}`}
                         >
-                          {question.category.replace("_", " ")}
+                          {formatCategoryName(question.category)}
                         </span>
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded-full ${getDifficultyColor(

@@ -21,9 +21,12 @@ export default function CreateQuestionPage() {
     levelKesulitan: "SEDANG",
     deskripsi: "",
     allowMultipleAnswers: false, // New field for multiple answers
+    poin: 1, // New field for question points
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [createdQuestions, setCreatedQuestions] = useState<any[]>([]);
+  const [totalPoints, setTotalPoints] = useState(0);
 
   // State untuk modal feedback
   const [feedbackModal, setFeedbackModal] = useState({
@@ -80,6 +83,43 @@ export default function CreateQuestionPage() {
       "Tes Bayangan Cermin",
       "Tes Identifikasi Potongan Gambar",
     ],
+    // RIASEC Categories
+    TES_REALISTIC: [
+      "Aktivitas Praktis",
+      "Pekerjaan Manual",
+      "Teknologi & Mesin",
+      "Outdoor & Fisik",
+    ],
+    TES_INVESTIGATIVE: [
+      "Penelitian & Analisis",
+      "Problem Solving",
+      "Sains & Matematika",
+      "Observasi & Eksperimen",
+    ],
+    TES_ARTISTIC: [
+      "Kreativitas & Seni",
+      "Ekspresi Diri",
+      "Desain & Estetika",
+      "Inovasi & Originalitas",
+    ],
+    TES_SOCIAL: [
+      "Membantu Orang Lain",
+      "Komunikasi & Interaksi",
+      "Mengajar & Membimbing",
+      "Kerja Tim & Kolaborasi",
+    ],
+    TES_ENTERPRISING: [
+      "Kepemimpinan & Manajemen",
+      "Bisnis & Kewirausahaan",
+      "Persuasi & Negosiasi",
+      "Kompetisi & Pencapaian",
+    ],
+    TES_CONVENTIONAL: [
+      "Organisasi & Administrasi",
+      "Detail & Akurasi",
+      "Prosedur & Sistem",
+      "Data & Dokumentasi",
+    ],
   };
 
   const handleInputChange = (
@@ -132,14 +172,15 @@ export default function CreateQuestionPage() {
   };
 
   const handleAnswerSelection = (answer: string, isSelected: boolean) => {
-    // Don't allow selection if answer is empty
-    if (!answer || answer.trim() === "") {
-      return;
-    }
-
-    // For image answers, check if the image exists
-    if (answer.startsWith("gambar_")) {
-      const index = parseInt(answer.replace("gambar_", ""));
+    // For text answers, don't allow selection if answer is empty
+    if (formData.tipeJawaban === "TEXT") {
+      const index = parseInt(answer);
+      if (!formData.pilihanJawaban[index] || formData.pilihanJawaban[index].trim() === "") {
+        return;
+      }
+    } else {
+      // For image answers, check if the image exists
+      const index = parseInt(answer);
       if (!formData.gambarJawaban[index]) {
         return; // Don't allow selection if no image uploaded
       }
@@ -232,8 +273,8 @@ export default function CreateQuestionPage() {
       // Check if all selected answers are valid
       const validAnswerOptions =
         formData.tipeJawaban === "TEXT"
-          ? formData.pilihanJawaban
-          : formData.gambarJawaban.map((_, index) => `gambar_${index}`);
+          ? formData.pilihanJawaban.map((_, index) => index.toString())
+          : formData.gambarJawaban.map((_, index) => index.toString()).filter((_, index) => formData.gambarJawaban[index] !== null);
 
       const invalidAnswers = formData.jawabanBenar.filter(
         (answer) => !validAnswerOptions.includes(answer)
@@ -278,6 +319,7 @@ export default function CreateQuestionPage() {
         "allowMultipleAnswers",
         formData.allowMultipleAnswers.toString()
       );
+      submitData.append("poin", formData.poin.toString());
 
       if (formData.tipeSoal === "PILIHAN_GANDA") {
         if (formData.tipeJawaban === "TEXT") {
@@ -336,12 +378,35 @@ export default function CreateQuestionPage() {
           console.error("Error logging activity:", logError);
         }
 
+        // Update created questions list and total points
+        const newQuestion = { ...data, points: parseInt(formData.poin.toString()) || 1 };
+        setCreatedQuestions(prev => [...prev, newQuestion]);
+        
+        const newTotalPoints = totalPoints + (parseInt(formData.poin.toString()) || 1);
+        setTotalPoints(newTotalPoints);
+        
         showFeedback(
           "success",
           "Soal berhasil dibuat!",
-          "Soal berhasil dibuat!"
+          `Soal berhasil dibuat! Total poin sekarang: ${newTotalPoints}`
         );
-        router.push("/admin/soal/bank-soal");
+        
+        // Reset form for creating another question
+        setFormData({
+          kategori: "",
+          subkategori: "",
+          pertanyaan: "",
+          gambar: null,
+          pilihanJawaban: ["", "", "", ""],
+          gambarJawaban: [null, null, null, null],
+          jawabanBenar: [],
+          tipeJawaban: "TEXT",
+          tipeSoal: "PILIHAN_GANDA",
+          levelKesulitan: "SEDANG",
+          deskripsi: "",
+          allowMultipleAnswers: false,
+          poin: 1,
+        });
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Gagal membuat soal");
@@ -368,28 +433,58 @@ export default function CreateQuestionPage() {
     if (!formData.allowMultipleAnswers && formData.jawabanBenar.length > 1) {
       setFormData((prev) => ({
         ...prev,
-        jawabanBenar: formData.jawabanBenar.slice(0, 1), // Keep only first answer
+        jawabanBenar: prev.jawabanBenar.slice(0, 1), // Keep only first answer
       }));
     }
-  }, [formData.allowMultipleAnswers]);
+  }, [formData.allowMultipleAnswers, formData.jawabanBenar.length]);
+
+  // Calculate total points when created questions change
+  useEffect(() => {
+    const total = createdQuestions.reduce((sum, question) => sum + (question.points || 0), 0);
+    setTotalPoints(total);
+  }, [createdQuestions]);
+
+  // Load existing questions on component mount
+  useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const response = await fetch("/api/questions", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setCreatedQuestions(data.questions || []);
+        }
+      } catch (error) {
+        console.error("Error loading questions:", error);
+      }
+    };
+
+    loadQuestions();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-0">
+    <div className="min-h-screen bg-gray-50 pb-8">
       <AdminHeader />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-xl shadow-sm p-6 mt-4">
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Form Section */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-xl p-6">
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">
                   Buat Soal Baru
                 </h1>
-                <p className="text-gray-600 text-sm sm:text-base">
+                <p className="text-gray-600">
                   Tambahkan soal ke bank soal TPA Universitas
                 </p>
               </div>
-            </div>
-          </div>
           <form
             onSubmit={handleSubmit}
             className="space-y-6"
@@ -417,10 +512,20 @@ export default function CreateQuestionPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Pilih Kategori Soal</option>
-                <option value="TES_VERBAL">Tes Verbal</option>
-                <option value="TES_ANGKA">Tes Angka</option>
-                <option value="TES_LOGIKA">Tes Logika</option>
-                <option value="TES_GAMBAR">Tes Gambar</option>
+                <optgroup label="TPA (Tes Potensi Akademik)">
+                  <option value="TES_VERBAL">Tes Verbal</option>
+                  <option value="TES_ANGKA">Tes Angka</option>
+                  <option value="TES_LOGIKA">Tes Logika</option>
+                  <option value="TES_GAMBAR">Tes Gambar</option>
+                </optgroup>
+                <optgroup label="RIASEC (Tes Minat Karir)">
+                  <option value="TES_REALISTIC">Tes Realistic</option>
+                  <option value="TES_INVESTIGATIVE">Tes Investigative</option>
+                  <option value="TES_ARTISTIC">Tes Artistic</option>
+                  <option value="TES_SOCIAL">Tes Social</option>
+                  <option value="TES_ENTERPRISING">Tes Enterprising</option>
+                  <option value="TES_CONVENTIONAL">Tes Conventional</option>
+                </optgroup>
               </select>
             </div>
 
@@ -501,13 +606,34 @@ export default function CreateQuestionPage() {
               </p>
             </div>
 
-            {/* 5. Multiple Answers */}
+            {/* 5. Tipe Soal */}
+            <div>
+              <label
+                htmlFor="tipeSoal"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                5. Tipe Soal *
+              </label>
+              <select
+                id="tipeSoal"
+                name="tipeSoal"
+                value={formData.tipeSoal}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="PILIHAN_GANDA">Pilihan Ganda</option>
+                <option value="ISIAN">Isian</option>
+              </select>
+            </div>
+
+            {/* 6. Multiple Answers */}
             <div>
               <label
                 htmlFor="allowMultipleAnswers"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                5. Tipe Jawaban *
+                6. Tipe Jawaban *
               </label>
               <select
                 id="allowMultipleAnswers"
@@ -532,14 +658,14 @@ export default function CreateQuestionPage() {
               </p>
             </div>
 
-            {/* 6. Tipe Jawaban */}
+            {/* 7. Tipe Jawaban */}
             {formData.tipeSoal === "PILIHAN_GANDA" && (
               <div>
                 <label
                   htmlFor="tipeJawaban"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  6. Format Jawaban *
+                  7. Format Jawaban *
                 </label>
                 <select
                   id="tipeJawaban"
@@ -555,12 +681,12 @@ export default function CreateQuestionPage() {
               </div>
             )}
 
-            {/* 7. Pilihan Jawaban (Teks) */}
+            {/* 8. Pilihan Jawaban (Teks) */}
             {formData.tipeSoal === "PILIHAN_GANDA" &&
               formData.tipeJawaban === "TEXT" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    6. Pilihan Jawaban (Teks) *
+                    8. Pilihan Jawaban (Teks) *
                   </label>
                   <div className="space-y-3">
                     {formData.pilihanJawaban.map((option, index) => (
@@ -571,13 +697,13 @@ export default function CreateQuestionPage() {
                         <input
                           type="checkbox"
                           name={`jawabanBenar_${index}`}
-                          value={option}
-                          checked={formData.jawabanBenar.includes(option)}
+                          value={index.toString()}
+                          checked={formData.jawabanBenar.includes(index.toString())}
                           disabled={!option || option.trim() === ""} // Disable if empty
                           onChange={() =>
                             handleAnswerSelection(
-                              option,
-                              formData.jawabanBenar.includes(option)
+                              index.toString(),
+                              formData.jawabanBenar.includes(index.toString())
                             )
                           }
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 disabled:opacity-50"
@@ -602,12 +728,12 @@ export default function CreateQuestionPage() {
                 </div>
               )}
 
-            {/* 6. Pilihan Jawaban (Gambar) */}
+            {/* 9. Pilihan Jawaban (Gambar) */}
             {formData.tipeSoal === "PILIHAN_GANDA" &&
               formData.tipeJawaban === "IMAGE" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    6. Pilihan Jawaban (Gambar) *
+                    9. Pilihan Jawaban (Gambar) *
                   </label>
                   <div className="space-y-3">
                     {formData.gambarJawaban.map((image, index) => (
@@ -618,15 +744,13 @@ export default function CreateQuestionPage() {
                         <input
                           type="checkbox"
                           name={`jawabanBenar_${index}`}
-                          value={`gambar_${index}`}
-                          checked={formData.jawabanBenar.includes(
-                            `gambar_${index}`
-                          )}
+                          value={index.toString()}
+                          checked={formData.jawabanBenar.includes(index.toString())}
                           disabled={!image} // Disable if no image uploaded
                           onChange={() =>
                             handleAnswerSelection(
-                              `gambar_${index}`,
-                              formData.jawabanBenar.includes(`gambar_${index}`)
+                              index.toString(),
+                              formData.jawabanBenar.includes(index.toString())
                             )
                           }
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 disabled:opacity-50"
@@ -657,14 +781,14 @@ export default function CreateQuestionPage() {
                 </div>
               )}
 
-            {/* 7. Jawaban yang Benar (untuk Isian) */}
+            {/* 10. Jawaban yang Benar (untuk Isian) */}
             {formData.tipeSoal === "ISIAN" && (
               <div>
                 <label
                   htmlFor="jawabanBenar"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  7. Jawaban yang Benar *
+                  10. Jawaban yang Benar *
                 </label>
                 <input
                   type="text"
@@ -686,34 +810,13 @@ export default function CreateQuestionPage() {
               </div>
             )}
 
-            {/* 8. Tipe Soal */}
-            <div>
-              <label
-                htmlFor="tipeSoal"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                8. Tipe Soal *
-              </label>
-              <select
-                id="tipeSoal"
-                name="tipeSoal"
-                value={formData.tipeSoal}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="PILIHAN_GANDA">Pilihan Ganda</option>
-                <option value="ISIAN">Isian</option>
-              </select>
-            </div>
-
-            {/* 9. Level Kesulitan */}
+            {/* 11. Level Kesulitan */}
             <div>
               <label
                 htmlFor="levelKesulitan"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                9. Level Kesulitan *
+                11. Level Kesulitan *
               </label>
               <select
                 id="levelKesulitan"
@@ -729,13 +832,38 @@ export default function CreateQuestionPage() {
               </select>
             </div>
 
-            {/* 10. Deskripsi (Opsional) */}
+            {/* 12. Poin Soal */}
+            <div>
+              <label
+                htmlFor="poin"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                12. Bobot Poin Soal *
+              </label>
+              <input
+                type="number"
+                id="poin"
+                name="poin"
+                value={formData.poin}
+                onChange={handleInputChange}
+                min="1"
+                max="100"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Masukkan bobot poin untuk soal ini (1-100)"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Poin yang akan diperoleh jika soal dijawab dengan benar (1-100 poin)
+              </p>
+            </div>
+
+            {/* 13. Deskripsi (Opsional) */}
             <div>
               <label
                 htmlFor="deskripsi"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                10. Deskripsi (Opsional)
+                13. Deskripsi (Opsional)
               </label>
               <textarea
                 id="deskripsi"
@@ -748,61 +876,54 @@ export default function CreateQuestionPage() {
               />
             </div>
 
-            {/* 12. Submit */}
-            <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+            {/* 14. Submit */}
+            <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-200">
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="btn-secondary"
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors font-medium"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {loading ? "Menyimpan..." : "Simpan Soal"}
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Menyimpan...
+                  </>
+                ) : (
+                  "Simpan Soal"
+                )}
               </button>
             </div>
           </form>
-        </div>
+            </div>
+          </div>
 
-        {/* Info Box */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-lg font-medium text-blue-900 mb-2">
-            💡 Penjelasan Tambahan
-          </h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>
-              • <strong>Kategori dan Subkategori Soal:</strong> Kategori soal
-              akan menentukan jenis soal yang dibuat
-            </li>
-            <li>
-              • <strong>Gambar:</strong> Hanya soal dari kategori Tes Gambar
-              yang akan memerlukan upload gambar
-            </li>
-            <li>
-              • <strong>Tipe Jawaban:</strong> Pilihan ganda dapat menggunakan
-              teks atau gambar sebagai jawaban
-            </li>
-            <li>
-              • <strong>Tipe Soal:</strong> Pilihan ganda (dengan 4 pilihan
-              jawaban) atau isian
-            </li>
-            <li>
-              • <strong>Level Kesulitan:</strong> Mudah untuk peserta pemula,
-              Sulit untuk peserta berpengalaman
-            </li>
-            <li>
-              • <strong>Deskripsi:</strong> Dapat digunakan untuk memberikan
-              instruksi atau klarifikasi
-            </li>
-            <li>
-              • <strong>Multiple Answers:</strong> Jika dipilih, peserta dapat
-              memilih lebih dari satu jawaban.
-            </li>
-          </ul>
+          {/* Info Box */}
+          <div className="lg:col-span-1">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-blue-900 mb-2">
+                💡 Tips Membuat Soal
+              </h3>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Pilih kategori dan subkategori yang sesuai dengan materi soal</li>
+                <li>• Upload gambar hanya untuk soal kategori Tes Gambar</li>
+                <li>• Gunakan tipe jawaban teks atau gambar sesuai kebutuhan</li>
+                <li>• Tentukan level kesulitan berdasarkan kompleksitas soal</li>
+                <li>• Aktifkan multiple answers jika soal memiliki lebih dari satu jawaban benar</li>
+                <li>• Berikan bobot poin sesuai tingkat kesulitan soal</li>
+                <li>• Tambahkan deskripsi untuk memberikan instruksi tambahan</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
       <FeedbackModal

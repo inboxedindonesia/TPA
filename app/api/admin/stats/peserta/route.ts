@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
         // Fetch test results for this peserta
         const testResultsRes = await client.query(
-          `SELECT ts.id, ts.status, ts."startTime", ts."endTime", ts.score, ts."maxScore", ts."testId", t.name as test_name, t.description as test_description
+          `SELECT ts.id, ts.status, ts."startTime", ts."endTime", ts.score, ts."maxScore", ts."testId", t.name as test_name, t.description as test_description, t."minimumScore"
            FROM test_sessions ts
            JOIN tests t ON ts."testId" = t.id
            WHERE ts."userId" = $1
@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
           testId: row.testId,
           testName: row.test_name,
           testDescription: row.test_description,
+          minimumScore: row.minimumScore || 60,
         }));
 
         return NextResponse.json({ peserta, testResults });

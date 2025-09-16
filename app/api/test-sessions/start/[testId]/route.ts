@@ -21,7 +21,7 @@ export async function POST(request: Request, context: any) {
     try {
       // Ambil info durasi dan maxAttempts tes
       const testResult = await client.query(
-        `SELECT duration, "maxAttempts" FROM tests WHERE id = $1`,
+        `SELECT duration, "maxAttempts", "availableFrom", "availableUntil", "isActive" FROM tests WHERE id = $1`,
         [testId]
       );
       if (testResult.rows.length === 0) {
@@ -32,6 +32,21 @@ export async function POST(request: Request, context: any) {
       }
       const duration = testResult.rows[0].duration; // dalam menit
       const maxAttempts = testResult.rows[0].maxAttempts ?? 1;
+      // Validasi isActive dan periode di sisi database (WIB)
+      const availCheck = await client.query(
+        `SELECT 1 FROM tests t
+         WHERE t.id = $1 AND t."isActive" = true
+           AND (t."availableFrom" IS NULL OR (NOW() AT TIME ZONE 'Asia/Jakarta') >= t."availableFrom")
+           AND (t."availableUntil" IS NULL OR (NOW() AT TIME ZONE 'Asia/Jakarta') <= t."availableUntil")
+         LIMIT 1`,
+        [testId]
+      );
+      if (availCheck.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Tes tidak tersedia saat ini." },
+          { status: 403 }
+        );
+      }
 
       // Hitung total percobaan tes user ini yang sudah selesai
       const countResult = await client.query(

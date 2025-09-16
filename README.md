@@ -20,6 +20,7 @@ Platform Tes Potensi Akademik untuk Masuk Universitas dengan fitur multiple answ
 - ✅ **Admin Dashboard**: Manajemen soal dan statistik
 - ✅ **View Soal**: Modal detail dengan multiple answers display
 - ✅ **Database**: PostgreSQL dengan schema yang lengkap
+- ✅ **Periode Tes Wajib**: Setiap tes memiliki periode mulai & berakhir yang wajib diisi (disimpan sebagai waktu WIB)
 
 ## 🛠️ Tech Stack
 
@@ -106,6 +107,23 @@ Setelah deploy, jalankan setup database:
 # Via Vercel dashboard atau CLI
 curl -X POST https://your-app.vercel.app/api/init-db
 ```
+
+Jika Anda meng-upgrade dari versi sebelumnya, jalankan migrasi berikut untuk menambahkan periode tes (wajib):
+
+- File: scripts/migrate_add_test_period.sql
+- Efek: menambah kolom "availableFrom" dan "availableUntil" ke tabel tests, melakukan backfill untuk data lama, lalu menetapkan NOT NULL dan membuat index.
+
+Contoh menjalankan migrasi menggunakan psql (sesuaikan kredensial DB Anda):
+
+1. Salin isi file SQL ke server/mesin yang punya akses ke database.
+2. Eksekusi perintah berikut:
+
+psql "postgres://<user>:<password>@<host>:<port>/<database>" -f scripts/migrate_add_test_period.sql
+
+Catatan:
+
+- Input di UI menggunakan tipe datetime-local (tanpa zona waktu) dan diperlakukan sebagai WIB saat disimpan.
+- Peserta hanya dapat memulai tes jika waktu saat ini (WIB) berada di dalam periode tersebut dan tes aktif.
 
 ## 📁 Project Structure
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import AdminHeader from "@/app/components/AdminHeader";
 import {
@@ -38,14 +38,22 @@ interface Role {
 
 export default function UsersManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]); // For stats calculation
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPaginationLoading, setIsPaginationLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [limit] = useState(10);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -54,15 +62,72 @@ export default function UsersManagementPage() {
     role: "",
   });
 
+  // Effect for pagination only
   useEffect(() => {
-    fetchUsers();
+    if (currentPage === 1) {
+      fetchUsers(true);
+    } else {
+      fetchUsers(false);
+    }
+  }, [currentPage]);
+
+  // Effect for search/filter with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (currentPage === 1) {
+        // If already on page 1, directly fetch users
+        fetchUsers(true);
+      } else {
+        // If not on page 1, reset to page 1 which will trigger pagination effect
+        setCurrentPage(1);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, roleFilter]);
+
+  useEffect(() => {
     fetchRoles();
+    fetchAllUsersForStats();
   }, []);
 
-  const fetchUsers = async () => {
+  // Fetch all users for stats calculation
+  const fetchAllUsersForStats = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch("/api/admin/users");
+      const response = await fetch('/api/admin/users?all=true');
+      if (!response.ok) {
+        throw new Error('Gagal mengambil data stats users');
+      }
+      const data = await response.json();
+      setAllUsers(data.users || []);
+    } catch (error) {
+      console.error('Error fetching all users for stats:', error);
+    }
+  };
+
+  const fetchUsers = async (isInitialLoad = false) => {
+    try {
+      if (isInitialLoad) {
+        setIsLoading(true);
+      } else {
+        setIsPaginationLoading(true);
+      }
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: limit.toString()
+      });
+      
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      
+      if (roleFilter && roleFilter !== 'all') {
+        params.append('roleFilter', roleFilter);
+      }
+      
+      const response = await fetch(`/api/admin/users?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error("Gagal mengambil data users");
@@ -70,11 +135,17 @@ export default function UsersManagementPage() {
 
       const data = await response.json();
       setUsers(data.users);
+      setTotalPages(data.pagination.totalPages);
+      setTotalUsers(data.pagination.totalUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
       setError("Gagal memuat data users");
     } finally {
-      setIsLoading(false);
+      if (isInitialLoad) {
+        setIsLoading(false);
+      } else {
+        setIsPaginationLoading(false);
+      }
     }
   };
 
@@ -113,6 +184,7 @@ export default function UsersManagementPage() {
       setShowAddModal(false);
       setFormData({ name: "", email: "", password: "", role: "PESERTA" });
       fetchUsers();
+      fetchAllUsersForStats(); // Update stats
 
       // Show success message
       alert("User berhasil ditambahkan!");
@@ -149,6 +221,7 @@ export default function UsersManagementPage() {
       setSelectedUser(null);
       setFormData({ name: "", email: "", password: "", role: "PESERTA" });
       fetchUsers();
+      fetchAllUsersForStats(); // Update stats
 
       // Show success message
       alert("User berhasil diupdate!");
@@ -173,6 +246,7 @@ export default function UsersManagementPage() {
       }
 
       fetchUsers();
+      fetchAllUsersForStats(); // Update stats
     } catch (error) {
       console.error("Error deleting user:", error);
       setError("Gagal menghapus user");
@@ -190,13 +264,8 @@ export default function UsersManagementPage() {
     setShowEditModal(true);
   };
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  // No need for client-side filtering since we're using server-side search
+  const filteredUsers = users;
 
   const getRoleIcon = (role: string) => {
     // Cari role berdasarkan ID atau nama
@@ -239,6 +308,23 @@ export default function UsersManagementPage() {
     const roleData = roles.find((r) => r.id === role || r.name === role);
     return roleData ? roleData.name : role;
   };
+
+  // Pagination handlers with useCallback
+  const handlePrevPage = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [currentPage]);
+
+  const handleNextPage = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [currentPage, totalPages]);
 
   if (isLoading) {
     return (
@@ -294,7 +380,7 @@ export default function UsersManagementPage() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total User</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {users.length}
+                  {totalUsers}
                 </p>
               </div>
             </div>
@@ -309,7 +395,7 @@ export default function UsersManagementPage() {
                 <p className="text-sm font-medium text-gray-600">Peserta</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {
-                    users.filter(
+                    allUsers.filter(
                       (u) => getRoleName(u.role).toLowerCase() === "peserta"
                     ).length
                   }
@@ -327,7 +413,7 @@ export default function UsersManagementPage() {
                 <p className="text-sm font-medium text-gray-600">Admin</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {
-                    users.filter(
+                    allUsers.filter(
                       (u) =>
                         getRoleName(u.role).toLowerCase() === "administrator"
                     ).length
@@ -346,7 +432,7 @@ export default function UsersManagementPage() {
                 <p className="text-sm font-medium text-gray-600">Moderator</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {
-                    users.filter(
+                    allUsers.filter(
                       (u) => getRoleName(u.role).toLowerCase() === "moderator"
                     ).length
                   }
@@ -518,6 +604,39 @@ export default function UsersManagementPage() {
               </p>
             </div>
           )}
+
+          {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <button
+                  type="button"
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1 || isPaginationLoading}
+                  className={`px-4 py-2 rounded-md border text-sm font-medium mr-2 ${
+                    currentPage === 1 || isPaginationLoading
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-white text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Halaman {currentPage} dari {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages || isPaginationLoading}
+                  className={`px-4 py-2 rounded-md border text-sm font-medium ml-2 ${
+                    currentPage === totalPages || isPaginationLoading
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-white text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            )}
         </div>
       </div>
 

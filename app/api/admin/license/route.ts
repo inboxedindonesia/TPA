@@ -21,7 +21,9 @@ export async function GET() {
     );
     meta = JSON.parse(rawMeta);
   } catch {}
-  return NextResponse.json({ license, meta });
+  const isValid = !!license && isLicenseValid(license);
+  const expiredAt = license ? new Date(license.end_date).getTime() : null;
+  return NextResponse.json({ license, meta, isValid, expiredAt });
 }
 
 export async function POST(req: NextRequest) {

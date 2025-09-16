@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { BookOpen, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import AdminHeader from "@/app/components/AdminHeader";
 import QuestionSelector from "@/app/components/QuestionSelector";
 import FeedbackModal from "@/app/components/FeedbackModal";
@@ -40,16 +40,22 @@ export default function EditTestPage() {
     description: "",
     isActive: true,
     maxAttempts: 1,
+    tabLeaveLimit: 3,
+    availableFrom: "",
+    availableUntil: "",
   });
+  const [isUnlimitedPeriod, setIsUnlimitedPeriod] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
   const [sections, setSections] = useState<Section[]>([]);
   const [activeSectionIdx, setActiveSectionIdx] = useState<number | null>(null);
   const [showQuestionSelector, setShowQuestionSelector] = useState(false);
   const [showSectionModal, setShowSectionModal] = useState(false);
   const [sectionNameInput, setSectionNameInput] = useState("");
   const [sectionDurationInput, setSectionDurationInput] = useState(10);
+
   const [showEditSectionModal, setShowEditSectionModal] = useState(false);
   const [editSectionIdx, setEditSectionIdx] = useState<number | null>(null);
   const [editSectionNameValue, setEditSectionNameValue] = useState("");
@@ -65,7 +71,21 @@ export default function EditTestPage() {
 
   useEffect(() => {
     fetchTestWithSections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testId]);
+
+  const toInputDateTime = (value: any) => {
+    if (!value) return "";
+    const raw = String(value);
+    const withT = raw.includes("T") ? raw : raw.replace(" ", "T");
+    const m1 = withT.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+    if (m1) return m1[1];
+    try {
+      return new Date(raw).toISOString().slice(0, 16);
+    } catch {
+      return "";
+    }
+  };
 
   const fetchTestWithSections = async () => {
     try {
@@ -75,31 +95,37 @@ export default function EditTestPage() {
         return;
       }
       const response = await fetch(`/api/tests/${testId}?withSections=true`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.ok) {
-        const test = await response.json();
-        setFormData({
-          name: test.name,
-          description: test.description || "",
-          isActive: test.isActive,
-          maxAttempts: test.maxAttempts ?? 1,
-        });
-        setSections(
-          Array.isArray(test.sections)
-            ? test.sections.map((s: any) => ({
-                name: s.name,
-                duration: s.duration,
-                questions: Array.isArray(s.questions) ? s.questions : [],
-              }))
-            : []
-        );
-      } else {
+      if (!response.ok) {
         setError("Gagal memuat data tes");
+        return;
       }
-    } catch (error) {
+      const test = await response.json();
+      // Deteksi periode tidak terbatas (availableUntil > 2050)
+      const untilDate = new Date(test.availableUntil);
+      const isUnlimited = untilDate.getFullYear() > 2050;
+      
+      setIsUnlimitedPeriod(isUnlimited);
+      setFormData({
+        name: test.name,
+        description: test.description || "",
+        isActive: !!test.isActive,
+        maxAttempts: test.maxAttempts ?? 1,
+        tabLeaveLimit: test.tabLeaveLimit ?? test.tableavelimit ?? 3,
+        availableFrom: toInputDateTime(test.availableFrom),
+        availableUntil: toInputDateTime(test.availableUntil),
+      });
+      setSections(
+        Array.isArray(test.sections)
+          ? test.sections.map((s: any) => ({
+              name: s.name,
+              duration: s.duration,
+              questions: Array.isArray(s.questions) ? s.questions : [],
+            }))
+          : []
+      );
+    } catch (e) {
       setError("Terjadi kesalahan server");
     } finally {
       setLoading(false);
@@ -123,7 +149,6 @@ export default function EditTestPage() {
     }));
   };
 
-  // Section logic
   const handleAddSection = () => {
     if (!sectionNameInput.trim() || !sectionDurationInput) return;
     setSections((prev) => [
@@ -220,6 +245,7 @@ export default function EditTestPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (sections.length === 0) {
       showFeedback(
         "warning",
@@ -228,6 +254,33 @@ export default function EditTestPage() {
       );
       return;
     }
+
+    // Validasi periode tes (hanya jika tidak unlimited)
+    if (!isUnlimitedPeriod) {
+      if (!formData.availableFrom || !formData.availableUntil) {
+        showFeedback(
+          "warning",
+          "Peringatan",
+          "Periode tes (mulai & berakhir) wajib diisi"
+        );
+        return;
+      }
+      const fromDate = new Date(formData.availableFrom);
+      const untilDate = new Date(formData.availableUntil);
+      if (
+        isNaN(fromDate.getTime()) ||
+        isNaN(untilDate.getTime()) ||
+        fromDate > untilDate
+      ) {
+        showFeedback(
+          "warning",
+          "Peringatan",
+          "Periode mulai harus sebelum atau sama dengan periode berakhir"
+        );
+        return;
+      }
+    }
+
     if (sections.some((s) => s.questions.length === 0)) {
       showFeedback(
         "warning",
@@ -236,8 +289,10 @@ export default function EditTestPage() {
       );
       return;
     }
+
     setSaving(true);
     setError("");
+
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`/api/tests/${testId}`, {
@@ -248,6 +303,10 @@ export default function EditTestPage() {
         },
         body: JSON.stringify({
           ...formData,
+          ...(isUnlimitedPeriod && {
+            availableFrom: new Date().toISOString().slice(0, 16),
+            availableUntil: "2099-12-31T23:59",
+          }),
           duration: sections.reduce((sum, s) => sum + (s.duration || 0), 0),
           sections: sections.map((s) => ({
             name: s.name,
@@ -256,11 +315,10 @@ export default function EditTestPage() {
           })),
         }),
       });
+
       if (response.ok) {
         showFeedback("success", "Berhasil", "Tes berhasil diperbarui!");
-        setTimeout(() => {
-          router.push("/admin/dashboard");
-        }, 2000);
+        setTimeout(() => router.push("/admin/dashboard"), 1500);
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Gagal memperbarui tes");
@@ -270,7 +328,7 @@ export default function EditTestPage() {
           errorData.error || "Gagal memperbarui tes"
         );
       }
-    } catch (error) {
+    } catch (err) {
       setError("Terjadi kesalahan server");
       showFeedback("error", "Error", "Terjadi kesalahan server");
     } finally {
@@ -283,18 +341,16 @@ export default function EditTestPage() {
     return text.substring(0, maxLength) + "...";
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty?.toUpperCase()) {
-      case "MUDAH":
-        return "bg-green-100 text-green-800";
-      case "SEDANG":
-        return "bg-yellow-100 text-yellow-800";
-      case "SULIT":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-8">
+        <AdminHeader />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+          <div className="bg-white rounded-xl p-6">Memuat...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
@@ -313,6 +369,7 @@ export default function EditTestPage() {
                     {error}
                   </div>
                 )}
+
                 {/* Nama Tes */}
                 <div>
                   <label
@@ -332,6 +389,7 @@ export default function EditTestPage() {
                     placeholder="Contoh: TPA Matematika Dasar"
                   />
                 </div>
+
                 {/* Deskripsi */}
                 <div>
                   <label
@@ -367,21 +425,7 @@ export default function EditTestPage() {
                     </span>
                   </div>
                 </div>
-                {/* Status Aktif */}
-                <div>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={formData.isActive}
-                      onChange={handleInputChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      Tes aktif (peserta dapat mengakses)
-                    </span>
-                  </label>
-                </div>
+
                 {/* Jumlah Percobaan (maxAttempts) */}
                 <div>
                   <label
@@ -396,12 +440,100 @@ export default function EditTestPage() {
                     name="maxAttempts"
                     value={formData.maxAttempts}
                     onChange={handleInputChange}
-                    min="0"
-                    max="20"
+                    min={0}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+
+                {/* Periode Tes */}
+                <div className="mb-4">
+                  <div className="flex items-center mb-4">
+                    <input
+                      type="checkbox"
+                      id="isUnlimitedPeriod"
+                      checked={isUnlimitedPeriod}
+                      onChange={(e) => setIsUnlimitedPeriod(e.target.checked)}
+                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isUnlimitedPeriod" className="text-sm font-medium text-gray-700">
+                      Periode tes tidak terbatas
+                    </label>
+                  </div>
+                  
+                  {!isUnlimitedPeriod && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          htmlFor="availableFrom"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          Periode Mulai Tes *
+                        </label>
+                        <input
+                          type="datetime-local"
+                          id="availableFrom"
+                          name="availableFrom"
+                          value={formData.availableFrom}
+                          onChange={handleInputChange}
+                          required
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Waktu lokal Anda, akan disimpan sebagai waktu WIB.
+                        </p>
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="availableUntil"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          Periode Berakhir Tes *
+                        </label>
+                        <input
+                          type="datetime-local"
+                          id="availableUntil"
+                          name="availableUntil"
+                          value={formData.availableUntil}
+                          onChange={handleInputChange}
+                          required
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Peserta tidak bisa mulai tes setelah waktu ini.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {isUnlimitedPeriod && (
+                    <p className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                      Tes ini dapat diakses kapan saja tanpa batas waktu.
+                    </p>
+                  )}
+                </div>
+
+                {/* Batas Tab/Window Leave */}
+                <div className="mb-4">
+                  <label
+                    htmlFor="tabLeaveLimit"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Batas Peringatan Tab/Window Leave (default 3, 0 = tak
+                    terbatas)
+                  </label>
+                  <input
+                    type="number"
+                    id="tabLeaveLimit"
+                    name="tabLeaveLimit"
+                    value={formData.tabLeaveLimit}
+                    onChange={handleInputChange}
+                    min={0}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
                 {/* Section List */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -433,7 +565,7 @@ export default function EditTestPage() {
                                 {section.name}
                               </div>
                               <div className="text-xs text-gray-600">
-                                Durasi: {section.duration} menit &bull;{" "}
+                                Durasi: {section.duration} menit •{" "}
                                 {section.questions.length} soal
                               </div>
                             </div>
@@ -568,62 +700,23 @@ export default function EditTestPage() {
                     </div>
                   )}
                 </div>
-                {/* Modal Section */}
-                {showSectionModal && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-xs shadow-lg">
-                      <h2 className="text-lg font-semibold mb-4">
-                        Tambah Section
-                      </h2>
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Nama Section
-                        </label>
-                        <input
-                          type="text"
-                          className="w-full border px-3 py-2 rounded"
-                          placeholder="Nama section"
-                          value={sectionNameInput}
-                          onChange={(e) => setSectionNameInput(e.target.value)}
-                          autoFocus
-                        />
-                      </div>
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Durasi (menit)
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          className="w-full border px-3 py-2 rounded"
-                          value={sectionDurationInput}
-                          onChange={(e) =>
-                            setSectionDurationInput(
-                              parseInt(e.target.value) || 1
-                            )
-                          }
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          className="px-3 py-1 text-gray-600 hover:text-gray-900"
-                          onClick={() => setShowSectionModal(false)}
-                        >
-                          Batal
-                        </button>
-                        <button
-                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                          onClick={handleAddSection}
-                          disabled={
-                            !sectionNameInput.trim() || sectionDurationInput < 1
-                          }
-                        >
-                          Simpan
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+
+                {/* Status Aktif */}
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={formData.isActive}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">
+                      Tes aktif (peserta dapat mengakses)
+                    </span>
+                  </label>
+                </div>
+
                 {/* Action Buttons */}
                 <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
                   <button
@@ -644,6 +737,7 @@ export default function EditTestPage() {
               </form>
             </div>
           </div>
+
           {/* Info Box */}
           <div className="lg:col-span-1">
             <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -664,6 +758,71 @@ export default function EditTestPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Tambah Section */}
+      {showSectionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded-lg p-6 w-full max-w-xs shadow-lg">
+            <h2 className="text-lg font-semibold mb-4">Tambah Section</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nama Section
+              </label>
+              <input
+                type="text"
+                className="w-full border px-3 py-2 rounded mb-2"
+                placeholder="Nama section"
+                value={sectionNameInput}
+                onChange={(e) => setSectionNameInput(e.target.value)}
+              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Durasi Section (menit)
+              </label>
+              <input
+                id="sectionDurationInput"
+                type="number"
+                min={1}
+                max={300}
+                className="w-full border px-3 py-2 rounded"
+                placeholder="Durasi section (menit)"
+                value={sectionDurationInput}
+                onChange={(e) =>
+                  setSectionDurationInput(parseInt(e.target.value) || 1)
+                }
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-3 py-1 text-gray-600 hover:text-gray-900"
+                onClick={() => setShowSectionModal(false)}
+              >
+                Batal
+              </button>
+              <button
+                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                onClick={handleAddSection}
+                disabled={!sectionNameInput.trim() || !sectionDurationInput}
+              >
+                Tambah
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Question Selector Modal per section */}
+      <QuestionSelector
+        isOpen={showQuestionSelector}
+        onClose={() => setShowQuestionSelector(false)}
+        onSelect={handleQuestionSelect}
+        existingQuestionIds={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.questions.map((q) => q.id)
+            : []
+        }
+      />
+
+      {/* Feedback Modal */}
       <FeedbackModal
         isOpen={showModal}
         type={modalType}
@@ -672,16 +831,6 @@ export default function EditTestPage() {
         onClose={() => setShowModal(false)}
         autoClose={modalType !== "warning"}
         autoCloseDelay={3000}
-      />
-      <QuestionSelector
-        isOpen={showQuestionSelector}
-        onClose={() => setShowQuestionSelector(false)}
-        onSelect={handleQuestionSelect}
-        existingQuestionIds={
-          activeSectionIdx !== null
-            ? sections[activeSectionIdx]?.questions.map((q) => q.id) || []
-            : []
-        }
       />
     </div>
   );

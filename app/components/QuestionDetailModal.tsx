@@ -52,6 +52,19 @@ export default function QuestionDetailModal({
     }
   };
 
+  const formatCategoryName = (category: string) => {
+    switch (category?.toUpperCase()) {
+      case "TES_VERBAL":
+        return "Tes Verbal";
+      case "TES_GAMBAR":
+        return "Tes Gambar";
+      case "TES_LOGIKA":
+        return "Tes Logika";
+      default:
+        return category?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || category;
+    }
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty?.toUpperCase()) {
       case "MUDAH":
@@ -89,7 +102,7 @@ export default function QuestionDetailModal({
                   question.category
                 )}`}
               >
-                {question.category}
+                {formatCategoryName(question.category)}
               </span>
               <span
                 className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getDifficultyColor(

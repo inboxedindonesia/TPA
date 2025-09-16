@@ -34,6 +34,22 @@ interface TestSession {
   currentQuestionIndex: number;
 }
 
+// Format category name to be more user-friendly
+const formatCategoryName = (category: string) => {
+  switch (category?.toUpperCase()) {
+    case "TES_VERBAL":
+      return "Tes Verbal";
+    case "TES_GAMBAR":
+      return "Tes Gambar";
+    case "TES_LOGIKA":
+      return "Tes Logika";
+    case "TES_ANGKA":
+      return "Tes Angka";
+    default:
+      return category?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || category;
+  }
+};
+
 export default function TakeTestPage() {
   const router = useRouter();
   const params = useParams();
@@ -979,7 +995,7 @@ export default function TakeTestPage() {
               </h2>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                  {currentQuestion.category.replace("_", " ")}
+                  {formatCategoryName(currentQuestion.category)}
                 </span>
                 <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
                   {currentQuestion.difficulty}

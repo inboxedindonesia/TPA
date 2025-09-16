@@ -47,9 +47,13 @@ export async function GET(request: NextRequest) {
         t."totalQuestions",
         t."isActive",
         t."createdAt",
-        t."maxAttempts"
+        t."maxAttempts",
+        t."availableFrom",
+        t."availableUntil"
       FROM tests t
       WHERE t."isActive" = true
+        AND (NOW() AT TIME ZONE 'Asia/Jakarta') >= t."availableFrom"
+        AND (NOW() AT TIME ZONE 'Asia/Jakarta') <= t."availableUntil"
       ORDER BY t."createdAt" DESC
     `);
 
@@ -77,6 +81,8 @@ export async function GET(request: NextRequest) {
         averageScore: "0.0",
         attemptCount,
         maxAttempts: row.maxAttempts ?? row.maxattempts ?? 1,
+        availableFrom: row.availableFrom ?? row.availablefrom,
+        availableUntil: row.availableUntil ?? row.availableuntil,
       });
     }
 

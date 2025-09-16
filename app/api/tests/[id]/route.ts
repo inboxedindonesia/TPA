@@ -192,3 +192,163 @@ export async function DELETE(
     );
   }
 }
+
+// PUT /api/tests/[id] - Update test detail termasuk periode & sections
+export async function PUT(request: Request, { params }: any) {
+  try {
+    const id = params["id"];
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID tes tidak valid" },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const {
+      name,
+      description,
+      isActive,
+      maxAttempts,
+      tabLeaveLimit,
+      duration,
+      sections,
+      availableFrom,
+      availableUntil,
+    } = body;
+
+    if (!name) {
+      return NextResponse.json(
+        { error: "Nama tes wajib diisi" },
+        { status: 400 }
+      );
+    }
+
+    // Periode wajib & valid
+    if (!availableFrom || !availableUntil) {
+      return NextResponse.json(
+        { error: "Periode tes (mulai & berakhir) wajib diisi" },
+        { status: 400 }
+      );
+    }
+    const toISOWithWIB = (value: any): string | null => {
+      if (!value || typeof value !== "string") return null;
+      const m = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+      return m ? `${m[1]}T${m[2]}:00+07:00` : null;
+    };
+    const fromISO = toISOWithWIB(availableFrom);
+    const untilISO = toISOWithWIB(availableUntil);
+    if (!fromISO || !untilISO) {
+      return NextResponse.json(
+        { error: "Format periode tidak valid" },
+        { status: 400 }
+      );
+    }
+    if (new Date(fromISO).getTime() > new Date(untilISO).getTime()) {
+      return NextResponse.json(
+        {
+          error:
+            "Periode mulai harus sebelum atau sama dengan periode berakhir",
+        },
+        { status: 400 }
+      );
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Pastikan tes ada dan ambil nama untuk logging
+      const exists = await client.query(
+        `SELECT name FROM tests WHERE id = $1`,
+        [id]
+      );
+      if (exists.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return NextResponse.json(
+          { error: "Tes tidak ditemukan" },
+          { status: 404 }
+        );
+      }
+
+      // Update kolom dasar di tests (termasuk periode WIB)
+      await client.query(
+        `UPDATE tests SET 
+          name = $1,
+          description = $2,
+          "isActive" = COALESCE($3, "isActive"),
+          "maxAttempts" = COALESCE($4, "maxAttempts"),
+          "tabLeaveLimit" = COALESCE($5, "tabLeaveLimit"),
+          duration = COALESCE($6, duration),
+          "availableFrom" = ($7::timestamptz AT TIME ZONE 'Asia/Jakarta'),
+          "availableUntil" = ($8::timestamptz AT TIME ZONE 'Asia/Jakarta'),
+          "updatedAt" = (NOW() AT TIME ZONE 'Asia/Jakarta')
+        WHERE id = $9`,
+        [
+          name,
+          description || null,
+          typeof isActive === "boolean" ? isActive : null,
+          typeof maxAttempts === "number" ? maxAttempts : null,
+          typeof tabLeaveLimit === "number" ? tabLeaveLimit : null,
+          typeof duration === "number" ? duration : null,
+          fromISO,
+          untilISO,
+          id,
+        ]
+      );
+
+      // Replace sections jika dikirim
+      if (Array.isArray(sections)) {
+        // Hapus relasi & sections lama
+        await client.query(`DELETE FROM test_questions WHERE test_id = $1`, [
+          id,
+        ]);
+        await client.query(`DELETE FROM sections WHERE testId = $1`, [id]);
+
+        // Insert ulang sections dan test_questions
+        for (const [order, s] of sections.entries()) {
+          const sec = await client.query(
+            `INSERT INTO sections (testId, name, duration, "order") VALUES ($1, $2, $3, $4) RETURNING id`,
+            [id, s.name, s.duration, order + 1]
+          );
+          const sectionId = sec.rows[0].id;
+          if (Array.isArray(s.questionIds) && s.questionIds.length > 0) {
+            for (const qid of s.questionIds) {
+              await client.query(
+                `INSERT INTO test_questions (test_id, question_id, section_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+                [id, qid, sectionId]
+              );
+            }
+          }
+        }
+
+        // Update totalQuestions after updating sections
+        const updateTestQuery = `
+          UPDATE tests 
+          SET "totalQuestions" = (
+            SELECT COUNT(*) FROM test_questions WHERE test_id = $1
+          )
+          WHERE id = $1
+        `;
+        await client.query(updateTestQuery, [id]);
+      }
+
+      await client.query("COMMIT");
+
+      // Ambil data terbaru
+      const res = await client.query(`SELECT * FROM tests WHERE id = $1`, [id]);
+      return NextResponse.json(res.rows[0] || { id });
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("Error updating test (PUT):", error);
+    return NextResponse.json(
+      { error: "Terjadi kesalahan saat memperbarui tes" },
+      { status: 500 }
+    );
+  }
+}

@@ -226,6 +226,16 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Update test total questions
+      const updateTestQuery = `
+        UPDATE tests 
+        SET "totalQuestions" = (
+          SELECT COUNT(*) FROM test_questions WHERE test_id = $1
+        )
+        WHERE id = $1
+      `;
+      await client.query(updateTestQuery, [testId]);
+
       return NextResponse.json({
         message: "Soal berhasil ditambahkan ke tes",
         addedCount,

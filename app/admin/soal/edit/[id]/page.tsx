@@ -92,6 +92,43 @@ export default function EditQuestionPage({
       "Tes Bayangan Cermin",
       "Tes Identifikasi Potongan Gambar",
     ],
+    // RIASEC Categories
+    TES_REALISTIC: [
+      "Aktivitas Praktis",
+      "Pekerjaan Manual",
+      "Teknologi & Mesin",
+      "Outdoor & Fisik",
+    ],
+    TES_INVESTIGATIVE: [
+      "Penelitian & Analisis",
+      "Problem Solving",
+      "Sains & Matematika",
+      "Observasi & Eksperimen",
+    ],
+    TES_ARTISTIC: [
+      "Kreativitas & Seni",
+      "Ekspresi Diri",
+      "Desain & Estetika",
+      "Inovasi & Originalitas",
+    ],
+    TES_SOCIAL: [
+      "Membantu Orang Lain",
+      "Komunikasi & Interaksi",
+      "Mengajar & Membimbing",
+      "Kerja Tim & Kolaborasi",
+    ],
+    TES_ENTERPRISING: [
+      "Kepemimpinan & Manajemen",
+      "Bisnis & Kewirausahaan",
+      "Persuasi & Negosiasi",
+      "Kompetisi & Pencapaian",
+    ],
+    TES_CONVENTIONAL: [
+      "Organisasi & Administrasi",
+      "Detail & Akurasi",
+      "Prosedur & Sistem",
+      "Data & Dokumentasi",
+    ],
   };
 
   // Load question data
@@ -507,7 +544,7 @@ export default function EditQuestionPage({
           "Soal berhasil diperbarui!",
           "Soal berhasil diperbarui!"
         );
-        router.push("/admin/stats/soal");
+        router.push("/admin/dashboard");
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Gagal memperbarui soal");
@@ -592,10 +629,20 @@ export default function EditQuestionPage({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Pilih Kategori Soal</option>
-                <option value="TES_VERBAL">Tes Verbal</option>
-                <option value="TES_ANGKA">Tes Angka</option>
-                <option value="TES_LOGIKA">Tes Logika</option>
-                <option value="TES_GAMBAR">Tes Gambar</option>
+                <optgroup label="TPA (Tes Potensi Akademik)">
+                  <option value="TES_VERBAL">Tes Verbal</option>
+                  <option value="TES_ANGKA">Tes Angka</option>
+                  <option value="TES_LOGIKA">Tes Logika</option>
+                  <option value="TES_GAMBAR">Tes Gambar</option>
+                </optgroup>
+                <optgroup label="RIASEC (Tes Minat Karir)">
+                  <option value="TES_REALISTIC">Tes Realistic</option>
+                  <option value="TES_INVESTIGATIVE">Tes Investigative</option>
+                  <option value="TES_ARTISTIC">Tes Artistic</option>
+                  <option value="TES_SOCIAL">Tes Social</option>
+                  <option value="TES_ENTERPRISING">Tes Enterprising</option>
+                  <option value="TES_CONVENTIONAL">Tes Conventional</option>
+                </optgroup>
               </select>
             </div>
 

@@ -41,6 +41,8 @@ interface User {
   jenjang?: string;
   foto?: string; // relative path under public/
   registration_id?: string;
+  nationality?: string;
+  passport?: string;
 }
 
 export default function ProfilePage() {
@@ -173,7 +175,7 @@ export default function ProfilePage() {
     return `${age} tahun`;
   };
 
-  // Generate PDF untuk satu hasil tes
+  // Generate PDF untuk satu hasil tes dengan preview
   const downloadSingleResultPdf = (r: any) => {
     try {
       const doc = new jsPDF();
@@ -203,12 +205,52 @@ export default function ProfilePage() {
       );
       y += 8;
       doc.text(`Tanggal      : ${r?.date ? formatDate(r.date) : "-"}`, 10, y);
+      y += 8;
+      doc.text(`Durasi        : ${r?.duration ? formatDuration(r.duration) : "-"}`, 10, y);
+      y += 8;
+      doc.text(`Status        : ${r?.status === "COMPLETED" ? "Selesai" : "Belum Selesai"}`, 10, y);
 
-      const dateForFile = r?.date
-        ? new Date(r.date).toISOString().slice(0, 10)
-        : "tanggal";
-      const nameForFile = fileSafe(r?.testName || "tes");
-      doc.save(`hasil-${nameForFile}-${dateForFile}.pdf`);
+      // Tambahkan informasi detail jika ada
+      if (r?.correctAnswers !== undefined || r?.wrongAnswers !== undefined) {
+        y += 12;
+        doc.text("Detail Jawaban:", 10, y);
+        y += 8;
+        doc.text(`Benar         : ${safe(r?.correctAnswers)}`, 10, y);
+        y += 8;
+        doc.text(`Salah         : ${safe(r?.wrongAnswers)}`, 10, y);
+      }
+
+      // Preview PDF terlebih dahulu
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      // Buka preview di tab baru
+      const previewWindow = window.open(pdfUrl, '_blank');
+      
+      if (previewWindow) {
+        // Tunggu sebentar lalu tanyakan apakah ingin download
+        setTimeout(() => {
+          const shouldDownload = confirm('Apakah Anda ingin mengunduh PDF ini?');
+          if (shouldDownload) {
+            const dateForFile = r?.date
+              ? new Date(r.date).toISOString().slice(0, 10)
+              : "tanggal";
+            const nameForFile = fileSafe(r?.testName || "tes");
+            doc.save(`hasil-${nameForFile}-${dateForFile}.pdf`);
+          }
+          // Bersihkan URL object
+          URL.revokeObjectURL(pdfUrl);
+        }, 1000);
+      } else {
+        // Jika popup diblokir, langsung download
+        alert('Popup diblokir. PDF akan langsung diunduh.');
+        const dateForFile = r?.date
+          ? new Date(r.date).toISOString().slice(0, 10)
+          : "tanggal";
+        const nameForFile = fileSafe(r?.testName || "tes");
+        doc.save(`hasil-${nameForFile}-${dateForFile}.pdf`);
+        URL.revokeObjectURL(pdfUrl);
+      }
     } catch (e) {
       alert("Gagal membuat PDF hasil tes.");
     }
@@ -361,12 +403,38 @@ export default function ProfilePage() {
                     {computeAge(user.tanggal_lahir || "")}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">NIK</p>
-                  <p className="mt-1 font-medium text-gray-900">
-                    {user.nik || "-"}
-                  </p>
-                </div>
+                {/* Tampilkan field berdasarkan kewarganegaraan */}
+                {user.nationality === "WNI" ? (
+                  <>
+                    <div>
+                      <p className="text-sm text-gray-500">Kewarganegaraan</p>
+                      <p className="mt-1 font-medium text-gray-900">
+                        WNI
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">NIK (Nomor Induk Kependudukan)</p>
+                      <p className="mt-1 font-medium text-gray-900">
+                        {user.nik || "-"}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-sm text-gray-500">Kewarganegaraan</p>
+                      <p className="mt-1 font-medium text-gray-900">
+                        {user.nationality || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Nomor Passport</p>
+                      <p className="mt-1 font-medium text-gray-900">
+                        {user.passport || "-"}
+                      </p>
+                    </div>
+                  </>
+                )}
                 <div>
                   <p className="text-sm text-gray-500">Jenjang</p>
                   <p className="mt-1 font-medium text-gray-900">

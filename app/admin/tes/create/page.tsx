@@ -64,7 +64,11 @@ export default function CreateTestPage() {
     isActive: true,
     maxAttempts: 1,
     tabLeaveLimit: 3, // default 3
+    minimumScore: 60, // default 60%
+    availableFrom: "",
+    availableUntil: "",
   });
+  const [isUnlimitedPeriod, setIsUnlimitedPeriod] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   // Section state
@@ -94,15 +98,42 @@ export default function CreateTestPage() {
     >
   ) => {
     const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox"
-          ? (e.target as HTMLInputElement).checked
-          : type === "number"
-          ? parseInt(value)
-          : value,
-    }));
+    
+    if (type === "checkbox") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: (e.target as HTMLInputElement).checked,
+      }));
+    } else if (type === "number") {
+      const numValue = parseInt(value) || 0;
+      // Validasi khusus untuk setiap field numerik
+      let validatedValue = numValue;
+      
+      if (name === "maxAttempts") {
+        validatedValue = Math.max(0, Math.min(20, numValue));
+      } else if (name === "tabLeaveLimit") {
+        validatedValue = Math.max(0, Math.min(10, numValue));
+      }
+      
+      setFormData((prev) => ({
+        ...prev,
+        [name]: validatedValue,
+      }));
+    } else {
+      // Validasi untuk text dan textarea
+      let validatedValue = value;
+      
+      if (name === "name" && value.length > 100) {
+        validatedValue = value.substring(0, 100);
+      } else if (name === "description" && value.length > 500) {
+        validatedValue = value.substring(0, 500);
+      }
+      
+      setFormData((prev) => ({
+        ...prev,
+        [name]: validatedValue,
+      }));
+    }
   };
 
   const handleAddSection = () => {
@@ -184,10 +215,100 @@ export default function CreateTestPage() {
       );
       return;
     }
+    // Validasi nama tes
+    if (!formData.name.trim()) {
+      showFeedback(
+        "warning",
+        "Validasi Gagal",
+        "Nama tes wajib diisi"
+      );
+      return;
+    }
+    
+    if (formData.name.trim().length < 3) {
+      showFeedback(
+        "warning",
+        "Validasi Gagal",
+        "Nama tes minimal 3 karakter"
+      );
+      return;
+    }
+
+    // Validasi periode tes (hanya jika tidak unlimited)
+    if (!isUnlimitedPeriod) {
+      if (!formData.availableFrom || !formData.availableUntil) {
+        showFeedback(
+          "warning",
+          "Validasi Gagal",
+          "Periode tes (mulai & berakhir) wajib diisi"
+        );
+        return;
+      }
+      
+      const from = new Date(formData.availableFrom);
+      const until = new Date(formData.availableUntil);
+      const now = new Date();
+      
+      if (isNaN(from.getTime()) || isNaN(until.getTime())) {
+        showFeedback(
+          "warning",
+          "Validasi Gagal",
+          "Format tanggal dan waktu tidak valid"
+        );
+        return;
+      }
+      
+      if (from >= until) {
+        showFeedback(
+          "warning",
+          "Validasi Gagal",
+          "Waktu mulai harus sebelum waktu berakhir"
+        );
+        return;
+      }
+      
+      if (until <= now) {
+        showFeedback(
+          "warning",
+          "Validasi Gagal",
+          "Waktu berakhir harus di masa depan"
+        );
+        return;
+      }
+    }
+    
+    // Validasi nilai numerik
+    if (formData.maxAttempts < 0) {
+      showFeedback(
+        "warning",
+        "Validasi Gagal",
+        "Batas percobaan tidak boleh negatif"
+      );
+      return;
+    }
+    
+    if (formData.tabLeaveLimit < 0) {
+      showFeedback(
+        "warning",
+        "Validasi Gagal",
+        "Batas peringatan tab leave tidak boleh negatif"
+      );
+      return;
+    }
+    
+    // Validasi batas minimum skor
+    if (formData.minimumScore < 0 || formData.minimumScore > 100) {
+      showFeedback(
+        "warning",
+        "Validasi Gagal",
+        "Batas minimum skor harus antara 0-100%"
+      );
+      return;
+    }
     if (sections.some((s) => s.questions.length === 0)) {
       showFeedback(
         "warning",
-        "Peringatan",
+        "Validasi Gagal",
         "Setiap section harus memiliki minimal satu soal"
       );
       return;
@@ -220,41 +341,54 @@ export default function CreateTestPage() {
         (sum, s) => sum + (s.duration || 0),
         0
       );
+      
+      // Prepare data dengan handling periode unlimited
+      const testData = {
+        ...formData,
+        duration: totalDuration,
+        creatorId,
+        // Jika unlimited period, set availableFrom ke now dan availableUntil ke tanggal yang sangat jauh
+        availableFrom: isUnlimitedPeriod 
+          ? new Date().toISOString().slice(0, 16) 
+          : formData.availableFrom,
+        availableUntil: isUnlimitedPeriod 
+          ? new Date('2099-12-31T23:59').toISOString().slice(0, 16)
+          : formData.availableUntil,
+        sections: sections.map((s) => ({
+          name: s.name,
+          duration: s.duration,
+          questionIds: s.questions.map((q) => q.id),
+        })),
+      };
+      
       const testResponse = await fetch("/api/tests", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...formData,
-          duration: totalDuration,
-          creatorId,
-          sections: sections.map((s) => ({
-            name: s.name,
-            duration: s.duration,
-            questionIds: s.questions.map((q) => q.id),
-          })),
-        }),
+        body: JSON.stringify(testData),
       });
 
       if (testResponse.ok) {
         showFeedback(
           "success",
-          "Berhasil",
-          "Tes dengan section berhasil dibuat!"
+          "Berhasil Dibuat",
+          "Tes dengan section berhasil dibuat dan siap digunakan!"
         );
         setTimeout(() => {
           router.push("/admin/dashboard");
         }, 2000);
       } else {
         const errorData = await testResponse.json();
-        setError(errorData.error || "Gagal membuat tes");
-        showFeedback("error", "Gagal", errorData.error || "Gagal membuat tes");
+        const errorMessage = errorData.error || "Terjadi kesalahan saat membuat tes";
+        setError(errorMessage);
+        showFeedback("error", "Gagal Membuat Tes", errorMessage);
       }
     } catch (error) {
-      setError("Terjadi kesalahan server");
-      showFeedback("error", "Error", "Terjadi kesalahan server");
+      const errorMessage = "Terjadi kesalahan pada server. Silakan coba lagi.";
+      setError(errorMessage);
+      showFeedback("error", "Kesalahan Server", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -304,8 +438,12 @@ export default function CreateTestPage() {
                 className="space-y-6"
               >
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-                    {error}
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+                    <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <span className="font-medium">Error:</span>
+                    <span className="ml-1">{error}</span>
                   </div>
                 )}
 
@@ -315,7 +453,7 @@ export default function CreateTestPage() {
                     htmlFor="name"
                     className="block text-sm font-medium text-gray-700 mb-2"
                   >
-                    Nama Tes *
+                    Nama Tes <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -324,9 +462,13 @@ export default function CreateTestPage() {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Contoh: TPA Matematika Dasar"
+                    maxLength={100}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Masukkan nama tes (contoh: TPA Matematika Dasar)"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Maksimal 100 karakter
+                  </p>
                 </div>
 
                 {/* Deskripsi */}
@@ -343,9 +485,13 @@ export default function CreateTestPage() {
                     value={formData.description}
                     onChange={handleInputChange}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Jelaskan tujuan dan cakupan tes ini..."
+                    maxLength={500}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-vertical"
+                    placeholder="Jelaskan tujuan dan cakupan tes ini (opsional)"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Maksimal 500 karakter ({formData.description.length}/500)
+                  </p>
                 </div>
 
                 {/* Durasi */}
@@ -365,47 +511,156 @@ export default function CreateTestPage() {
                   </div>
                 </div>
 
-                {/* Jumlah Percobaan (maxAttempts) */}
-                <div className="mb-4">
+                {/* Pengaturan Tes */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Jumlah Percobaan (maxAttempts) */}
+                  <div>
+                    <label
+                      htmlFor="maxAttempts"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Batas Percobaan Tes <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      id="maxAttempts"
+                      name="maxAttempts"
+                      value={formData.maxAttempts}
+                      onChange={handleInputChange}
+                      min="0"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      0 = tak terbatas
+                    </p>
+                  </div>
+                  
+                  {/* Batas Tab/Window Leave */}
+                  <div>
+                    <label
+                      htmlFor="tabLeaveLimit"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Batas Peringatan Tab Leave <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      id="tabLeaveLimit"
+                      name="tabLeaveLimit"
+                      value={formData.tabLeaveLimit}
+                      onChange={handleInputChange}
+                      min="0"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="3"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      0 = tak terbatas
+                    </p>
+                  </div>
+                </div>
+
+                {/* Batas Minimum Skor */}
+                <div>
                   <label
-                    htmlFor="maxAttempts"
+                    htmlFor="minimumScore"
                     className="block text-sm font-medium text-gray-700 mb-2"
                   >
-                    Batas Percobaan Tes (default 1, 0 = tak terbatas)
+                    Batas Minimum Skor Kelulusan <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    id="maxAttempts"
-                    name="maxAttempts"
-                    value={formData.maxAttempts}
-                    onChange={handleInputChange}
-                    min="0"
-                    max="20"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      id="minimumScore"
+                      name="minimumScore"
+                      value={formData.minimumScore}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="100"
+                      required
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="60"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-gray-500 text-sm">%</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Peserta harus mencapai skor minimal ini untuk dinyatakan lulus (0-100%)
+                  </p>
                 </div>
-                {/* Batas Tab/Window Leave */}
+                {/* Periode Tes */}
                 <div className="mb-4">
-                  <label
-                    htmlFor="tabLeaveLimit"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Batas Peringatan Tab/Window Leave (default 3, 0 = tak
-                    terbatas)
-                  </label>
-                  <input
-                    type="number"
-                    id="tabLeaveLimit"
-                    name="tabLeaveLimit"
-                    value={formData.tabLeaveLimit}
-                    onChange={handleInputChange}
-                    min="0"
-                    max="10"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <div className="flex items-center mb-4">
+                    <input
+                      type="checkbox"
+                      id="isUnlimitedPeriod"
+                      checked={isUnlimitedPeriod}
+                      onChange={(e) => setIsUnlimitedPeriod(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                    <label
+                      htmlFor="isUnlimitedPeriod"
+                      className="ml-2 text-sm font-medium text-gray-700"
+                    >
+                      Periode tes tidak terbatas
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-4">
+                    {isUnlimitedPeriod 
+                      ? "Tes dapat diakses kapan saja tanpa batas waktu"
+                      : "Tentukan periode waktu tes dapat diakses peserta"
+                    }
+                  </p>
                 </div>
+                
+                {!isUnlimitedPeriod && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label
+                        htmlFor="availableFrom"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Periode Mulai Tes <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="availableFrom"
+                        name="availableFrom"
+                        value={formData.availableFrom}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Waktu mulai tes dapat diakses peserta (zona waktu lokal)
+                      </p>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="availableUntil"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Periode Berakhir Tes <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="availableUntil"
+                        name="availableUntil"
+                        value={formData.availableUntil}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Peserta tidak dapat memulai tes setelah waktu ini
+                      </p>
+                    </div>
+                  </div>
+                )}
+
 
                 {/* Section List */}
                 <div>
@@ -415,10 +670,10 @@ export default function CreateTestPage() {
                     </label>
                     <button
                       type="button"
-                      className="flex items-center px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                      className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-sm font-medium"
                       onClick={() => setShowSectionModal(true)}
                     >
-                      <Plus className="w-4 h-4 mr-1" /> Tambah Section
+                      <Plus className="w-4 h-4 mr-2" /> Tambah Section
                     </button>
                   </div>
                   {sections.length === 0 ? (
@@ -432,9 +687,9 @@ export default function CreateTestPage() {
                           key={idx}
                           className="border rounded-lg p-3 bg-gray-50"
                         >
-                          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2">
-                            <div className="flex-1">
-                              <div className="font-semibold text-blue-800">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-blue-800 truncate">
                                 {section.name}
                               </div>
                               <div className="text-xs text-gray-600">
@@ -442,7 +697,7 @@ export default function CreateTestPage() {
                                 {section.questions.length} soal
                               </div>
                             </div>
-                            <div className="flex flex-row flex-wrap items-end gap-1 mt-2 md:mt-0">
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
                               <button
                                 type="button"
                                 onClick={() =>
@@ -452,9 +707,9 @@ export default function CreateTestPage() {
                                     section.duration
                                   )
                                 }
-                                className="text-blue-600 hover:underline text-xs ml-1"
+                                className="px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                               >
-                                Edit Section
+                                Edit
                               </button>
                               {/* Modal Edit Section */}
                               {showEditSectionModal && (
@@ -498,23 +753,25 @@ export default function CreateTestPage() {
                                     </div>
                                     <div className="flex justify-end gap-2">
                                       <button
-                                        className="px-3 py-1 text-gray-600 hover:text-gray-900"
-                                        onClick={() =>
-                                          setShowEditSectionModal(false)
-                                        }
-                                      >
-                                        Batal
-                                      </button>
-                                      <button
-                                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                        onClick={handleEditSectionSave}
-                                        disabled={
-                                          !editSectionNameValue.trim() ||
-                                          editSectionDurationValue < 1
-                                        }
-                                      >
-                                        Simpan
-                                      </button>
+                        type="button"
+                        className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+                        onClick={() =>
+                          setShowEditSectionModal(false)
+                        }
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                        onClick={handleEditSectionSave}
+                        disabled={
+                          !editSectionNameValue.trim() ||
+                          editSectionDurationValue < 1
+                        }
+                      >
+                        Simpan
+                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -522,13 +779,13 @@ export default function CreateTestPage() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveSection(idx)}
-                                className="text-red-600 hover:underline text-xs ml-1"
+                                className="px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
                               >
                                 Hapus
                               </button>
                               <button
                                 type="button"
-                                className="text-blue-600 hover:underline text-xs ml-1"
+                                className="px-2 py-1 text-green-600 hover:bg-green-50 rounded transition-colors"
                                 onClick={() => {
                                   setActiveSectionIdx(idx);
                                   setShowQuestionSelector(true);
@@ -590,11 +847,11 @@ export default function CreateTestPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => router.back()}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors font-medium"
                   >
                     Batal
                   </button>
@@ -605,9 +862,19 @@ export default function CreateTestPage() {
                       sections.length === 0 ||
                       sections.some((s) => s.questions.length === 0)
                     }
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                   >
-                    {loading ? "Menyimpan..." : "Buat Tes"}
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Menyimpan...
+                      </>
+                    ) : (
+                      "Buat Tes"
+                    )}
                   </button>
                 </div>
               </form>
@@ -669,13 +936,15 @@ export default function CreateTestPage() {
             </div>
             <div className="flex justify-end gap-2">
               <button
-                className="px-3 py-1 text-gray-600 hover:text-gray-900"
+                type="button"
+                className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
                 onClick={() => setShowSectionModal(false)}
               >
                 Batal
               </button>
               <button
-                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                type="button"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 onClick={handleAddSection}
                 disabled={!sectionNameInput.trim() || !sectionDurationInput}
               >

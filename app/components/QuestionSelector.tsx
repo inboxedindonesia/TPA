@@ -30,6 +30,22 @@ interface QuestionSelectorProps {
   existingQuestionIds?: string[];
 }
 
+// Format category name to be more user-friendly
+const formatCategoryName = (category: string) => {
+  switch (category?.toUpperCase()) {
+    case "TES_VERBAL":
+      return "Tes Verbal";
+    case "TES_GAMBAR":
+      return "Tes Gambar";
+    case "TES_LOGIKA":
+      return "Tes Logika";
+    case "TES_ANGKA":
+      return "Tes Angka";
+    default:
+      return category?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || category;
+  }
+};
+
 export default function QuestionSelector({
   isOpen,
   onClose,
@@ -403,7 +419,7 @@ export default function QuestionSelector({
                                 question.category
                               )}`}
                             >
-                              {question.category}
+                              {formatCategoryName(question.category)}
                             </span>
                             <span
                               className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDifficultyColor(

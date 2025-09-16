@@ -35,6 +35,8 @@ export default function RegisterPage() {
     jurusan: "",
     nik: "",
     jenjang: "",
+    nationality: "",
+    passport: "",
   });
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
@@ -191,7 +193,9 @@ export default function RegisterPage() {
           body.append("provinsi_sekolah", formData.provinsi_sekolah);
         if (formData.jurusan) body.append("jurusan", formData.jurusan);
         if (formData.nik) body.append("nik", formData.nik);
+        if (formData.passport) body.append("passport", formData.passport);
         if (formData.jenjang) body.append("jenjang", formData.jenjang);
+        if (formData.nationality) body.append("nationality", formData.nationality);
         if (foto) body.append("foto", foto);
         response = await fetch("/api/auth/profile", {
           method: "PUT",
@@ -478,6 +482,96 @@ export default function RegisterPage() {
                   </div>
                   <div>
                     <label
+                      htmlFor="nationality"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Kewarganegaraan
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MapPin className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <select
+                        id="nationality"
+                        name="nationality"
+                        className="input-field pl-10"
+                        value={formData.nationality}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            nationality: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">Pilih Kewarganegaraan</option>
+                        <option value="WNI">Warga Negara Indonesia (WNI)</option>
+                        <option value="WNA">Warga Negara Asing (WNA)</option>
+                      </select>
+                    </div>
+                  </div>
+                  {/* Conditional field based on nationality */}
+                  {formData.nationality === 'WNI' && (
+                    <div>
+                      <label
+                        htmlFor="nik"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        NIK (Nomor Induk Kependudukan)
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <User className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          id="nik"
+                          name="nik"
+                          type="text"
+                          className="input-field pl-10"
+                          placeholder="Masukkan NIK (16 digit)"
+                          value={formData.nik}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              nik: e.target.value.replace(/[^0-9]/g, ""),
+                            })
+                          }
+                          pattern="[0-9]{16}"
+                          maxLength={16}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {formData.nationality === 'WNA' && (
+                    <div>
+                      <label
+                        htmlFor="passport"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Nomor Passport
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <User className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          id="passport"
+                          name="passport"
+                          type="text"
+                          className="input-field pl-10"
+                          placeholder="Masukkan nomor passport"
+                          value={formData.passport || ''}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              passport: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label
                       htmlFor="jenjang"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
@@ -612,33 +706,7 @@ export default function RegisterPage() {
                       </select>
                     </div>
                   </div>
-                  <div>
-                    <label
-                      htmlFor="nik"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      NIK
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        id="nik"
-                        name="nik"
-                        type="text"
-                        className="input-field pl-10"
-                        placeholder="Nomor Induk Kependudukan"
-                        value={formData.nik}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            nik: e.target.value.replace(/[^0-9]/g, ""),
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
+
                   <div className="md:col-span-2">
                     <label
                       htmlFor="alamat"

@@ -31,6 +31,8 @@ export async function GET(req: Request) {
         jenjang: user.jenjang,
         registration_id: user.registration_id,
         is_verified: user.is_verified,
+        nationality: user.nationality,
+        passport: user.passport,
       },
     });
   } catch (e) {
@@ -61,9 +63,10 @@ export async function PUT(req: Request) {
       "asal_sekolah",
       "provinsi_sekolah",
       "jurusan",
-      "foto",
       "nik",
       "jenjang",
+      "nationality",
+      "passport",
     ];
     const updates: Record<string, any> = {};
 

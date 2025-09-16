@@ -48,10 +48,10 @@ export async function GET(request: NextRequest) {
         t."createdAt",
         COUNT(DISTINCT ts."userId") as "participantCount",
         COALESCE(AVG(ts.score), 0) as "averageScore",
-        COUNT(q.id) as "questionCount"
+        COUNT(DISTINCT tq.question_id) as "questionCount"
       FROM tests t
       LEFT JOIN test_sessions ts ON t.id = ts."testId" AND ts.status = $1
-      LEFT JOIN questions q ON t.id = q."testId"
+      LEFT JOIN test_questions tq ON t.id = tq.test_id
       GROUP BY t.id, t.name, t.duration, t."isActive", t."createdAt"
       ORDER BY t."createdAt" DESC
       LIMIT 20

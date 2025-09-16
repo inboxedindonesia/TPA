@@ -69,9 +69,28 @@ export async function initDatabase() {
         "totalQuestions" INTEGER DEFAULT 0,
   "isActive" BOOLEAN DEFAULT TRUE,
         "creatorId" VARCHAR(255) NOT NULL,
+        "maxAttempts" INTEGER DEFAULT 1,
+        "tabLeaveLimit" INTEGER DEFAULT 3,
+        "minimumScore" INTEGER DEFAULT 60,
+  "availableFrom" TIMESTAMP NOT NULL,
+  "availableUntil" TIMESTAMP NOT NULL,
   "createdAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
   "updatedAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         FOREIGN KEY ("creatorId") REFERENCES users(id)
+      )
+    `);
+
+    // Create sections table (for grouping questions per test)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sections (
+        id SERIAL PRIMARY KEY,
+        testId VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        duration INTEGER NOT NULL,
+        "order" INTEGER NOT NULL,
+        "createdAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
+        "updatedAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
+        CONSTRAINT fk_sections_test FOREIGN KEY (testId) REFERENCES tests(id) ON DELETE CASCADE
       )
     `);
 
@@ -105,16 +124,18 @@ export async function initDatabase() {
       )
     `);
 
-    // Create test_questions table (junction table for many-to-many relationship)
+  // Create test_questions table (junction table for many-to-many relationship)
     await client.query(`
       CREATE TABLE IF NOT EXISTS test_questions (
         id SERIAL PRIMARY KEY,
         test_id VARCHAR(255) NOT NULL,
         question_id VARCHAR(255) NOT NULL,
+    section_id INTEGER NULL,
   created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         UNIQUE(test_id, question_id),
         FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
-        FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+    FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE
       )
     `);
 

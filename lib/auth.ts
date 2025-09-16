@@ -21,6 +21,8 @@ export interface UserInfo {
   jenjang?: string;
   registration_id?: string;
   is_verified?: boolean;
+  nationality?: string;
+  passport?: string;
 }
 
 export async function getUserFromRequest(
@@ -101,7 +103,7 @@ export async function getUserFromDatabase(
       SELECT u.id, u.name, u.email, r.name as role_name,
   u."createdAt",
   u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin, u.alamat,
-    u.asal_sekolah, u.provinsi_sekolah, u.jurusan, u.foto, u.nik, u.jenjang, u.registration_id, u.is_verified
+    u.asal_sekolah, u.provinsi_sekolah, u.jurusan, u.foto, u.nik, u.jenjang, u.registration_id, u.is_verified, u.nationality, u.passport
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1
@@ -134,6 +136,8 @@ export async function getUserFromDatabase(
       jenjang: user.jenjang,
       registration_id: user.registration_id,
       is_verified: user.is_verified,
+      nationality: user.nationality,
+      passport: user.passport,
     };
   } catch (error) {
     console.error("Error getting user from database:", error);

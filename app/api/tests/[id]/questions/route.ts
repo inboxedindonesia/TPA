@@ -145,7 +145,7 @@ export async function POST(request: Request, { params }: any) {
       // Update test total questions
       const updateTestQuery = `
         UPDATE tests 
-        SET total_questions = (
+        SET "totalQuestions" = (
           SELECT COUNT(*) FROM test_questions WHERE test_id = $1
         )
         WHERE id = $1

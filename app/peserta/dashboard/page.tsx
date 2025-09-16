@@ -26,6 +26,8 @@ interface Test {
   averageScore: number;
   attemptCount?: number;
   maxAttempts?: number;
+  availableFrom?: string;
+  availableUntil?: string;
 }
 
 interface TestResult {
@@ -84,6 +86,24 @@ export default function PesertaDashboard() {
       setError("Gagal memuat data dashboard");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const formatWIBDateTime = (value?: string) => {
+    if (!value) return "-";
+    try {
+      const date = new Date(value);
+      // Tampilkan sebagai WIB di sisi klien
+      return date.toLocaleString("id-ID", {
+        timeZone: "Asia/Jakarta",
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return value;
     }
   };
 
@@ -288,15 +308,12 @@ export default function PesertaDashboard() {
           <div className="p-6">
             {activeTab === "tes" && (
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">
-                  Tes yang Tersedia
-                </h2>
                 {dashboardData.availableTests.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {dashboardData.availableTests.map((test) => (
                       <div
                         key={test.id}
-                        className="bg-gray-50 rounded-lg p-6"
+                        className="bg-gray-50 rounded-xl p-7 min-h-[220px]"
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div>
@@ -305,6 +322,10 @@ export default function PesertaDashboard() {
                             </h3>
                             <p className="text-gray-600 text-sm mb-4">
                               {test.description}
+                            </p>
+                            <p className="text-gray-600 text-xs">
+                              Periode: {formatWIBDateTime(test.availableFrom)} —{" "}
+                              {formatWIBDateTime(test.availableUntil)} WIB
                             </p>
                           </div>
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">

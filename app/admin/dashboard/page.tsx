@@ -39,6 +39,22 @@ interface DashboardData {
   recentActivities?: any[];
 }
 
+// Format category name to be more user-friendly
+const formatCategoryName = (category: string) => {
+  switch (category?.toUpperCase()) {
+    case "TES_VERBAL":
+      return "Tes Verbal";
+    case "TES_GAMBAR":
+      return "Tes Gambar";
+    case "TES_LOGIKA":
+      return "Tes Logika";
+    case "TES_ANGKA":
+      return "Tes Angka";
+    default:
+      return category?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || category;
+  }
+};
+
 export default function AdminDashboard() {
   // Pagination state for Tes and Peserta
   const [tesPage, setTesPage] = useState(1);
@@ -127,7 +143,10 @@ export default function AdminDashboard() {
   const [searchSoal, setSearchSoal] = useState("");
   const [soalPage, setSoalPage] = useState(1);
   const [soalTotalPages, setSoalTotalPages] = useState(1);
+  const [selectedSoal, setSelectedSoal] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
   const [searchPeserta, setSearchPeserta] = useState("");
+  const [filterStatusKelulusan, setFilterStatusKelulusan] = useState("");
   const [loading, setLoading] = useState(true);
   const [feedbackModal, setFeedbackModal] = useState({
     isOpen: false,
@@ -172,18 +191,26 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, [soalPage]);
 
+  // Reset selectAll when search changes
+  useEffect(() => {
+    setSelectAll(false);
+    setSelectedSoal([]);
+  }, [searchSoal]);
+
   const fetchDashboardData = async (page = soalPage) => {
     try {
+      // Add timestamp to prevent caching
+      const timestamp = Date.now();
       const [
         dashboardResponse,
         pesertaResponse,
         soalResponse,
         activitiesResponse,
       ] = await Promise.all([
-        fetch("/api/admin/dashboard"),
-        fetch("/api/admin/stats/peserta"),
-        fetch(`/api/admin/stats/soal?page=${page}`),
-        fetch("/api/admin/activities?limit=5"),
+        fetch(`/api/admin/dashboard?_t=${timestamp}`, { cache: 'no-store' }),
+        fetch(`/api/admin/stats/peserta?_t=${timestamp}`, { cache: 'no-store' }),
+        fetch(`/api/admin/stats/soal?page=${page}&_t=${timestamp}`, { cache: 'no-store' }),
+        fetch(`/api/admin/activities?limit=5&_t=${timestamp}`, { cache: 'no-store' }),
       ]);
 
       if (
@@ -318,6 +345,90 @@ export default function AdminDashboard() {
           type: "error",
           title: "Error",
           message: errorData.error || "Gagal menghapus soal",
+        });
+      }
+    } catch (error) {
+      setFeedbackModal({
+        isOpen: true,
+        type: "error",
+        title: "Error",
+        message: "Terjadi kesalahan saat menghapus soal",
+      });
+    } finally {
+      setDeleteModal({ ...deleteModal, isOpen: false });
+    }
+  };
+
+  // Handle checkbox selection
+  const handleSelectSoal = (soalId: string) => {
+    setSelectedSoal(prev => {
+      if (prev.includes(soalId)) {
+        return prev.filter(id => id !== soalId);
+      } else {
+        return [...prev, soalId];
+      }
+    });
+  };
+
+  const handleSelectAll = (filteredSoal: any[]) => {
+    if (selectAll) {
+      setSelectedSoal([]);
+      setSelectAll(false);
+    } else {
+      setSelectedSoal(filteredSoal.map((soal: any) => soal.id));
+      setSelectAll(true);
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    if (selectedSoal.length === 0) {
+      setFeedbackModal({
+        isOpen: true,
+        type: "warning",
+        title: "Peringatan",
+        message: "Pilih minimal satu soal untuk dihapus",
+      });
+      return;
+    }
+
+    setDeleteModal({
+      isOpen: true,
+      type: "soal",
+      item: { bulk: true, ids: selectedSoal },
+      title: "Konfirmasi Hapus Soal",
+      message: `Apakah Anda yakin ingin menghapus ${selectedSoal.length} soal yang dipilih?`,
+    });
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      const response = await fetch('/api/admin/soal/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids: selectedSoal }),
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok) {
+        setFeedbackModal({
+          isOpen: true,
+          type: "success",
+          title: "Berhasil",
+          message: `${selectedSoal.length} soal berhasil dihapus`,
+        });
+        setSelectedSoal([]);
+        setSelectAll(false);
+        fetchDashboardData();
+      } else {
+        setFeedbackModal({
+          isOpen: true,
+          type: "error",
+          title: "Error",
+          message: responseData.error || "Gagal menghapus soal",
         });
       }
     } catch (error) {
@@ -772,31 +883,65 @@ export default function AdminDashboard() {
                       <Plus className="w-4 h-4 mr-2" />
                       Tambah Soal
                     </Link>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Cari soal..."
-                        value={searchSoal}
-                        onChange={(e) => setSearchSoal(e.target.value)}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
+                    <div className="flex items-center space-x-4">
+                      {selectedSoal.length > 0 && (
+                        <button
+                          onClick={handleBulkDelete}
+                          className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Hapus ({selectedSoal.length})
+                        </button>
+                      )}
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Cari soal..."
+                          value={searchSoal}
+                          onChange={(e) => setSearchSoal(e.target.value)}
+                          className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Search className="h-4 w-4 text-gray-400" />
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-xl overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Daftar Soal
-                    </h3>
-                  </div>
+                  <div className="px-6 py-4 border-b border-gray-200"></div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full">
                       <thead className="bg-gray-50">
                         <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <input
+                              type="checkbox"
+                              checked={selectAll && dashboardData.daftarSoal && dashboardData.daftarSoal.filter(
+                                (soal: any) =>
+                                  soal.question
+                                    .toLowerCase()
+                                    .includes(searchSoal.toLowerCase()) ||
+                                  soal.category
+                                    .toLowerCase()
+                                    .includes(searchSoal.toLowerCase())
+                              ).length > 0}
+                              onChange={() => {
+                                const filtered = dashboardData.daftarSoal ? dashboardData.daftarSoal.filter(
+                                  (soal: any) =>
+                                    soal.question
+                                      .toLowerCase()
+                                      .includes(searchSoal.toLowerCase()) ||
+                                    soal.category
+                                      .toLowerCase()
+                                      .includes(searchSoal.toLowerCase())
+                                ) : [];
+                                handleSelectAll(filtered);
+                              }}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                          </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Soal
                           </th>
@@ -804,7 +949,13 @@ export default function AdminDashboard() {
                             Kategori
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Tipe
+                            Poin
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Level Kesulitan
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Tipe Soal
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
@@ -832,7 +983,7 @@ export default function AdminDashboard() {
                               return (
                                 <tr>
                                   <td
-                                    colSpan={5}
+                                    colSpan={8}
                                     className="px-6 py-4 text-center text-gray-500"
                                   >
                                     {searchSoal
@@ -848,6 +999,14 @@ export default function AdminDashboard() {
                                 className="hover:bg-gray-50"
                               >
                                 <td className="px-6 py-4 whitespace-nowrap">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedSoal.includes(soal.id)}
+                                    onChange={() => handleSelectSoal(soal.id)}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                  />
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm font-medium text-gray-900">
                                     {soal.question.length > 50
                                       ? soal.question.substring(0, 50) + "..."
@@ -857,31 +1016,52 @@ export default function AdminDashboard() {
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span
                                     className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      soal.category === "MATEMATIKA"
+                                      soal.category === "TES_VERBAL"
                                         ? "bg-blue-100 text-blue-800"
-                                        : soal.category === "BAHASA_INDONESIA"
+                                        : soal.category === "TES_ANGKA"
+                                        ? "bg-green-100 text-green-800"
+                                        : soal.category === "TES_LOGIKA"
                                         ? "bg-purple-100 text-purple-800"
-                                        : soal.category === "GENERAL_KNOWLEDGE"
+                                        : soal.category === "TES_GAMBAR"
                                         ? "bg-orange-100 text-orange-800"
                                         : "bg-gray-100 text-gray-800"
                                     }`}
                                   >
-                                    {soal.category}
+                                    {soal.category === "TES_VERBAL" ? "Tes Verbal" : 
+                                     soal.category === "TES_ANGKA" ? "Tes Angka" :
+                                     soal.category === "TES_LOGIKA" ? "Tes Logika" :
+                                     soal.category === "TES_GAMBAR" ? "Tes Gambar" :
+                                     formatCategoryName(soal.category)}
                                   </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                      {soal.points || 1} poin
+                                    </span>
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span
                                     className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      soal.difficulty === "MUDAH"
+                                      (soal.levelKesulitan || soal.difficulty) === "MUDAH"
                                         ? "bg-green-100 text-green-800"
-                                        : soal.difficulty === "SEDANG"
+                                        : (soal.levelKesulitan || soal.difficulty) === "SEDANG"
                                         ? "bg-yellow-100 text-yellow-800"
-                                        : soal.difficulty === "SULIT"
+                                        : (soal.levelKesulitan || soal.difficulty) === "SULIT"
                                         ? "bg-red-100 text-red-800"
                                         : "bg-gray-100 text-gray-800"
                                     }`}
                                   >
-                                    {soal.difficulty}
+                                    {(soal.levelKesulitan || soal.difficulty) === "MUDAH" ? "Mudah" :
+                                     (soal.levelKesulitan || soal.difficulty) === "SEDANG" ? "Sedang" :
+                                     (soal.levelKesulitan || soal.difficulty) === "SULIT" ? "Sulit" :
+                                     "Sedang"}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                    {soal.tipeSoal === "PILIHAN_GANDA" ? "Pilihan Ganda" : soal.tipeSoal || "Pilihan Ganda"}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -917,7 +1097,7 @@ export default function AdminDashboard() {
                         ) : (
                           <tr>
                             <td
-                              colSpan={5}
+                              colSpan={8}
                               className="px-6 py-4 text-center text-gray-500"
                             >
                               {searchSoal
@@ -1002,11 +1182,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="bg-white rounded-xl overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Daftar Tes
-                    </h3>
-                  </div>
+                  <div className="px-6 py-4 border-b border-gray-200"></div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full">
                       <thead className="bg-gray-50">
@@ -1131,6 +1307,34 @@ export default function AdminDashboard() {
                         )}
                       </tbody>
                     </table>
+                    {/* Pagination Peserta */}
+                    <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
+                      <button
+                        onClick={handlePrevPesertaPage}
+                        disabled={pesertaPage === 1}
+                        className={`px-4 py-2 rounded-md border text-sm font-medium mr-2 ${
+                          pesertaPage === 1
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-white text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        Halaman {pesertaPage} dari {pesertaTotalPages}
+                      </span>
+                      <button
+                        onClick={handleNextPesertaPage}
+                        disabled={pesertaPage === pesertaTotalPages}
+                        className={`px-4 py-2 rounded-md border text-sm font-medium ml-2 ${
+                          pesertaPage === pesertaTotalPages
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-white text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1159,27 +1363,54 @@ export default function AdminDashboard() {
                       <Users className="w-4 h-4 mr-2" />
                       Kelola Peserta
                     </Link>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Cari peserta..."
-                        value={searchPeserta}
-                        onChange={(e) => setSearchPeserta(e.target.value)}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
+                    <div className="flex items-center space-x-3">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Cari peserta..."
+                          value={searchPeserta}
+                          onChange={(e) => setSearchPeserta(e.target.value)}
+                          className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Search className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <select
+                          value={filterStatusKelulusan}
+                          onChange={(e) =>
+                            setFilterStatusKelulusan(e.target.value)
+                          }
+                          className="pl-4 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm appearance-none bg-white w-full"
+                        >
+                          <option value="">Status Kelulusan</option>
+                          <option value="lolos">Lolos</option>
+                          <option value="tidak-lolos">Tidak Lolos</option>
+                          <option value="belum-tes">Belum Tes</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                          <svg
+                            className="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-xl overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Daftar Peserta
-                    </h3>
-                  </div>
+                  <div className="px-6 py-4 border-b border-gray-200"></div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full">
                       <thead className="bg-gray-50">
@@ -1200,6 +1431,9 @@ export default function AdminDashboard() {
                             Tes Selesai
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status Kelulusan
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Aksi
                           </th>
                         </tr>
@@ -1210,23 +1444,51 @@ export default function AdminDashboard() {
                           (() => {
                             const filteredPeserta =
                               dashboardData.daftarPeserta.filter(
-                                (peserta: any) =>
-                                  peserta.name
-                                    .toLowerCase()
-                                    .includes(searchPeserta.toLowerCase()) ||
-                                  peserta.email
-                                    .toLowerCase()
-                                    .includes(searchPeserta.toLowerCase())
+                                (peserta: any) => {
+                                  // Filter berdasarkan search
+                                  const matchesSearch =
+                                    peserta.name
+                                      .toLowerCase()
+                                      .includes(searchPeserta.toLowerCase()) ||
+                                    peserta.email
+                                      .toLowerCase()
+                                      .includes(searchPeserta.toLowerCase());
+
+                                  // Filter berdasarkan status kelulusan
+                                  let matchesStatus = true;
+                                  if (filterStatusKelulusan) {
+                                    const averageScore = Number(
+                                      peserta.averageScore
+                                    );
+                                    const totalTests = peserta.totalTests;
+                                    const minimumScore = peserta.averageMinimumScore || 60;
+
+                                    if (filterStatusKelulusan === "lolos") {
+                                      matchesStatus = averageScore >= minimumScore;
+                                    } else if (
+                                      filterStatusKelulusan === "tidak-lolos"
+                                    ) {
+                                      matchesStatus =
+                                        totalTests > 0 && averageScore < minimumScore;
+                                    } else if (
+                                      filterStatusKelulusan === "belum-tes"
+                                    ) {
+                                      matchesStatus = totalTests === 0;
+                                    }
+                                  }
+
+                                  return matchesSearch && matchesStatus;
+                                }
                               );
                             if (filteredPeserta.length === 0) {
                               return (
                                 <tr>
                                   <td
-                                    colSpan={5}
+                                    colSpan={7}
                                     className="px-6 py-4 text-center text-gray-500"
                                   >
-                                    {searchPeserta
-                                      ? "Tidak ada peserta yang sesuai dengan pencarian"
+                                    {searchPeserta || filterStatusKelulusan
+                                      ? "Tidak ada peserta yang sesuai dengan filter"
                                       : "Belum ada peserta yang terdaftar"}
                                   </td>
                                 </tr>
@@ -1238,18 +1500,38 @@ export default function AdminDashboard() {
                                 className="hover:bg-gray-50"
                               >
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {peserta.name}
+                                  <div
+                                    className="text-sm font-medium text-gray-900 max-w-[150px] truncate"
+                                    title={peserta.name}
+                                  >
+                                    {peserta.name.length > 20
+                                      ? `${peserta.name.substring(0, 20)}...`
+                                      : peserta.name}
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {peserta.email}
+                                  <div
+                                    className="text-sm text-gray-900 max-w-[150px] truncate"
+                                    title={peserta.email}
+                                  >
+                                    {peserta.email.length > 15
+                                      ? `${peserta.email.substring(0, 15)}...`
+                                      : peserta.email}
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {peserta.registration_id || "-"}
+                                  <div
+                                    className="text-sm text-gray-900"
+                                    title={peserta.registration_id || "-"}
+                                  >
+                                    {peserta.registration_id
+                                      ? peserta.registration_id.length > 15
+                                        ? `${peserta.registration_id.substring(
+                                            0,
+                                            15
+                                          )}...`
+                                        : peserta.registration_id
+                                      : "-"}
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -1273,6 +1555,23 @@ export default function AdminDashboard() {
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <div>
+                                    {Number(peserta.averageScore) >= 70 ? (
+                                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                        Lolos
+                                      </span>
+                                    ) : peserta.totalTests > 0 ? (
+                                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                        Tidak Lolos
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                        Belum Tes
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
                                   <div className="flex space-x-2 justify-center">
                                     <button
                                       onClick={() => handleViewPeserta(peserta)}
@@ -1293,14 +1592,42 @@ export default function AdminDashboard() {
                               colSpan={5}
                               className="px-6 py-4 text-center text-gray-500"
                             >
-                              {searchPeserta
-                                ? "Tidak ada peserta yang sesuai dengan pencarian"
+                              {searchPeserta || filterStatusKelulusan
+                                ? "Tidak ada peserta yang sesuai dengan filter"
                                 : "Belum ada peserta yang terdaftar"}
                             </td>
                           </tr>
                         )}
                       </tbody>
                     </table>
+                    {/* Pagination Peserta untuk Tab Total Peserta */}
+                    <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
+                      <button
+                        onClick={handlePrevPesertaPage}
+                        disabled={pesertaPage === 1}
+                        className={`px-4 py-2 rounded-md border text-sm font-medium mr-2 ${
+                          pesertaPage === 1
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-white text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        Halaman {pesertaPage} dari {pesertaTotalPages}
+                      </span>
+                      <button
+                        onClick={handleNextPesertaPage}
+                        disabled={pesertaPage === pesertaTotalPages}
+                        className={`px-4 py-2 rounded-md border text-sm font-medium ml-2 ${
+                          pesertaPage === pesertaTotalPages
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-white text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1362,7 +1689,11 @@ export default function AdminDashboard() {
               <button
                 onClick={() => {
                   if (deleteModal.type === "soal") {
-                    confirmDeleteSoal();
+                    if (deleteModal.item?.bulk) {
+                      confirmBulkDelete();
+                    } else {
+                      confirmDeleteSoal();
+                    }
                   } else if (deleteModal.type === "tes") {
                     confirmDeleteTes();
                   }

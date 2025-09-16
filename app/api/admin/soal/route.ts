@@ -144,8 +144,8 @@ async function handleFormDataRequest(request: NextRequest) {
         INSERT INTO questions (
           id, question, category, difficulty, options, "correctAnswer",
           tipeSoal, tipeJawaban, gambar, gambarJawaban, subkategori,
-          levelKesulitan, deskripsi, allowMultipleAnswers, "testId", "creatorId"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+          levelKesulitan, deskripsi, allowMultipleAnswers, "creatorId"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       `;
 
       const values = [
@@ -163,7 +163,6 @@ async function handleFormDataRequest(request: NextRequest) {
         levelKesulitan,
         deskripsi,
         allowMultipleAnswers === "true",
-        "default-test-id", // You might want to make this configurable
         "admin-user-id", // You might want to get this from the authenticated user
       ];
 
@@ -224,8 +223,8 @@ async function handleJsonRequest(request: NextRequest) {
       const insertQuery = `
         INSERT INTO questions (
           id, question, type, category, difficulty, options, "correctAnswer",
-          "testId", "creatorId"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          "creatorId"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `;
 
       const values = [
@@ -236,7 +235,6 @@ async function handleJsonRequest(request: NextRequest) {
         questionData.difficulty,
         JSON.stringify(questionData.options || []),
         JSON.stringify(questionData.correctAnswer),
-        questionData.testId || "default-test-id",
         "admin-user-id", // You might want to get this from the authenticated user
       ];
 
