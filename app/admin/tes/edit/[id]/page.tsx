@@ -71,7 +71,6 @@ export default function EditTestPage() {
 
   useEffect(() => {
     fetchTestWithSections();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testId]);
 
   const toInputDateTime = (value: any) => {

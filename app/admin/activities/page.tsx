@@ -174,7 +174,6 @@ export default function ActivitiesPage() {
     setStartDate(todayStr);
     setEndDate(todayStr);
     setPagination((prev) => ({ ...prev, page: 1 }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

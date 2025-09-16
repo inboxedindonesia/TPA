@@ -198,7 +198,6 @@ export default function CameraMonitor({
           "Gagal load vision/mediapipe: " +
             (e instanceof Error ? e.message : String(e))
         );
-        // eslint-disable-next-line no-console
         console.error("[CameraMonitor] vision/mediapipe import error:", e);
       }
 

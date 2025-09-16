@@ -3,21 +3,26 @@ import { useState, useEffect } from "react";
 import AdminHeader from "@/app/components/AdminHeader";
 
 export default function GenerateLicensePage() {
-  // Client-side redirect to dashboard if on-prem is active
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_IS_ONPREM === "true") {
-      window.location.replace("/admin/dashboard");
-    }
-  }, []);
-  if (process.env.NEXT_PUBLIC_IS_ONPREM === "true") {
-    return null;
-  }
   const [institution, setInstitution] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [licenseKey, setLicenseKey] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const res = await fetch("/api/admin/check-auth");
+      if (!res.ok) {
+        window.location.href = "/login";
+      }
+    }
+    checkAuth();
+  }, []);
+  
+  if (process.env.NEXT_PUBLIC_IS_ONPREM === "true") {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
