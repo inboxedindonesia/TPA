@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
           u.name as "creatorName",
           u.email as "creatorEmail",
           COUNT(DISTINCT q.id) as "questionCount",
-          COUNT(DISTINCT ts.id) as "sessionCount"
+          COUNT(DISTINCT ts.id) as "sessionCount",
+          (SELECT COUNT(*) FROM test_questions WHERE test_id = t.id) as "totalQuestions"
         FROM tests t
         LEFT JOIN users u ON t."creatorId" = u.id
         LEFT JOIN test_questions tq ON t.id = tq.test_id
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
         name: row.name,
         description: row.description,
         duration: row.duration,
-        totalQuestions: row.totalQuestions,
+        totalQuestions: parseInt(row.totalQuestions) || 0,
         isActive: Boolean(row.isActive),
         creatorId: row.creatorId,
         createdAt: row.createdAt,
@@ -241,18 +242,34 @@ export async function POST(request: NextRequest) {
       // Insert sections dan relasi soal ke tes (test_questions)
       if (Array.isArray(sections)) {
         for (const [sectionOrder, section] of sections.entries()) {
-          // Insert section
+          // Insert section with auto-grouping configuration
           const sectionInsert = await client.query(
-            `INSERT INTO sections (testId, name, duration, "order") VALUES ($1, $2, $3, $4) RETURNING id`,
-            [testId, section.name, section.duration, sectionOrder + 1]
+            `INSERT INTO sections (testId, name, duration, "order", autoGrouping, category, questionCount) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+            [testId, section.name, section.duration, sectionOrder + 1, section.autoGrouping || false, section.category || null, section.questionCount || 10]
           );
           const sectionId = sectionInsert.rows[0].id;
+          
+          // Handle auto-grouping: if enabled, fetch questions by category
+          let questionIds = section.questionIds || [];
+          if (section.autoGrouping && section.category && questionIds.length === 0) {
+            // Fetch questions from the specified category
+            // Get a reasonable number of questions (default 10, but can be adjusted)
+            const questionCount = section.questionCount || 10;
+            const categoryQuestions = await client.query(
+              `SELECT id FROM questions WHERE category = $1 ORDER BY RANDOM() LIMIT $2`,
+              [section.category, questionCount]
+            );
+            questionIds = categoryQuestions.rows.map(row => row.id);
+            
+            // Log if not enough questions found
+            if (questionIds.length < questionCount) {
+              console.warn(`Only ${questionIds.length} questions found for category ${section.category}, requested ${questionCount}`);
+            }
+          }
+          
           // Insert ke test_questions untuk setiap soal di section
-          if (
-            Array.isArray(section.questionIds) &&
-            section.questionIds.length > 0
-          ) {
-            for (const questionId of section.questionIds) {
+          if (Array.isArray(questionIds) && questionIds.length > 0) {
+            for (const questionId of questionIds) {
               await client.query(
                 `INSERT INTO test_questions (test_id, question_id, section_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
                 [testId, questionId, sectionId]
@@ -261,6 +278,9 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+      
+      // No need to update totalQuestions - we calculate it dynamically from test_questions table
+
       // Fetch the created test with creator data
       const result = await client.query(
         `

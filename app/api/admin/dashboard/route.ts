@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
+import { getUserFromRequest } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
-  // Daftar peserta lengkap
-  // (Deklarasi dihapus, sudah ada di dalam blok utama function)
+  // Check authentication
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check if user is admin
+  if (user.userRole !== "Administrator") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const client = await pool.connect();
 
   // Daftar peserta lengkap
@@ -56,7 +66,7 @@ export async function GET(request: NextRequest) {
     );
     const tesAktif = parseInt(tesAktifRes.rows[0].count) || 0;
 
-    // Daftar tes dengan statistik menggunakan test_questions
+    // Daftar tes dengan statistik menggunakan test_questions dan sections
     const tesListRes = await client.query(`
       SELECT 
         t.id, 
@@ -238,10 +248,12 @@ export async function GET(request: NextRequest) {
       totalPesertaTes,
       daftarPeserta,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching dashboard data:", error);
+    console.error("Error details:", error?.message);
+    console.error("Error stack:", error?.stack);
     return NextResponse.json(
-      { error: "Gagal mengambil data dashboard" },
+      { error: "Gagal mengambil data dashboard", details: error?.message },
       { status: 500 }
     );
   } finally {

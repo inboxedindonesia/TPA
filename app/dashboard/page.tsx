@@ -20,9 +20,7 @@ import {
 } from "lucide-react";
 
 export default function DashboardPage() {
-  const [userRole, setUserRole] = useState<"ADMIN" | "PARTICIPANT">(
-    "PARTICIPANT"
-  );
+  const [userRole, setUserRole] = useState<"Administrator" | "role-moderator" | "role-peserta" | null>(null);
   const [availableTests, setAvailableTests] = useState<any[]>([]);
   const [completedTestIds, setCompletedTestIds] = useState<string[]>([]);
   const [completedTests, setCompletedTests] = useState<any[]>([]);
@@ -83,7 +81,7 @@ export default function DashboardPage() {
         {/* Header dengan animasi */}
         <div className="mb-8 slide-up">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-            Dashboard {userRole === "ADMIN" ? "Admin" : "Peserta"}
+            Dashboard {userRole === "Administrator" ? "Admin" : "Peserta"}
           </h1>
           <p className="mt-2 text-gray-600">
             Selamat datang di platform Tes Potensi Akademik Online
@@ -112,9 +110,9 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="bg-white rounded-xl p-1 shadow-lg inline-flex">
             <button
-              onClick={() => setUserRole("PARTICIPANT")}
+              onClick={() => setUserRole("role-peserta")}
               className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                userRole === "PARTICIPANT"
+                userRole === "role-peserta"
                   ? "bg-primary-600 text-white shadow-lg"
                   : "text-gray-700 hover:text-primary-600"
               }`}
@@ -123,9 +121,9 @@ export default function DashboardPage() {
               Peserta
             </button>
             <button
-              onClick={() => setUserRole("ADMIN")}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                userRole === "ADMIN"
+              onClick={() => setUserRole("Administrator")}
+            className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
+                userRole === "Administrator"
                   ? "bg-primary-600 text-white shadow-lg"
                   : "text-gray-700 hover:text-primary-600"
               }`}
@@ -136,7 +134,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {userRole === "PARTICIPANT" ? (
+        {userRole === "role-peserta" ? (
           <div>
             {/* DEBUG INFO: tampilkan di atas dashboard agar pasti terlihat */}
             <div className="mb-4 text-xs text-red-500 bg-white p-2 rounded shadow">

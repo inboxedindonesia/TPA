@@ -64,7 +64,7 @@ export async function getEntityInfo(
         break;
       case "TEST":
         query = `
-          SELECT name, description, duration, "totalQuestions"
+          SELECT name, description, duration, (SELECT COUNT(*) FROM test_questions WHERE test_id = tests.id) as "totalQuestions"
           FROM tests 
           WHERE id = $1
         `;

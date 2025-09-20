@@ -28,6 +28,9 @@ type Section = {
   name: string;
   duration: number;
   questions: Question[];
+  autoGrouping?: boolean;
+  category?: string;
+  questionCount?: number;
 };
 
 export default function EditTestPage() {
@@ -41,6 +44,7 @@ export default function EditTestPage() {
     isActive: true,
     maxAttempts: 1,
     tabLeaveLimit: 3,
+    minimumScore: 60,
     availableFrom: "",
     availableUntil: "",
   });
@@ -56,12 +60,21 @@ export default function EditTestPage() {
   const [sectionNameInput, setSectionNameInput] = useState("");
   const [sectionDurationInput, setSectionDurationInput] = useState(10);
 
+  // Auto-grouping states
+  const [sectionAutoGrouping, setSectionAutoGrouping] = useState(false);
+  const [sectionCategory, setSectionCategory] = useState("");
+  const [sectionQuestionCount, setSectionQuestionCount] = useState(10);
+
   const [showEditSectionModal, setShowEditSectionModal] = useState(false);
   const [editSectionIdx, setEditSectionIdx] = useState<number | null>(null);
   const [editSectionNameValue, setEditSectionNameValue] = useState("");
   const [editSectionDurationValue, setEditSectionDurationValue] = useState(10);
 
-  // Modal states
+  // Auto-grouping states for edit section
+  const [editSectionAutoGrouping, setEditSectionAutoGrouping] = useState(false);
+  const [editSectionCategory, setEditSectionCategory] = useState("");
+  const [editSectionQuestionCount, setEditSectionQuestionCount] = useState(10);
+
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<
     "success" | "error" | "warning" | "info"
@@ -112,16 +125,22 @@ export default function EditTestPage() {
         isActive: !!test.isActive,
         maxAttempts: test.maxAttempts ?? 1,
         tabLeaveLimit: test.tabLeaveLimit ?? test.tableavelimit ?? 3,
+        minimumScore: test.minimumScore ?? 60,
         availableFrom: toInputDateTime(test.availableFrom),
         availableUntil: toInputDateTime(test.availableUntil),
       });
       setSections(
         Array.isArray(test.sections)
-          ? test.sections.map((s: any) => ({
-              name: s.name,
-              duration: s.duration,
-              questions: Array.isArray(s.questions) ? s.questions : [],
-            }))
+          ? test.sections.map((s: any) => {
+              return {
+                name: s.name,
+                duration: s.duration,
+                questions: Array.isArray(s.questions) ? s.questions : [],
+                autoGrouping: s.autoGrouping || false,
+                category: s.category || null,
+                questionCount: s.questionCount || null,
+              };
+            })
           : []
       );
     } catch (e) {
@@ -150,27 +169,56 @@ export default function EditTestPage() {
 
   const handleAddSection = () => {
     if (!sectionNameInput.trim() || !sectionDurationInput) return;
+    
+    // Validasi untuk auto-grouping
+    if (sectionAutoGrouping && (!sectionCategory || !sectionQuestionCount)) {
+      showFeedback(
+        "warning",
+        "Validasi Gagal",
+        "Pilih kategori dan jumlah soal untuk auto-grouping"
+      );
+      return;
+    }
+
     setSections((prev) => [
       ...prev,
       {
         name: sectionNameInput.trim(),
         duration: sectionDurationInput,
         questions: [],
+        autoGrouping: sectionAutoGrouping,
+        category: sectionAutoGrouping ? sectionCategory : undefined,
+        questionCount: sectionAutoGrouping ? sectionQuestionCount : undefined,
       },
     ]);
+    
+    // Reset form
     setSectionNameInput("");
     setSectionDurationInput(10);
+    setSectionAutoGrouping(false);
+    setSectionCategory("");
+    setSectionQuestionCount(10);
     setShowSectionModal(false);
   };
 
   const handleEditSection = (
     idx: number,
     newName: string,
-    newDuration: number
+    newDuration: number,
+    autoGrouping?: boolean,
+    category?: string,
+    questionCount?: number
   ) => {
     setSections((prev) =>
       prev.map((s, i) =>
-        i === idx ? { ...s, name: newName, duration: newDuration } : s
+        i === idx ? { 
+          ...s, 
+          name: newName, 
+          duration: newDuration,
+          autoGrouping: autoGrouping,
+          category: autoGrouping ? category : undefined,
+          questionCount: autoGrouping ? questionCount : undefined
+        } : s
       )
     );
   };
@@ -180,9 +228,16 @@ export default function EditTestPage() {
     currentName: string,
     currentDuration: number
   ) => {
+    const section = sections[idx];
     setEditSectionIdx(idx);
     setEditSectionNameValue(currentName);
     setEditSectionDurationValue(currentDuration);
+    
+    // Initialize auto-grouping states
+    setEditSectionAutoGrouping(section.autoGrouping || false);
+    setEditSectionCategory(section.category || "");
+    setEditSectionQuestionCount(section.questionCount || 10);
+    
     setShowEditSectionModal(true);
   };
 
@@ -192,10 +247,23 @@ export default function EditTestPage() {
       editSectionNameValue.trim() &&
       editSectionDurationValue > 0
     ) {
+      // Validasi untuk auto-grouping
+      if (editSectionAutoGrouping && (!editSectionCategory || !editSectionQuestionCount)) {
+        showFeedback(
+          "warning",
+          "Validasi Gagal",
+          "Pilih kategori dan jumlah soal untuk auto-grouping"
+        );
+        return;
+      }
+
       handleEditSection(
         editSectionIdx,
         editSectionNameValue.trim(),
-        editSectionDurationValue
+        editSectionDurationValue,
+        editSectionAutoGrouping,
+        editSectionCategory,
+        editSectionQuestionCount
       );
     }
     setShowEditSectionModal(false);
@@ -280,11 +348,22 @@ export default function EditTestPage() {
       }
     }
 
-    if (sections.some((s) => s.questions.length === 0)) {
+    // Validasi batas minimum skor
+    if (formData.minimumScore < 0 || formData.minimumScore > 100) {
+      showFeedback(
+        "warning",
+        "Validasi Gagal",
+        "Batas minimum skor harus antara 0-100%"
+      );
+      return;
+    }
+
+    // Validasi: setiap section harus memiliki soal (kecuali yang menggunakan auto-grouping)
+    if (sections.some((s) => !s.autoGrouping && s.questions.length === 0)) {
       showFeedback(
         "warning",
         "Peringatan",
-        "Setiap section harus memiliki minimal satu soal"
+        "Setiap section harus memiliki minimal satu soal atau menggunakan auto-grouping"
       );
       return;
     }
@@ -311,6 +390,9 @@ export default function EditTestPage() {
             name: s.name,
             duration: s.duration,
             questionIds: s.questions.map((q) => q.id),
+            autoGrouping: s.autoGrouping,
+            category: s.category,
+            questionCount: s.questionCount,
           })),
         }),
       });
@@ -425,24 +507,85 @@ export default function EditTestPage() {
                   </div>
                 </div>
 
-                {/* Jumlah Percobaan (maxAttempts) */}
+                {/* Pengaturan Tes */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Jumlah Percobaan (maxAttempts) */}
+                  <div>
+                    <label
+                      htmlFor="maxAttempts"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Batas Percobaan Tes <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      id="maxAttempts"
+                      name="maxAttempts"
+                      value={formData.maxAttempts}
+                      onChange={handleInputChange}
+                      min="0"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      0 = tak terbatas
+                    </p>
+                  </div>
+                  
+                  {/* Batas Tab/Window Leave */}
+                  <div>
+                    <label
+                      htmlFor="tabLeaveLimit"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Batas Peringatan Tab Leave <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      id="tabLeaveLimit"
+                      name="tabLeaveLimit"
+                      value={formData.tabLeaveLimit}
+                      onChange={handleInputChange}
+                      min="0"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="3"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      0 = tak terbatas
+                    </p>
+                  </div>
+                </div>
+
+                {/* Batas Minimum Skor */}
                 <div>
                   <label
-                    htmlFor="maxAttempts"
+                    htmlFor="minimumScore"
                     className="block text-sm font-medium text-gray-700 mb-2"
                   >
-                    Batas Percobaan Tes (default 1, 0 = tak terbatas)
+                    Batas Minimum Skor Kelulusan <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    id="maxAttempts"
-                    name="maxAttempts"
-                    value={formData.maxAttempts}
-                    onChange={handleInputChange}
-                    min={0}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      id="minimumScore"
+                      name="minimumScore"
+                      value={formData.minimumScore}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="100"
+                      required
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="60"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-gray-500 text-sm">%</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Peserta harus mencapai skor minimal ini untuk dinyatakan lulus (0-100%)
+                  </p>
                 </div>
 
                 {/* Periode Tes */}
@@ -453,13 +596,15 @@ export default function EditTestPage() {
                       id="isUnlimitedPeriod"
                       checked={isUnlimitedPeriod}
                       onChange={(e) => setIsUnlimitedPeriod(e.target.checked)}
-                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     />
-                    <label htmlFor="isUnlimitedPeriod" className="text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="isUnlimitedPeriod"
+                      className="ml-2 text-sm font-medium text-gray-700"
+                    >
                       Periode tes tidak terbatas
                     </label>
                   </div>
-                  
                   {!isUnlimitedPeriod && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -467,7 +612,7 @@ export default function EditTestPage() {
                           htmlFor="availableFrom"
                           className="block text-sm font-medium text-gray-700 mb-2"
                         >
-                          Periode Mulai Tes *
+                          Periode Mulai Tes <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="datetime-local"
@@ -475,11 +620,11 @@ export default function EditTestPage() {
                           name="availableFrom"
                           value={formData.availableFrom}
                           onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required={!isUnlimitedPeriod}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          Waktu lokal Anda, akan disimpan sebagai waktu WIB.
+                          Waktu mulai tes dapat diakses peserta (zona waktu lokal)
                         </p>
                       </div>
                       <div>
@@ -487,7 +632,7 @@ export default function EditTestPage() {
                           htmlFor="availableUntil"
                           className="block text-sm font-medium text-gray-700 mb-2"
                         >
-                          Periode Berakhir Tes *
+                          Periode Berakhir Tes <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="datetime-local"
@@ -495,42 +640,20 @@ export default function EditTestPage() {
                           name="availableUntil"
                           value={formData.availableUntil}
                           onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required={!isUnlimitedPeriod}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          Peserta tidak bisa mulai tes setelah waktu ini.
+                          Peserta tidak dapat memulai tes setelah waktu ini
                         </p>
                       </div>
                     </div>
                   )}
-                  
                   {isUnlimitedPeriod && (
-                    <p className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
                       Tes ini dapat diakses kapan saja tanpa batas waktu.
                     </p>
                   )}
-                </div>
-
-                {/* Batas Tab/Window Leave */}
-                <div className="mb-4">
-                  <label
-                    htmlFor="tabLeaveLimit"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Batas Peringatan Tab/Window Leave (default 3, 0 = tak
-                    terbatas)
-                  </label>
-                  <input
-                    type="number"
-                    id="tabLeaveLimit"
-                    name="tabLeaveLimit"
-                    value={formData.tabLeaveLimit}
-                    onChange={handleInputChange}
-                    min={0}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
                 </div>
 
                 {/* Section List */}
@@ -565,8 +688,20 @@ export default function EditTestPage() {
                               </div>
                               <div className="text-xs text-gray-600">
                                 Durasi: {section.duration} menit •{" "}
-                                {section.questions.length} soal
+                                {section.autoGrouping ? (
+                                  <>
+                                    Auto-grouping ({section.category}) •{" "}
+                                    {section.questionCount} soal
+                                  </>
+                                ) : (
+                                  `${section.questions.length} soal`
+                                )}
                               </div>
+                              {section.autoGrouping && (
+                                <div className="text-xs text-green-600 font-medium">
+                                  ✓ Auto-grouping aktif
+                                </div>
+                              )}
                             </div>
                             <div className="flex flex-row flex-wrap items-end gap-1 mt-2 md:mt-0">
                               <button
@@ -596,7 +731,7 @@ export default function EditTestPage() {
                                         </label>
                                         <input
                                           type="text"
-                                          className="w-full border px-3 py-2 rounded"
+                                          className="w-full border px-3 py-2 rounded mb-2"
                                           placeholder="Nama section"
                                           value={editSectionNameValue}
                                           onChange={(e) =>
@@ -606,15 +741,15 @@ export default function EditTestPage() {
                                           }
                                           autoFocus
                                         />
-                                      </div>
-                                      <div className="mb-4">
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                          Durasi (menit)
+                                          Durasi Section (menit)
                                         </label>
                                         <input
                                           type="number"
                                           min={1}
-                                          className="w-full border px-3 py-2 rounded"
+                                          max={300}
+                                          className="w-full border px-3 py-2 rounded mb-3"
+                                          placeholder="Durasi section (menit)"
                                           value={editSectionDurationValue}
                                           onChange={(e) =>
                                             setEditSectionDurationValue(
@@ -622,10 +757,70 @@ export default function EditTestPage() {
                                             )
                                           }
                                         />
+                                        
+                                        {/* Auto-grouping toggle */}
+                                        <div className="mb-3">
+                                          <label className="flex items-center">
+                                            <input
+                                              type="checkbox"
+                                              checked={editSectionAutoGrouping}
+                                              onChange={(e) => setEditSectionAutoGrouping(e.target.checked)}
+                                              className="mr-2"
+                                            />
+                                            <span className="text-sm font-medium text-gray-700">
+                                              Auto-grouping soal berdasarkan kategori
+                                            </span>
+                                          </label>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            Sistem akan otomatis memilih soal berdasarkan kategori yang dipilih
+                                          </p>
+                                        </div>
+
+                                        {/* Category selection when auto-grouping is enabled */}
+                                        {editSectionAutoGrouping && (
+                                          <div className="mb-3">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                              Kategori Soal
+                                            </label>
+                                            <select
+                                              value={editSectionCategory}
+                                              onChange={(e) => setEditSectionCategory(e.target.value)}
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                              required
+                                            >
+                                              <option value="">Pilih Kategori</option>
+                                              <option value="TES_VERBAL">Tes Verbal</option>
+                                              <option value="TES_GAMBAR">Tes Gambar</option>
+                                              <option value="TES_LOGIKA">Tes Logika</option>
+                                              <option value="TES_ANGKA">Tes Angka</option>
+                                            </select>
+                                          </div>
+                                        )}
+
+                                        {editSectionAutoGrouping && (
+                                          <div className="mb-3">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                              Jumlah Soal
+                                            </label>
+                                            <input
+                                              type="number"
+                                              value={editSectionQuestionCount}
+                                              onChange={(e) => setEditSectionQuestionCount(parseInt(e.target.value) || 10)}
+                                              min="1"
+                                              max="50"
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                              placeholder="Jumlah soal yang akan dipilih otomatis"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">
+                                              Sistem akan memilih soal secara acak dari kategori yang dipilih
+                                            </p>
+                                          </div>
+                                        )}
                                       </div>
                                       <div className="flex justify-end gap-2">
                                         <button
-                                          className="px-3 py-1 text-gray-600 hover:text-gray-900"
+                                          type="button"
+                                          className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
                                           onClick={() =>
                                             setShowEditSectionModal(false)
                                           }
@@ -633,11 +828,13 @@ export default function EditTestPage() {
                                           Batal
                                         </button>
                                         <button
-                                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                          type="button"
+                                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                                           onClick={handleEditSectionSave}
                                           disabled={
                                             !editSectionNameValue.trim() ||
-                                            editSectionDurationValue < 1
+                                            editSectionDurationValue < 1 ||
+                                            (editSectionAutoGrouping && (!editSectionCategory || !editSectionQuestionCount))
                                           }
                                         >
                                           Simpan
@@ -655,44 +852,66 @@ export default function EditTestPage() {
                               </button>
                               <button
                                 type="button"
-                                className="text-blue-600 hover:underline text-xs ml-1"
+                                className={`px-2 py-1 rounded transition-colors text-xs ${
+                                  section.autoGrouping 
+                                    ? 'text-gray-400 cursor-not-allowed' 
+                                    : 'text-green-600 hover:bg-green-50'
+                                }`}
                                 onClick={() => {
-                                  setActiveSectionIdx(idx);
-                                  setShowQuestionSelector(true);
+                                  if (!section.autoGrouping) {
+                                    setActiveSectionIdx(idx);
+                                    setShowQuestionSelector(true);
+                                  }
                                 }}
+                                disabled={section.autoGrouping}
+                                title={section.autoGrouping ? 'Soal akan dipilih otomatis' : 'Pilih soal manual'}
                               >
-                                Pilih Soal
+                                {section.autoGrouping ? 'Auto-grouping Aktif' : 'Pilih Soal'}
                               </button>
                             </div>
                           </div>
                           {/* List soal per section */}
-                          {section.questions.length === 0 ? (
-                            <div className="text-xs text-gray-400 italic">
-                              Belum ada soal
+                          {section.autoGrouping ? (
+                            <div className="text-xs text-blue-600 italic mt-2 bg-blue-50 p-2 rounded">
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span>
+                                  Soal dipilih otomatis dari kategori {section.category?.replace('TES_', '').replace('_', ' ')} sebanyak {section.questionCount || 10} soal
+                                </span>
+                              </div>
                             </div>
                           ) : (
-                            <ul className="space-y-1 mt-2">
-                              {section.questions.map((q, qidx) => (
-                                <li
-                                  key={q.id}
-                                  className="flex items-center justify-between text-xs bg-white rounded px-2 py-1 border"
-                                >
-                                  <span>
-                                    {qidx + 1}. {truncateText(q.question, 40)}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    className="ml-2 text-red-400 hover:text-red-700"
-                                    onClick={() =>
-                                      handleRemoveQuestion(idx, q.id)
-                                    }
-                                    title="Hapus soal"
+                            // Tampilkan list soal hanya jika bukan auto-grouping
+                            section.questions && section.questions.length > 0 ? (
+                              <ul className="space-y-1 mt-2">
+                                {section.questions.map((q, qidx) => (
+                                  <li
+                                    key={q.id}
+                                    className="flex items-center justify-between text-xs bg-white rounded px-2 py-1 border"
                                   >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
+                                    <span>
+                                      {qidx + 1}. {truncateText(q.question, 40)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className="ml-2 text-red-400 hover:text-red-700"
+                                      onClick={() =>
+                                        handleRemoveQuestion(idx, q.id)
+                                      }
+                                      title="Hapus soal"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="text-xs text-gray-400 italic">
+                                Belum ada soal
+                              </div>
+                            )
                           )}
                         </div>
                       ))}
@@ -782,13 +1001,74 @@ export default function EditTestPage() {
                 type="number"
                 min={1}
                 max={300}
-                className="w-full border px-3 py-2 rounded"
+                className="w-full border px-3 py-2 rounded mb-4"
                 placeholder="Durasi section (menit)"
                 value={sectionDurationInput}
                 onChange={(e) =>
                   setSectionDurationInput(parseInt(e.target.value) || 1)
                 }
               />
+
+              {/* Auto-grouping checkbox */}
+              <div className="mb-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={sectionAutoGrouping}
+                    onChange={(e) => setSectionAutoGrouping(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    Auto-grouping soal berdasarkan kategori
+                  </span>
+                </label>
+                {sectionAutoGrouping && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Soal akan dipilih otomatis dari kategori yang dipilih saat tes dibuat
+                  </p>
+                )}
+              </div>
+
+              {/* Category selector - only show when auto-grouping is enabled */}
+              {sectionAutoGrouping && (
+                <>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Kategori Soal
+                    </label>
+                    <select
+                      value={sectionCategory}
+                      onChange={(e) => setSectionCategory(e.target.value)}
+                      className="w-full border px-3 py-2 rounded"
+                      required
+                    >
+                      <option value="">Pilih kategori</option>
+                      <option value="TES_VERBAL">Tes Verbal</option>
+                      <option value="TES_NUMERIK">Tes Numerik</option>
+                      <option value="TES_LOGIKA">Tes Logika</option>
+                      <option value="TES_SPASIAL">Tes Spasial</option>
+                    </select>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Jumlah Soal
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={sectionQuestionCount}
+                      onChange={(e) => setSectionQuestionCount(parseInt(e.target.value) || 10)}
+                      className="w-full border px-3 py-2 rounded"
+                      placeholder="Jumlah soal yang akan dipilih"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Jumlah soal yang akan dipilih secara acak dari kategori
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <button
@@ -818,6 +1098,26 @@ export default function EditTestPage() {
           activeSectionIdx !== null
             ? sections[activeSectionIdx]?.questions.map((q) => q.id)
             : []
+        }
+        sectionName={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.name
+            : undefined
+        }
+        autoGrouping={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.autoGrouping || false
+            : false
+        }
+        sectionCategory={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.category
+            : undefined
+        }
+        sectionQuestionCount={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.questionCount || 10
+            : 10
         }
       />
 

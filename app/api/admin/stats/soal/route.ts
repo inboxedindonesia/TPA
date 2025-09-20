@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
+import { getUserFromRequest } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
+  // Check authentication
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check if user is admin
+  if (user.userRole !== "Administrator") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const client = await pool.connect();
 
   try {
@@ -40,14 +52,35 @@ export async function GET(request: NextRequest) {
     // Rata-rata kesulitan (dummy data untuk contoh)
     const rataRataKesulitan = 6.5; // Ini bisa dihitung dari field difficulty jika ada
 
-    // Pagination
+    // Pagination and search
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const search = searchParams.get("search") || "";
     const offset = (page - 1) * limit;
 
+    // Build WHERE clause for search
+    let whereClause = "";
+    let queryParams: any[] = [limit, offset];
+    let paramIndex = 3;
+
+    if (search) {
+      whereClause = `WHERE (question ILIKE $${paramIndex} OR category ILIKE $${paramIndex} OR subkategori ILIKE $${paramIndex})`;
+      queryParams.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Get total count with search filter
+    const totalCountQuery = search 
+      ? `SELECT COUNT(*) as count FROM questions WHERE (question ILIKE $1 OR category ILIKE $1 OR subkategori ILIKE $1)`
+      : `SELECT COUNT(*) as count FROM questions`;
+    
+    const totalCountParams = search ? [`%${search}%`] : [];
+    const totalSoalWithSearchRes = await client.query(totalCountQuery, totalCountParams);
+    const totalSoalWithSearch = parseInt(totalSoalWithSearchRes.rows[0].count);
+
     // ...log dihapus...
-    // Daftar soal dengan statistik - paginated
+    // Daftar soal dengan statistik - paginated and searchable
     const daftarSoalRes = await client.query(
       `
       SELECT 
@@ -68,10 +101,11 @@ export async function GET(request: NextRequest) {
         deskripsi,
         COALESCE(points, 1) as points
       FROM questions
+      ${whereClause}
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
     `,
-      [limit, offset]
+      queryParams
     );
     // ...log dihapus...
 
@@ -142,7 +176,9 @@ export async function GET(request: NextRequest) {
       daftarSoal,
       page,
       limit,
-      totalPages: Math.ceil(totalSoal / limit),
+      totalPages: Math.ceil(totalSoalWithSearch / limit),
+      totalResults: totalSoalWithSearch,
+      hasSearch: !!search,
     });
   } catch (error) {
     console.error("Error fetching soal stats:", error);

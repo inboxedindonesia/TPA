@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import PesertaHeader from "../../../components/PesertaHeader";
-import { generateTestResultPDF } from "@/lib/pdfGenerator";
+import PDFResultTemplate from "../../../components/PDFResultTemplate";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 interface Answer {
   id: string;
@@ -39,6 +41,7 @@ interface TestSession {
   startTime: string;
   endTime: string;
   overallPercentage: number;
+  minimum_score?: number;
   categoryBreakdown: {
     TES_VERBAL: CategoryBreakdown;
     TES_ANGKA: CategoryBreakdown;
@@ -90,6 +93,96 @@ export default function DetailHasilTesPesertaPage() {
   }>({});
   const [retryCount, setRetryCount] = useState(0);
   const [autoRetrying, setAutoRetrying] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const pdfRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPDF = async () => {
+    if (!session || isGeneratingPDF) return;
+
+    try {
+      setIsGeneratingPDF(true);
+
+      // Create a temporary container for the PDF template
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '210mm';
+      tempContainer.style.backgroundColor = 'white';
+      document.body.appendChild(tempContainer);
+
+      // Render the PDF template in the temporary container
+      const { createRoot } = await import('react-dom/client');
+      const root = createRoot(tempContainer);
+      
+      await new Promise<void>((resolve) => {
+        root.render(
+          <PDFResultTemplate session={session} />
+        );
+        // Wait for rendering to complete
+        setTimeout(resolve, 1000);
+      });
+
+      // Generate PDF using html2canvas and jsPDF
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794, // A4 width in pixels at 96 DPI
+        height: 1123, // A4 height in pixels at 96 DPI
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Generate PDF blob and open directly in new tab
+      const pdfBlob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      // Open PDF directly in new tab
+      window.open(pdfUrl, '_blank');
+
+      // Clean up
+      root.unmount();
+      document.body.removeChild(tempContainer);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Terjadi kesalahan saat membuat PDF. Silakan coba lagi.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  // Helper function untuk threshold dinamis
+  const getThresholds = (minimumScore?: number) => {
+    const base = minimumScore || 60;
+    return {
+      excellent: Math.max(base + 20, 80), // minimal 80 atau base + 20
+      good: Math.max(base + 10, 60),      // minimal 60 atau base + 10  
+      average: base,                       // menggunakan minimum score
+      poor: Math.max(base - 20, 20)       // minimal 20 atau base - 20
+    };
+  };
 
   useEffect(() => {
     fetchSessionDetail();
@@ -318,16 +411,18 @@ export default function DetailHasilTesPesertaPage() {
     return Math.round((score / maxScore) * 100);
   };
 
-  const getScoreColor = (percentage: number) => {
-    if (percentage >= 80) return "text-green-600";
-    if (percentage >= 60) return "text-yellow-600";
+  const getScoreColor = (percentage: number, minimumScore?: number) => {
+    const threshold = minimumScore || 60;
+    if (percentage >= threshold) return "text-green-600";
+    if (percentage >= threshold * 0.8) return "text-yellow-600";
     return "text-red-600";
   };
 
-  const getScoreMessage = (percentage: number) => {
-    if (percentage >= 80) return "Excellent! Anda sangat baik!";
-    if (percentage >= 60) return "Good! Anda cukup baik!";
-    return "Keep trying! Anda perlu belajar lebih giat!";
+  const getScoreMessage = (percentage: number, minimumScore?: number) => {
+    const threshold = minimumScore || 60;
+    if (percentage >= threshold) return "Selamat! Anda telah lulus!";
+    if (percentage >= threshold * 0.8) return "Hampir lulus! Tingkatkan lagi!";
+    return "Belum lulus. Terus belajar dan coba lagi!";
   };
 
   const getCategoryName = (category: string) => {
@@ -381,9 +476,11 @@ export default function DetailHasilTesPesertaPage() {
   // Fungsi untuk rekomendasi keseluruhan
   const getOverallRecommendation = (
     percentage: number,
-    categoryBreakdown: any
+    categoryBreakdown: any,
+    minimumScore?: number
   ) => {
     const recommendations = [];
+    const threshold = minimumScore || 60;
 
     // Rekomendasi berdasarkan skor keseluruhan
     if (percentage >= 85) {
@@ -428,7 +525,7 @@ export default function DetailHasilTesPesertaPage() {
       const categoryName = getCategoryName(weakestCategory[0]);
       const categoryPercentage = weakestCategory[1].percentage;
 
-      if (categoryPercentage < 60) {
+      if (categoryPercentage < threshold) {
         recommendations.push(
           `🎯 Area yang perlu diprioritaskan: ${categoryName} (${categoryPercentage}%). Alokasikan lebih banyak waktu untuk mempelajari dan berlatih soal-soal di kategori ini.`
         );
@@ -502,19 +599,23 @@ export default function DetailHasilTesPesertaPage() {
             </button>
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => {
-                  if (session) {
-                    const pdf = generateTestResultPDF(session);
-                    pdf.save(
-                      `Hasil_Tes_${session.user_name || "Peserta"}_${
-                        new Date().toISOString().split("T")[0]
-                      }.pdf`
-                    );
-                  }
-                }}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                onClick={() => handleDownloadPDF()}
+                disabled={isGeneratingPDF}
+                className="inline-flex items-center px-4 py-2 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                📄 Download PDF
+                {isGeneratingPDF ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Membuat PDF...
+                  </>
+                ) : (
+                  <>
+                    📄 Download PDF
+                  </>
+                )}
               </button>
               <button
                 onClick={() => router.back()}
@@ -555,19 +656,26 @@ export default function DetailHasilTesPesertaPage() {
             </button>
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => {
-                  if (session) {
-                    const pdf = generateTestResultPDF(session);
-                    pdf.save(
-                      `Hasil_Tes_${
-                        (session as TestSession).user_name || "Peserta"
-                      }_${new Date().toISOString().split("T")[0]}.pdf`
-                    );
-                  }
-                }}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                onClick={handleDownloadPDF}
+                disabled={isGeneratingPDF}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs md:text-sm font-medium text-white shadow-sm ring-1 ring-emerald-600/10 transition hover:bg-emerald-700 hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                📄 Download PDF
+                {isGeneratingPDF ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Membuat PDF...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Unduh PDF
+                  </>
+                )}
               </button>
               <button
                 onClick={() => router.back()}
@@ -605,41 +713,26 @@ export default function DetailHasilTesPesertaPage() {
             </div>
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => {
-                  if (session) {
-                    const pdf = generateTestResultPDF(session);
-                    const blob = pdf.output("blob");
-                    const fileName = `Hasil_Tes_${
-                      session.user_name || "Peserta"
-                    }_${new Date().toISOString().split("T")[0]}.pdf`;
-
-                    // Create URL for the PDF blob
-                    const pdfUrl = URL.createObjectURL(blob);
-
-                    // Open PDF in new window/tab
-                    const previewWindow = window.open(pdfUrl, "_blank");
-
-                    if (previewWindow) {
-                      // Set window title
-                      previewWindow.document.title = fileName;
-
-                      // Clean up URL after some time
-                      setTimeout(() => {
-                        URL.revokeObjectURL(pdfUrl);
-                      }, 60000); // Clean up after 1 minute
-                    } else {
-                      // If popup is blocked, show alert and offer direct download
-                      alert(
-                        "Popup diblokir oleh browser. PDF akan diunduh langsung."
-                      );
-                      pdf.save(fileName);
-                      URL.revokeObjectURL(pdfUrl);
-                    }
-                  }
-                }}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                onClick={handleDownloadPDF}
+                disabled={isGeneratingPDF}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs md:text-sm font-medium text-white shadow-sm ring-1 ring-emerald-600/10 transition hover:bg-emerald-700 hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Unduh PDF
+                {isGeneratingPDF ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Membuat PDF...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Unduh PDF
+                  </>
+                )}
               </button>
               <button
                 onClick={() => router.back()}
@@ -827,7 +920,8 @@ export default function DetailHasilTesPesertaPage() {
                     <div
                       className={`text-3xl font-bold ${getScoreColor(
                         session.overallPercentage ||
-                          calculatePercentage(session.score, session.maxScore)
+                          calculatePercentage(session.score, session.maxScore),
+                        session.minimum_score
                       )}`}
                     >
                       {session.score}/{session.maxScore}
@@ -838,7 +932,8 @@ export default function DetailHasilTesPesertaPage() {
                     <div
                       className={`text-3xl font-bold ${getScoreColor(
                         session.overallPercentage ||
-                          calculatePercentage(session.score, session.maxScore)
+                          calculatePercentage(session.score, session.maxScore),
+                        session.minimum_score
                       )}`}
                     >
                       {session.overallPercentage ||
@@ -850,7 +945,7 @@ export default function DetailHasilTesPesertaPage() {
                     <div className="text-sm text-gray-600">Status</div>
                     {(session.overallPercentage ||
                       calculatePercentage(session.score, session.maxScore)) >=
-                    60 ? (
+                    (session.minimum_score || 60) ? (
                       <div className="text-2xl font-bold text-green-600">
                         Lulus
                       </div>
@@ -862,10 +957,15 @@ export default function DetailHasilTesPesertaPage() {
                   </div>
                   <div className="text-center">
                     <div className="text-sm text-gray-600">Pesan</div>
-                    <div className="text-lg font-bold text-blue-600">
+                    <div className={`text-lg font-bold ${
+                      (session.overallPercentage ||
+                        calculatePercentage(session.score, session.maxScore)) >=
+                      (session.minimum_score || 60) ? "text-green-600" : "text-red-600"
+                    }`}>
                       {getScoreMessage(
                         session.overallPercentage ||
-                          calculatePercentage(session.score, session.maxScore)
+                          calculatePercentage(session.score, session.maxScore),
+                        session.minimum_score
                       )}
                     </div>
                   </div>
@@ -920,7 +1020,8 @@ export default function DetailHasilTesPesertaPage() {
                                   </span>
                                   <span
                                     className={`font-bold ${getScoreColor(
-                                      data.percentage
+                                      data.percentage,
+                                      session.minimum_score
                                     )}`}
                                   >
                                     {data.percentage}%
@@ -931,9 +1032,9 @@ export default function DetailHasilTesPesertaPage() {
                                 <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                                   <div
                                     className={`h-2 rounded-full transition-all duration-300 ${
-                                      data.percentage >= 80
+                                      data.percentage >= getThresholds(session.minimum_score).excellent
                                         ? "bg-green-500"
-                                        : data.percentage >= 60
+                                        : data.percentage >= getThresholds(session.minimum_score).average
                                         ? "bg-yellow-500"
                                         : "bg-red-500"
                                     }`}
@@ -949,16 +1050,16 @@ export default function DetailHasilTesPesertaPage() {
                                 <div className="text-xs mt-2">
                                   <span
                                     className={`px-2 py-1 rounded-full ${
-                                      data.percentage >= 80
+                                      data.percentage >= getThresholds(session.minimum_score).excellent
                                         ? "bg-green-100 text-green-800"
-                                        : data.percentage >= 60
+                                        : data.percentage >= getThresholds(session.minimum_score).average
                                         ? "bg-yellow-100 text-yellow-800"
                                         : "bg-red-100 text-red-800"
                                     }`}
                                   >
-                                    {data.percentage >= 80
+                                    {data.percentage >= getThresholds(session.minimum_score).excellent
                                       ? "Sangat Baik"
-                                      : data.percentage >= 60
+                                      : data.percentage >= getThresholds(session.minimum_score).average
                                       ? "Baik"
                                       : "Perlu Perbaikan"}
                                   </span>
@@ -1319,31 +1420,32 @@ export default function DetailHasilTesPesertaPage() {
                               const getStandardInterpretation = (
                                 perc: number
                               ) => {
+                                const thresholds = getThresholds(session.minimum_score);
                                 if (perc >= 95)
                                   return {
                                     level: "Superior",
                                     desc: "Kemampuan luar biasa (Top 5%)",
                                     percentile: "95-100",
                                   };
-                                if (perc >= 85)
+                                if (perc >= thresholds.excellent + 5)
                                   return {
                                     level: "Sangat Tinggi",
                                     desc: "Kemampuan sangat baik (Top 15%)",
                                     percentile: "85-94",
                                   };
-                                if (perc >= 75)
+                                if (perc >= thresholds.good + 15)
                                   return {
                                     level: "Tinggi",
                                     desc: "Kemampuan baik (Top 25%)",
                                     percentile: "75-84",
                                   };
-                                if (perc >= 60)
+                                if (perc >= thresholds.average)
                                   return {
                                     level: "Sedang-Tinggi",
                                     desc: "Kemampuan cukup baik (Top 40%)",
                                     percentile: "60-74",
                                   };
-                                if (perc >= 40)
+                                if (perc >= thresholds.poor + 20)
                                   return {
                                     level: "Sedang",
                                     desc: "Kemampuan rata-rata (40-60%)",
@@ -1399,17 +1501,19 @@ export default function DetailHasilTesPesertaPage() {
 
                               // Prediksi Potensi Akademik
                               const getAcademicPotential = (perc: number) => {
-                                if (perc >= 85)
+                                const thresholds = getThresholds(session.minimum_score);
+                                if (perc >= thresholds.excellent)
                                   return "Sangat berpotensi untuk program studi kompetitif (Kedokteran, Teknik, dll)";
-                                if (perc >= 75)
+                                if (perc >= thresholds.good + 15)
                                   return "Berpotensi untuk program studi pilihan dengan persiapan tambahan";
-                                if (perc >= 60)
+                                if (perc >= thresholds.average)
                                   return "Cocok untuk berbagai program studi dengan fokus peningkatan";
-                                if (perc >= 40)
+                                if (perc >= thresholds.poor + 20)
                                   return "Perlu persiapan intensif untuk program studi yang diinginkan";
                                 return "Disarankan mengikuti program remedial sebelum melanjutkan ke jenjang berikutnya";
                               };
 
+                              const thresholds = getThresholds(session.minimum_score);
                               const analyses = {
                                 TES_VERBAL: {
                                   name: "Kemampuan Verbal",
@@ -1421,28 +1525,28 @@ export default function DetailHasilTesPesertaPage() {
 
                                   // Analisis Kekuatan & Kelemahan
                                   strengths:
-                                    percentage >= 75
+                                    percentage >= thresholds.good + 15
                                       ? "Pemahaman konsep verbal sangat baik, mampu menganalisis hubungan kata dengan tepat, dan memiliki kosakata yang luas"
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? "Pemahaman dasar bahasa baik, dapat menangkap makna teks sederhana dengan cukup baik"
                                       : "Dasar pemahaman bahasa ada, namun perlu pengembangan kosakata dan kemampuan analisis",
 
                                   weaknesses:
-                                    percentage < 60
+                                    percentage < thresholds.average
                                       ? "Perlu peningkatan signifikan dalam analisis teks kompleks, pemahaman sinonim-antonim, dan penguasaan kosakata"
-                                      : percentage < 80
+                                      : percentage < thresholds.excellent
                                       ? "Dapat ditingkatkan pada soal analogi yang lebih kompleks dan pemahaman teks akademik"
                                       : "Pertahankan kemampuan dengan tantangan yang lebih tinggi",
 
                                   // Rekomendasi Spesifik
                                   recommendations:
-                                    percentage >= 80
+                                    percentage >= thresholds.excellent
                                       ? [
                                           "Pertahankan dengan membaca literatur akademik",
                                           "Latih soal verbal tingkat olimpiade",
                                           "Pelajari etimologi kata untuk memperdalam pemahaman",
                                         ]
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? [
                                           "Perbanyak membaca artikel ilmiah",
                                           "Latihan sinonim-antonim rutin",
@@ -1458,19 +1562,19 @@ export default function DetailHasilTesPesertaPage() {
 
                                   // Tingkat Kesulitan yang Cocok
                                   difficulty:
-                                    percentage >= 85
+                                    percentage >= thresholds.excellent + 5
                                       ? "Siap untuk soal verbal tingkat universitas dan tes masuk PTN"
-                                      : percentage >= 70
+                                      : percentage >= thresholds.good + 10
                                       ? "Cocok untuk soal tingkat SMA dan persiapan UTBK"
-                                      : percentage >= 50
+                                      : percentage >= thresholds.average - 10
                                       ? "Mulai dari soal tingkat SMP-SMA"
                                       : "Fokus pada soal dasar dan penguasaan kosakata",
 
                                   // Waktu Optimal
                                   timeManagement:
-                                    percentage >= 80
+                                    percentage >= thresholds.excellent
                                       ? "Dapat menyelesaikan soal dengan cepat dan akurat"
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? "Perlu latihan kecepatan membaca dan analisis"
                                       : "Fokus pada akurasi terlebih dahulu, kecepatan akan mengikuti",
 
@@ -1491,27 +1595,27 @@ export default function DetailHasilTesPesertaPage() {
                                     "Mengukur kemampuan operasi matematika dasar, deret angka, dan pemecahan masalah numerik",
 
                                   strengths:
-                                    percentage >= 75
+                                    percentage >= thresholds.good + 15
                                       ? "Kemampuan matematika sangat solid, dapat menyelesaikan deret kompleks dan operasi dengan akurasi tinggi"
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? "Pemahaman konsep dasar matematika baik, dapat menyelesaikan soal standar dengan benar"
                                       : "Pemahaman konsep dasar matematika perlu diperkuat dengan latihan intensif",
 
                                   weaknesses:
-                                    percentage < 60
+                                    percentage < thresholds.average
                                       ? "Perlu peningkatan menyeluruh dalam operasi dasar, deret angka, dan pemecahan masalah matematika"
-                                      : percentage < 80
+                                      : percentage < thresholds.excellent
                                       ? "Dapat ditingkatkan pada soal matematika aplikatif dan deret yang lebih kompleks"
                                       : "Tantang diri dengan soal matematika tingkat lanjut",
 
                                   recommendations:
-                                    percentage >= 80
+                                    percentage >= thresholds.excellent
                                       ? [
                                           "Latih soal matematika tingkat olimpiade",
                                           "Pelajari statistik dan probabilitas",
                                           "Fokus pada soal cerita kompleks",
                                         ]
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? [
                                           "Kuatkan operasi dasar (+-×÷)",
                                           "Latihan deret angka rutin",
@@ -1526,18 +1630,18 @@ export default function DetailHasilTesPesertaPage() {
                                         ],
 
                                   difficulty:
-                                    percentage >= 85
+                                    percentage >= thresholds.excellent + 5
                                       ? "Siap untuk matematika tingkat universitas dan tes masuk teknik"
-                                      : percentage >= 70
+                                      : percentage >= thresholds.good + 10
                                       ? "Cocok untuk matematika SMA dan persiapan SAINTEK"
-                                      : percentage >= 50
+                                      : percentage >= thresholds.average - 10
                                       ? "Mulai dari matematika SMP-SMA"
                                       : "Fokus pada operasi dasar dan konsep fundamental",
 
                                   timeManagement:
-                                    percentage >= 80
+                                    percentage >= thresholds.excellent
                                       ? "Dapat menyelesaikan perhitungan dengan cepat dan efisien"
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? "Perlu latihan kecepatan perhitungan mental"
                                       : "Fokus pada akurasi, gunakan strategi step-by-step",
 
@@ -1557,27 +1661,27 @@ export default function DetailHasilTesPesertaPage() {
                                     "Mengukur kemampuan penalaran logis, deduksi, induksi, dan pemecahan masalah sistematis",
 
                                   strengths:
-                                    percentage >= 75
+                                    percentage >= thresholds.good + 15
                                       ? "Kemampuan penalaran logis sangat baik, dapat berpikir sistematis dan analitis dengan pola yang kompleks"
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? "Kemampuan penalaran dasar baik, dapat mengikuti alur logika sederhana dengan benar"
                                       : "Dasar penalaran logis ada, namun perlu pengembangan pola pikir sistematis dan terstruktur",
 
                                   weaknesses:
-                                    percentage < 60
+                                    percentage < thresholds.average
                                       ? "Perlu peningkatan signifikan dalam penalaran deduktif, induktif, dan pemecahan masalah kompleks"
-                                      : percentage < 80
+                                      : percentage < thresholds.excellent
                                       ? "Dapat ditingkatkan pada soal logika multi-tahap dan penalaran abstrak"
                                       : "Tantang dengan soal logika tingkat kompetisi",
 
                                   recommendations:
-                                    percentage >= 80
+                                    percentage >= thresholds.excellent
                                       ? [
                                           "Latih soal logika tingkat olimpiade",
                                           "Pelajari logika formal dan silogisme",
                                           "Berlatih puzzle kompleks",
                                         ]
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? [
                                           "Latihan soal penalaran rutin",
                                           "Pelajari pola logika dasar",
@@ -1592,18 +1696,18 @@ export default function DetailHasilTesPesertaPage() {
                                         ],
 
                                   difficulty:
-                                    percentage >= 85
+                                    percentage >= thresholds.excellent + 5
                                       ? "Siap untuk tes logika tingkat universitas dan kompetisi"
-                                      : percentage >= 70
+                                      : percentage >= thresholds.good + 10
                                       ? "Cocok untuk soal logika SMA dan UTBK"
-                                      : percentage >= 50
+                                      : percentage >= thresholds.average - 10
                                       ? "Mulai dari logika SMP-SMA"
                                       : "Fokus pada pola dasar dan penalaran sederhana",
 
                                   timeManagement:
-                                    percentage >= 80
+                                    percentage >= thresholds.excellent
                                       ? "Dapat menganalisis pola dengan cepat dan akurat"
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? "Perlu latihan kecepatan analisis pola"
                                       : "Fokus pada pemahaman konsep, kecepatan akan mengikuti",
 
@@ -1623,27 +1727,27 @@ export default function DetailHasilTesPesertaPage() {
                                     "Mengukur kemampuan visualisasi spasial, pengenalan pola, dan analisis bentuk geometris",
 
                                   strengths:
-                                    percentage >= 75
+                                    percentage >= thresholds.good + 15
                                       ? "Kemampuan visualisasi spasial sangat baik, dapat menganalisis bentuk 3D dan pola kompleks dengan akurat"
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? "Kemampuan visual dasar baik, dapat mengenali pola sederhana dan orientasi spasial"
                                       : "Dasar kemampuan visual ada, namun perlu latihan intensif pengenalan pola dan orientasi spasial",
 
                                   weaknesses:
-                                    percentage < 60
+                                    percentage < thresholds.average
                                       ? "Perlu peningkatan menyeluruh dalam analisis visual, pengenalan pola, dan kemampuan spasial"
-                                      : percentage < 80
+                                      : percentage < thresholds.excellent
                                       ? "Dapat ditingkatkan pada soal spasial 3D dan transformasi geometris yang kompleks"
                                       : "Tantang dengan soal spasial tingkat arsitektur dan engineering",
 
                                   recommendations:
-                                    percentage >= 80
+                                    percentage >= thresholds.excellent
                                       ? [
                                           "Latih soal spasial tingkat arsitektur",
                                           "Pelajari geometri 3D lanjut",
                                           "Berlatih dengan software CAD",
                                         ]
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? [
                                           "Latihan pengenalan pola rutin",
                                           "Belajar rotasi dan refleksi",
@@ -1658,18 +1762,18 @@ export default function DetailHasilTesPesertaPage() {
                                         ],
 
                                   difficulty:
-                                    percentage >= 85
+                                    percentage >= thresholds.excellent + 5
                                       ? "Siap untuk tes spasial tingkat arsitektur dan engineering"
-                                      : percentage >= 70
+                                      : percentage >= thresholds.good + 10
                                       ? "Cocok untuk soal spasial SMA dan tes masuk teknik"
-                                      : percentage >= 50
+                                      : percentage >= thresholds.average - 10
                                       ? "Mulai dari soal visual SMP-SMA"
                                       : "Fokus pada pola dasar dan orientasi sederhana",
 
                                   timeManagement:
-                                    percentage >= 80
+                                    percentage >= thresholds.excellent
                                       ? "Dapat memvisualisasikan dengan cepat dan akurat"
-                                      : percentage >= 60
+                                      : percentage >= thresholds.average
                                       ? "Perlu latihan kecepatan visualisasi"
                                       : "Fokus pada akurasi visualisasi, gunakan bantuan sketsa",
 

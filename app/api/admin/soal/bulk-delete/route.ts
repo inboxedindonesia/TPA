@@ -44,17 +44,7 @@ export async function POST(request: NextRequest) {
     const deleteResult = await client.query(deleteQuery, [validIds]);
     const totalDeleted = deleteResult.rowCount || 0;
 
-    // Update totalQuestions for all affected tests
-    for (const testId of affectedTestIds) {
-      const updateTestQuery = `
-        UPDATE tests 
-        SET "totalQuestions" = (
-          SELECT COUNT(*) FROM test_questions WHERE test_id = $1
-        )
-        WHERE id = $1
-      `;
-      await client.query(updateTestQuery, [testId]);
-    }
+    // No need to update totalQuestions - we calculate it dynamically from test_questions table
 
     // Commit transaction
     await client.query('COMMIT');

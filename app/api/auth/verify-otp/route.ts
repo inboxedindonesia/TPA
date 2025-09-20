@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
 import jwt from "jsonwebtoken";
+import { logUserRegistered } from "@/lib/activityLogger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,6 +65,17 @@ export async function POST(request: NextRequest) {
         "your-super-secret-jwt-key-for-development",
         { expiresIn: "24h" }
       );
+
+      // Log user registration activity
+      try {
+        await logUserRegistered(
+          userId,
+          user.name,
+          roles.length > 0 ? roles[0] : "USER"
+        );
+      } catch (error) {
+        console.error("Error logging registration activity:", error);
+      }
 
       client.release();
       const response = NextResponse.json({ message: "Verifikasi berhasil" });

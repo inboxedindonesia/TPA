@@ -137,17 +137,7 @@ export async function DELETE(request: Request, { params }: any) {
       const deleteQuery = "DELETE FROM questions WHERE id = $1";
       await client.query(deleteQuery, [id]);
 
-      // Update totalQuestions for all affected tests
-      for (const testId of affectedTestIds) {
-        const updateTestQuery = `
-          UPDATE tests 
-          SET "totalQuestions" = (
-            SELECT COUNT(*) FROM test_questions WHERE test_id = $1
-          )
-          WHERE id = $1
-        `;
-        await client.query(updateTestQuery, [testId]);
-      }
+      // No need to update totalQuestions - we calculate it dynamically from test_questions table
 
       return NextResponse.json(
         { message: "Soal berhasil dihapus" },

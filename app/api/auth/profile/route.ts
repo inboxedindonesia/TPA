@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "../../../../lib/auth";
+import { logUserProfileUpdated } from "../../../../lib/activityLogger";
 import fs from "fs";
 import path from "path";
 
@@ -139,6 +140,10 @@ export async function PUT(req: Request) {
 
     // Kembalikan data user terbaru
     const updatedUser = rows[0];
+
+    // Log activity
+    await logUserProfileUpdated(user.userId, user.userName, user.userRole);
+
     return NextResponse.json({
       user: {
         id: updatedUser.id,

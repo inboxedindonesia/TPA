@@ -150,7 +150,7 @@ export function getFallbackUserInfo(): UserInfo {
   return {
     userId: "admin-1",
     userName: "Admin TPA",
-    userRole: "ADMIN",
+    userRole: "Administrator",
     userEmail: "admin@tpa.com",
   };
 }

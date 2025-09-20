@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
 import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
+import { logTestStarted } from "@/lib/activityLogger";
 import { randomUUID } from "crypto";
 
 // POST /api/test-sessions/start/[testId]
@@ -91,6 +92,26 @@ export async function POST(request: Request, context: any) {
         `INSERT INTO test_sessions (id, "userId", "testId", status, "startTime") VALUES ($1, $2, $3, 'ONGOING', (NOW() AT TIME ZONE 'Asia/Jakarta')) RETURNING *`,
         [sessionId, user.userId, testId]
       );
+
+      // Log test started activity
+      try {
+        const testRes = await client.query(
+          `SELECT name FROM tests WHERE id = $1`,
+          [testId]
+        );
+        const testName = testRes.rows[0]?.name || "Unknown Test";
+
+        await logTestStarted(
+          user.userId,
+          user.userName,
+          user.userRole || "peserta",
+          testId,
+          testName
+        );
+      } catch (error) {
+        console.error("Error logging test start activity:", error);
+      }
+
       return NextResponse.json({ session: res.rows[0] });
     } finally {
       client.release();

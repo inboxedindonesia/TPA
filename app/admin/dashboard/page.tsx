@@ -24,6 +24,7 @@ import {
 import AdminHeader from "../../components/AdminHeader";
 import FeedbackModal from "../../components/FeedbackModal";
 import TesDetailModal from "../../components/TesDetailModal";
+import PaginationWithSearch from "../../components/PaginationWithSearch";
 
 interface DashboardData {
   totalSoal: number;
@@ -56,72 +57,6 @@ const formatCategoryName = (category: string) => {
 };
 
 export default function AdminDashboard() {
-  // Pagination state for Tes and Peserta
-  const [tesPage, setTesPage] = useState(1);
-  const [tesTotalPages, setTesTotalPages] = useState(1);
-  const [pesertaPage, setPesertaPage] = useState(1);
-  const [pesertaTotalPages, setPesertaTotalPages] = useState(1);
-
-  // Pagination handlers
-  const handlePrevTesPage = () => {
-    if (tesPage > 1) setTesPage(tesPage - 1);
-  };
-  const handleNextTesPage = () => {
-    if (tesPage < tesTotalPages) setTesPage(tesPage + 1);
-  };
-  const handlePrevPesertaPage = () => {
-    if (pesertaPage > 1) setPesertaPage(pesertaPage - 1);
-  };
-  const handleNextPesertaPage = () => {
-    if (pesertaPage < pesertaTotalPages) setPesertaPage(pesertaPage + 1);
-  };
-
-  // Fetch paginated Tes data
-  useEffect(() => {
-    const fetchTesData = async () => {
-      try {
-        const res = await fetch(`/api/admin/stats/tes?page=${tesPage}`);
-        if (res.ok) {
-          const data = await res.json();
-          setDashboardData((prev) => ({
-            ...prev,
-            tesList: data.tesList || [],
-          }));
-          setTesTotalPages(data.totalPages || 1);
-        }
-      } catch (err) {
-        // handle error
-      }
-    };
-    fetchTesData();
-  }, [tesPage]);
-
-  // Fetch paginated Peserta data
-  useEffect(() => {
-    const fetchPesertaData = async () => {
-      try {
-        const res = await fetch(`/api/admin/stats/peserta?page=${pesertaPage}`);
-        if (res.ok) {
-          const data = await res.json();
-          setDashboardData((prev) => ({
-            ...prev,
-            daftarPeserta: data.daftarPeserta || [],
-          }));
-          setPesertaTotalPages(data.totalPages || 1);
-        }
-      } catch (err) {
-        // handle error
-      }
-    };
-    fetchPesertaData();
-  }, [pesertaPage]);
-  // Navigasi halaman soal
-  const handlePrevSoalPage = () => {
-    if (soalPage > 1) setSoalPage(soalPage - 1);
-  };
-  const handleNextSoalPage = () => {
-    if (soalPage < soalTotalPages) setSoalPage(soalPage + 1);
-  };
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [dashboardData, setDashboardData] = useState<DashboardData>({
@@ -172,6 +107,112 @@ export default function AdminDashboard() {
     tes: null as any,
   });
 
+  // Pagination state for Tes and Peserta
+  const [tesPage, setTesPage] = useState(1);
+  const [tesTotalPages, setTesTotalPages] = useState(1);
+  const [pesertaPage, setPesertaPage] = useState(1);
+  const [pesertaTotalPages, setPesertaTotalPages] = useState(1);
+
+  // Pagination handlers
+  const handlePrevTesPage = () => {
+    if (tesPage > 1) setTesPage(tesPage - 1);
+  };
+  const handleNextTesPage = () => {
+    if (tesPage < tesTotalPages) setTesPage(tesPage + 1);
+  };
+  const handlePrevPesertaPage = () => {
+    if (pesertaPage > 1) setPesertaPage(pesertaPage - 1);
+  };
+  const handleNextPesertaPage = () => {
+    if (pesertaPage < pesertaTotalPages) setPesertaPage(pesertaPage + 1);
+  };
+
+  // Navigasi halaman soal
+  const handlePrevSoalPage = () => {
+    if (soalPage > 1) setSoalPage(soalPage - 1);
+  };
+  const handleNextSoalPage = () => {
+    if (soalPage < soalTotalPages) setSoalPage(soalPage + 1);
+  };
+
+  // Fetch paginated Tes data
+  useEffect(() => {
+    const fetchTesData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+
+        const searchParam = searchTes ? `&search=${encodeURIComponent(searchTes)}` : '';
+        const res = await fetch(`/api/admin/stats/tes?page=${tesPage}${searchParam}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDashboardData((prev) => ({
+            ...prev,
+            tesList: data.tesList || [],
+            tesAktif: data.tesAktif || 0,
+            rataRataDurasi: data.rataRataDurasi || "0",
+            rataRataSkor: data.rataRataSkor || "0.0",
+          }));
+          setTesTotalPages(data.totalPages || 1);
+        } else if (res.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/login");
+        }
+      } catch (err) {
+        // handle error
+      }
+    };
+    fetchTesData();
+  }, [tesPage, searchTes]);
+
+  // Fetch paginated Peserta data
+  useEffect(() => {
+    const fetchPesertaData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+
+        const searchParam = searchPeserta ? `&search=${encodeURIComponent(searchPeserta)}` : '';
+        const statusParam = filterStatusKelulusan ? `&status=${encodeURIComponent(filterStatusKelulusan)}` : '';
+        const res = await fetch(`/api/admin/stats/peserta?page=${pesertaPage}${searchParam}${statusParam}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDashboardData((prev) => ({
+            ...prev,
+            daftarPeserta: data.daftarPeserta || [],
+            totalPeserta: data.totalPeserta || 0,
+            pesertaAktif: data.pesertaAktif || 0,
+            pesertaBaru: data.pesertaBaru || 0,
+            rataRataSkor: data.rataRataSkor || "0.0",
+          }));
+          setPesertaTotalPages(data.totalPages || 1);
+        } else if (res.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/login");
+        }
+      } catch (err) {
+        // handle error
+      }
+    };
+    fetchPesertaData();
+  }, [pesertaPage, searchPeserta, filterStatusKelulusan]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -181,36 +222,66 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData(soalPage);
+    fetchDashboardData(soalPage, searchSoal);
 
     // Refresh data every 30 seconds
     const interval = setInterval(() => {
-      fetchDashboardData(soalPage);
+      fetchDashboardData(soalPage, searchSoal);
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [soalPage]);
+  }, [soalPage, searchSoal]);
 
-  // Reset selectAll when search changes
+  // Reset selectAll when search changes and reset to page 1
   useEffect(() => {
     setSelectAll(false);
     setSelectedSoal([]);
+    if (searchSoal) {
+      setSoalPage(1); // Reset to first page when searching
+    }
   }, [searchSoal]);
 
-  const fetchDashboardData = async (page = soalPage) => {
+  const fetchDashboardData = async (page = soalPage, search = searchSoal) => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
       // Add timestamp to prevent caching
       const timestamp = Date.now();
+      
+      // Build search parameter for soal API
+      const soalSearchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+      
+      const headers = {
+        "Authorization": `Bearer ${token}`,
+        "Cache-Control": "no-cache"
+      };
+      
       const [
         dashboardResponse,
         pesertaResponse,
         soalResponse,
         activitiesResponse,
       ] = await Promise.all([
-        fetch(`/api/admin/dashboard?_t=${timestamp}`, { cache: 'no-store' }),
-        fetch(`/api/admin/stats/peserta?_t=${timestamp}`, { cache: 'no-store' }),
-        fetch(`/api/admin/stats/soal?page=${page}&_t=${timestamp}`, { cache: 'no-store' }),
-        fetch(`/api/admin/activities?limit=5&_t=${timestamp}`, { cache: 'no-store' }),
+        fetch(`/api/admin/dashboard?_t=${timestamp}`, { 
+          cache: 'no-store',
+          headers 
+        }),
+        fetch(`/api/admin/stats/peserta?_t=${timestamp}`, { 
+          cache: 'no-store',
+          headers 
+        }),
+        fetch(`/api/admin/stats/soal?page=${page}${soalSearchParam}&_t=${timestamp}`, { 
+          cache: 'no-store',
+          headers 
+        }),
+        fetch(`/api/admin/notifications/logs?limit=5&_t=${timestamp}`, { 
+          cache: 'no-store',
+          headers 
+        }),
       ]);
 
       if (
@@ -230,7 +301,7 @@ export default function AdminDashboard() {
           daftarSoal: Array.isArray(soalData.daftarSoal)
             ? soalData.daftarSoal
             : [],
-          recentActivities: activitiesData.activities || [],
+          recentActivities: activitiesData.notifications || [],
         };
 
         setSoalTotalPages(soalData.totalPages || 1);
@@ -243,6 +314,16 @@ export default function AdminDashboard() {
           if (soalPage < soalTotalPages) setSoalPage(soalPage + 1);
         };
       } else {
+        // Check for authentication errors
+        if (dashboardResponse.status === 401 || 
+            pesertaResponse.status === 401 || 
+            soalResponse.status === 401 || 
+            activitiesResponse.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/login");
+          return;
+        }
         console.error("Error fetching dashboard data");
       }
     } catch (error) {
@@ -968,51 +1049,29 @@ export default function AdminDashboard() {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {dashboardData.daftarSoal &&
                         dashboardData.daftarSoal.length > 0 ? (
-                          (() => {
-                            const filteredSoal =
-                              dashboardData.daftarSoal.filter(
-                                (soal: any) =>
-                                  soal.question
-                                    .toLowerCase()
-                                    .includes(searchSoal.toLowerCase()) ||
-                                  soal.category
-                                    .toLowerCase()
-                                    .includes(searchSoal.toLowerCase())
-                              );
-                            if (filteredSoal.length === 0) {
-                              return (
-                                <tr>
-                                  <td
-                                    colSpan={8}
-                                    className="px-6 py-4 text-center text-gray-500"
-                                  >
-                                    {searchSoal
-                                      ? "Tidak ada soal yang sesuai dengan pencarian"
-                                      : "Belum ada soal yang dibuat"}
-                                  </td>
-                                </tr>
-                              );
-                            }
-                            return filteredSoal.map((soal: any) => (
-                              <tr
-                                key={soal.id}
-                                className="hover:bg-gray-50"
-                              >
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedSoal.includes(soal.id)}
-                                    onChange={() => handleSelectSoal(soal.id)}
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                  />
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {soal.question.length > 50
-                                      ? soal.question.substring(0, 50) + "..."
-                                      : soal.question}
-                                  </div>
-                                </td>
+                          dashboardData.daftarSoal.map((soal: any) => (
+                            <tr
+                              key={soal.id}
+                              className="hover:bg-gray-50"
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedSoal.includes(soal.id)}
+                                  onChange={() => handleSelectSoal(soal.id)}
+                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div 
+                                  className="text-sm font-medium text-gray-900 max-w-[200px] truncate"
+                                  title={soal.question}
+                                >
+                                  {soal.question.length > 30
+                                    ? `${soal.question.substring(0, 30)}...`
+                                    : soal.question}
+                                </div>
+                              </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span
                                     className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -1092,8 +1151,7 @@ export default function AdminDashboard() {
                                   </div>
                                 </td>
                               </tr>
-                            ));
-                          })()
+                            ))
                         ) : (
                           <tr>
                             <td
@@ -1110,33 +1168,13 @@ export default function AdminDashboard() {
                     </table>
                   </div>
                   {/* Pagination Soal */}
-                  <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
-                    <button
-                      onClick={handlePrevSoalPage}
-                      disabled={soalPage === 1}
-                      className={`px-4 py-2 rounded-md border text-sm font-medium mr-2 ${
-                        soalPage === 1
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-white text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      Previous
-                    </button>
-                    <span className="text-sm text-gray-600">
-                      Halaman {soalPage} dari {soalTotalPages}
-                    </span>
-                    <button
-                      onClick={handleNextSoalPage}
-                      disabled={soalPage === soalTotalPages}
-                      className={`px-4 py-2 rounded-md border text-sm font-medium ml-2 ${
-                        soalPage === soalTotalPages
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-white text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      Next
-                    </button>
-                  </div>
+                  <PaginationWithSearch
+                    currentPage={soalPage}
+                    totalPages={soalTotalPages}
+                    onPageChange={(page) => setSoalPage(page)}
+                    onPrevPage={handlePrevSoalPage}
+                    onNextPage={handleNextSoalPage}
+                  />
                 </div>
               </div>
             </div>
@@ -1210,131 +1248,95 @@ export default function AdminDashboard() {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {(dashboardData as any).tesList &&
                         (dashboardData as any).tesList.length > 0 ? (
-                          (() => {
-                            const filteredTes = (
-                              dashboardData as any
-                            ).tesList.filter((tes: any) =>
-                              tes.nama
-                                .toLowerCase()
-                                .includes(searchTes.toLowerCase())
-                            );
-                            if (filteredTes.length === 0) {
-                              return (
-                                <tr>
-                                  <td
-                                    colSpan={6}
-                                    className="px-6 py-4 text-center text-gray-500"
+                          (dashboardData as any).tesList.map((tes: any) => (
+                            <tr
+                              key={tes.id}
+                              className="hover:bg-gray-50"
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div 
+                                  className="text-sm font-medium text-gray-900 max-w-[150px] truncate"
+                                  title={tes.nama}
+                                >
+                                  {tes.nama.length > 20
+                                    ? `${tes.nama.substring(0, 20)}...`
+                                    : tes.nama}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {tes.jumlahSoal || 0} soal
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {tes.durasi || 0} menit
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    tes.status === "aktif"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {tes.status === "aktif"
+                                    ? "Aktif"
+                                    : "Nonaktif"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {tes.peserta || 0} peserta
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleViewTes(tes)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                                   >
-                                    {searchTes
-                                      ? "Tidak ada tes yang sesuai dengan pencarian"
-                                      : "Belum ada tes yang dibuat"}
-                                  </td>
-                                </tr>
-                              );
-                            }
-                            return filteredTes.map((tes: any) => (
-                              <tr
-                                key={tes.id}
-                                className="hover:bg-gray-50"
-                              >
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {tes.nama}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {tes.jumlahSoal || 0} soal
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {tes.durasi || 0} menit
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span
-                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      tes.status === "aktif"
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-red-100 text-red-800"
-                                    }`}
+                                    <Eye className="w-4 h-4 mr-1" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleEditTes(tes)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-600 hover:text-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                   >
-                                    {tes.status === "aktif"
-                                      ? "Aktif"
-                                      : "Nonaktif"}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {tes.peserta || 0} peserta
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex space-x-2">
-                                    <button
-                                      onClick={() => handleViewTes(tes)}
-                                      className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                    >
-                                      <Eye className="w-4 h-4 mr-1" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleEditTes(tes)}
-                                      className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-600 hover:text-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                                    >
-                                      <Edit className="w-4 h-4 mr-1" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteTes(tes)}
-                                      className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-red-600 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-1" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ));
-                          })()
+                                    <Edit className="w-4 h-4 mr-1" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteTes(tes)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-red-600 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-1" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
                         ) : (
                           <tr>
                             <td
                               colSpan={6}
                               className="px-6 py-4 text-center text-gray-500"
                             >
-                              Belum ada tes yang dibuat
+                              {searchTes
+                                ? "Tidak ada tes yang sesuai dengan pencarian"
+                                : "Belum ada tes yang dibuat"}
                             </td>
                           </tr>
                         )}
                       </tbody>
                     </table>
-                    {/* Pagination Peserta */}
-                    <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
-                      <button
-                        onClick={handlePrevPesertaPage}
-                        disabled={pesertaPage === 1}
-                        className={`px-4 py-2 rounded-md border text-sm font-medium mr-2 ${
-                          pesertaPage === 1
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            : "bg-white text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        Previous
-                      </button>
-                      <span className="text-sm text-gray-600">
-                        Halaman {pesertaPage} dari {pesertaTotalPages}
-                      </span>
-                      <button
-                        onClick={handleNextPesertaPage}
-                        disabled={pesertaPage === pesertaTotalPages}
-                        className={`px-4 py-2 rounded-md border text-sm font-medium ml-2 ${
-                          pesertaPage === pesertaTotalPages
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            : "bg-white text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        Next
-                      </button>
-                    </div>
+                    {/* Pagination Tes */}
+                    <PaginationWithSearch
+                      currentPage={tesPage}
+                      totalPages={tesTotalPages}
+                      onPageChange={(page) => setTesPage(page)}
+                      onPrevPage={handlePrevTesPage}
+                      onNextPage={handleNextTesPage}
+                    />
                   </div>
                 </div>
               </div>
@@ -1441,155 +1443,101 @@ export default function AdminDashboard() {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {dashboardData.daftarPeserta &&
                         dashboardData.daftarPeserta.length > 0 ? (
-                          (() => {
-                            const filteredPeserta =
-                              dashboardData.daftarPeserta.filter(
-                                (peserta: any) => {
-                                  // Filter berdasarkan search
-                                  const matchesSearch =
-                                    peserta.name
-                                      .toLowerCase()
-                                      .includes(searchPeserta.toLowerCase()) ||
-                                    peserta.email
-                                      .toLowerCase()
-                                      .includes(searchPeserta.toLowerCase());
-
-                                  // Filter berdasarkan status kelulusan
-                                  let matchesStatus = true;
-                                  if (filterStatusKelulusan) {
-                                    const averageScore = Number(
-                                      peserta.averageScore
-                                    );
-                                    const totalTests = peserta.totalTests;
-                                    const minimumScore = peserta.averageMinimumScore || 60;
-
-                                    if (filterStatusKelulusan === "lolos") {
-                                      matchesStatus = averageScore >= minimumScore;
-                                    } else if (
-                                      filterStatusKelulusan === "tidak-lolos"
-                                    ) {
-                                      matchesStatus =
-                                        totalTests > 0 && averageScore < minimumScore;
-                                    } else if (
-                                      filterStatusKelulusan === "belum-tes"
-                                    ) {
-                                      matchesStatus = totalTests === 0;
-                                    }
-                                  }
-
-                                  return matchesSearch && matchesStatus;
-                                }
-                              );
-                            if (filteredPeserta.length === 0) {
-                              return (
-                                <tr>
-                                  <td
-                                    colSpan={7}
-                                    className="px-6 py-4 text-center text-gray-500"
+                          dashboardData.daftarPeserta.map((peserta: any) => (
+                            <tr
+                              key={peserta.id}
+                              className="hover:bg-gray-50"
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div
+                                  className="text-sm font-medium text-gray-900 max-w-[150px] truncate"
+                                  title={peserta.name}
+                                >
+                                  {peserta.name.length > 20
+                                    ? `${peserta.name.substring(0, 20)}...`
+                                    : peserta.name}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div
+                                  className="text-sm text-gray-900 max-w-[150px] truncate"
+                                  title={peserta.email}
+                                >
+                                  {peserta.email.length > 15
+                                    ? `${peserta.email.substring(0, 15)}...`
+                                    : peserta.email}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div
+                                  className="text-sm text-gray-900"
+                                  title={peserta.registration_id || "-"}
+                                >
+                                  {peserta.registration_id
+                                    ? peserta.registration_id.length > 15
+                                      ? `${peserta.registration_id.substring(
+                                          0,
+                                          15
+                                        )}...`
+                                      : peserta.registration_id
+                                    : "-"}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
+                                    peserta.is_verified
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                  }`}
+                                >
+                                  {peserta.is_verified
+                                    ? "Aktif"
+                                    : "Belum Verifikasi"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-center">
+                                <div className="text-sm text-gray-900">
+                                  {typeof peserta.totalTests === "number"
+                                    ? peserta.totalTests
+                                    : 0}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-center">
+                                <div>
+                                  {Number(peserta.averageScore) >= 70 ? (
+                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                      Lolos
+                                    </span>
+                                  ) : peserta.totalTests > 0 ? (
+                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                      Tidak Lolos
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                      Belum Tes
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-center">
+                                <div className="flex space-x-2 justify-center">
+                                  <button
+                                    onClick={() => handleViewPeserta(peserta)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                    title="Lihat Detail Peserta"
                                   >
-                                    {searchPeserta || filterStatusKelulusan
-                                      ? "Tidak ada peserta yang sesuai dengan filter"
-                                      : "Belum ada peserta yang terdaftar"}
-                                  </td>
-                                </tr>
-                              );
-                            }
-                            return filteredPeserta.map((peserta: any) => (
-                              <tr
-                                key={peserta.id}
-                                className="hover:bg-gray-50"
-                              >
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div
-                                    className="text-sm font-medium text-gray-900 max-w-[150px] truncate"
-                                    title={peserta.name}
-                                  >
-                                    {peserta.name.length > 20
-                                      ? `${peserta.name.substring(0, 20)}...`
-                                      : peserta.name}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div
-                                    className="text-sm text-gray-900 max-w-[150px] truncate"
-                                    title={peserta.email}
-                                  >
-                                    {peserta.email.length > 15
-                                      ? `${peserta.email.substring(0, 15)}...`
-                                      : peserta.email}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div
-                                    className="text-sm text-gray-900"
-                                    title={peserta.registration_id || "-"}
-                                  >
-                                    {peserta.registration_id
-                                      ? peserta.registration_id.length > 15
-                                        ? `${peserta.registration_id.substring(
-                                            0,
-                                            15
-                                          )}...`
-                                        : peserta.registration_id
-                                      : "-"}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span
-                                    className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
-                                      peserta.is_verified
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-yellow-100 text-yellow-800"
-                                    }`}
-                                  >
-                                    {peserta.is_verified
-                                      ? "Aktif"
-                                      : "Belum Verifikasi"}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-center">
-                                  <div className="text-sm text-gray-900">
-                                    {typeof peserta.totalTests === "number"
-                                      ? peserta.totalTests
-                                      : 0}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-center">
-                                  <div>
-                                    {Number(peserta.averageScore) >= 70 ? (
-                                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                        Lolos
-                                      </span>
-                                    ) : peserta.totalTests > 0 ? (
-                                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                        Tidak Lolos
-                                      </span>
-                                    ) : (
-                                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                        Belum Tes
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-center">
-                                  <div className="flex space-x-2 justify-center">
-                                    <button
-                                      onClick={() => handleViewPeserta(peserta)}
-                                      className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                      title="Lihat Detail Peserta"
-                                    >
-                                      <Eye className="w-4 h-4 mr-1" />
-                                    </button>
-                                    {/* Tambahkan aksi lain di sini jika diperlukan, misal: edit, hapus, dll */}
-                                  </div>
-                                </td>
-                              </tr>
-                            ));
-                          })()
+                                    <Eye className="w-4 h-4 mr-1" />
+                                  </button>
+                                  {/* Tambahkan aksi lain di sini jika diperlukan, misal: edit, hapus, dll */}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
                         ) : (
                           <tr>
                             <td
-                              colSpan={5}
+                              colSpan={7}
                               className="px-6 py-4 text-center text-gray-500"
                             >
                               {searchPeserta || filterStatusKelulusan
@@ -1601,33 +1549,13 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                     {/* Pagination Peserta untuk Tab Total Peserta */}
-                    <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
-                      <button
-                        onClick={handlePrevPesertaPage}
-                        disabled={pesertaPage === 1}
-                        className={`px-4 py-2 rounded-md border text-sm font-medium mr-2 ${
-                          pesertaPage === 1
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            : "bg-white text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        Previous
-                      </button>
-                      <span className="text-sm text-gray-600">
-                        Halaman {pesertaPage} dari {pesertaTotalPages}
-                      </span>
-                      <button
-                        onClick={handleNextPesertaPage}
-                        disabled={pesertaPage === pesertaTotalPages}
-                        className={`px-4 py-2 rounded-md border text-sm font-medium ml-2 ${
-                          pesertaPage === pesertaTotalPages
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            : "bg-white text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        Next
-                      </button>
-                    </div>
+                    <PaginationWithSearch
+                      currentPage={pesertaPage}
+                      totalPages={pesertaTotalPages}
+                      onPageChange={(page) => setPesertaPage(page)}
+                      onPrevPage={handlePrevPesertaPage}
+                      onNextPage={handleNextPesertaPage}
+                    />
                   </div>
                 </div>
               </div>

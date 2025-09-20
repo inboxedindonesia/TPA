@@ -46,6 +46,9 @@ export async function GET(request: Request, { params }: any) {
           name: section.name,
           duration: section.duration,
           questions: questionsResult.rows,
+          autoGrouping: section.autogrouping || false,
+          category: section.category || null,
+          questionCount: section.questioncount || null,
         });
       }
       return NextResponse.json({ ...test, sections });
@@ -215,6 +218,7 @@ export async function PUT(request: Request, { params }: any) {
       sections,
       availableFrom,
       availableUntil,
+      minimumScore,
     } = body;
 
     if (!name) {
@@ -282,8 +286,9 @@ export async function PUT(request: Request, { params }: any) {
           duration = COALESCE($6, duration),
           "availableFrom" = ($7::timestamptz AT TIME ZONE 'Asia/Jakarta'),
           "availableUntil" = ($8::timestamptz AT TIME ZONE 'Asia/Jakarta'),
+          "minimumScore" = COALESCE($9, "minimumScore"),
           "updatedAt" = (NOW() AT TIME ZONE 'Asia/Jakarta')
-        WHERE id = $9`,
+        WHERE id = $10`,
         [
           name,
           description || null,
@@ -293,6 +298,7 @@ export async function PUT(request: Request, { params }: any) {
           typeof duration === "number" ? duration : null,
           fromISO,
           untilISO,
+          typeof minimumScore === "number" ? minimumScore : null,
           id,
         ]
       );
@@ -308,11 +314,35 @@ export async function PUT(request: Request, { params }: any) {
         // Insert ulang sections dan test_questions
         for (const [order, s] of sections.entries()) {
           const sec = await client.query(
-            `INSERT INTO sections (testId, name, duration, "order") VALUES ($1, $2, $3, $4) RETURNING id`,
-            [id, s.name, s.duration, order + 1]
+            `INSERT INTO sections (testId, name, duration, "order", autoGrouping, category, questionCount) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+            [id, s.name, s.duration, order + 1, s.autoGrouping || false, s.category || null, s.questionCount || 10]
           );
           const sectionId = sec.rows[0].id;
-          if (Array.isArray(s.questionIds) && s.questionIds.length > 0) {
+          
+          // Handle questions based on section type
+          if (s.autoGrouping && s.category) {
+            // Auto-grouping: select random questions from category
+            const questionCount = s.questionCount || 10;
+            const categoryQuestions = await client.query(
+              `SELECT id FROM questions WHERE category = $1 ORDER BY RANDOM() LIMIT $2`,
+              [s.category, questionCount]
+            );
+            const questionIds = categoryQuestions.rows.map(row => row.id);
+            
+            // Log if not enough questions found
+            if (questionIds.length < questionCount) {
+              console.warn(`Only ${questionIds.length} questions found for category ${s.category}, requested ${questionCount}`);
+            }
+            
+            // Insert selected questions
+            for (const questionId of questionIds) {
+              await client.query(
+                `INSERT INTO test_questions (test_id, question_id, section_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+                [id, questionId, sectionId]
+              );
+            }
+          } else if (Array.isArray(s.questionIds) && s.questionIds.length > 0) {
+            // Manual selection: use provided question IDs
             for (const qid of s.questionIds) {
               await client.query(
                 `INSERT INTO test_questions (test_id, question_id, section_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
@@ -322,15 +352,7 @@ export async function PUT(request: Request, { params }: any) {
           }
         }
 
-        // Update totalQuestions after updating sections
-        const updateTestQuery = `
-          UPDATE tests 
-          SET "totalQuestions" = (
-            SELECT COUNT(*) FROM test_questions WHERE test_id = $1
-          )
-          WHERE id = $1
-        `;
-        await client.query(updateTestQuery, [id]);
+        // No need to update totalQuestions - we calculate it dynamically from test_questions table
       }
 
       await client.query("COMMIT");

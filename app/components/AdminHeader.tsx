@@ -10,9 +10,9 @@ import {
   BarChart3,
   User,
   Shield,
-  History,
   Key,
   KeyRound,
+  Activity,
 } from "lucide-react";
 
 interface AdminHeaderProps {
@@ -143,6 +143,18 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Dashboard
               </Link>
+              
+              <Link
+                href="/admin/notifications"
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                  isActive("/admin/notifications")
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-gray-600 hover:text-blue-600"
+                }`}
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Aktivitas
+              </Link>
             </div>
 
             {/* User Profile & Logout */}
@@ -187,14 +199,7 @@ export default function AdminHeader({ currentTime }: AdminHeaderProps) {
                       <Shield className="w-4 h-4 mr-2" />
                       Manajemen Peran
                     </Link>
-                    <Link
-                      href="/admin/activities"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsUserDropdownOpen(false)}
-                    >
-                      <History className="w-4 h-4 mr-2" />
-                      Log Pengguna
-                    </Link>
+
                     {isAdmin && !isOnPrem && (
                       <Link
                         href="/admin/generate-license"

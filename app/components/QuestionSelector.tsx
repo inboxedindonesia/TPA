@@ -28,6 +28,10 @@ interface QuestionSelectorProps {
   onSelect: (selectedQuestions: Question[]) => void;
   testId?: string;
   existingQuestionIds?: string[];
+  sectionName?: string;
+  autoGrouping?: boolean;
+  sectionCategory?: string;
+  sectionQuestionCount?: number;
 }
 
 // Format category name to be more user-friendly
@@ -52,6 +56,10 @@ export default function QuestionSelector({
   onSelect,
   testId,
   existingQuestionIds = [],
+  sectionName,
+  autoGrouping = false,
+  sectionCategory,
+  sectionQuestionCount = 10,
 }: QuestionSelectorProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,6 +91,10 @@ export default function QuestionSelector({
 
   useEffect(() => {
     if (isOpen) {
+      // Auto-set category filter if auto-grouping is enabled
+      if (autoGrouping && sectionCategory) {
+        setSelectedCategory(sectionCategory);
+      }
       fetchQuestions();
     }
   }, [
@@ -92,6 +104,8 @@ export default function QuestionSelector({
     selectedCategory,
     selectedDifficulty,
     selectedType,
+    autoGrouping,
+    sectionCategory,
   ]);
 
   const fetchQuestions = async () => {
@@ -136,6 +150,26 @@ export default function QuestionSelector({
     } else {
       setSelectedQuestions([...selectedQuestions, question]);
     }
+  };
+
+  const handleAutoSelectByCategory = () => {
+    if (!sectionCategory) return;
+    
+    const categoryQuestions = questions.filter(
+      (q) => q.category === sectionCategory
+    );
+    
+    // Limit selection to the specified count
+    const selectedCount = Math.min(sectionQuestionCount, categoryQuestions.length);
+    const selectedQuestions = categoryQuestions.slice(0, selectedCount);
+    
+    setSelectedQuestions(selectedQuestions);
+    
+    showFeedback(
+      "success",
+      "Auto Grouping",
+      `${selectedQuestions.length} soal kategori ${formatCategoryName(sectionCategory)} telah dipilih otomatis`
+    );
   };
 
   const handleSelectAll = () => {
@@ -250,14 +284,27 @@ export default function QuestionSelector({
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">
-                  Pilih Soal dari Bank Soal
+                  {sectionName ? `Pilih Soal untuk Section: ${sectionName}` : "Pilih Soal dari Bank Soal"}
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
                   {selectedQuestions.length} soal dipilih • {questions.length}{" "}
                   soal tersedia
+                  {autoGrouping && sectionCategory && (
+                    <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                      Auto-grouping: {formatCategoryName(sectionCategory)} ({sectionQuestionCount} soal)
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="flex items-center space-x-3">
+                {autoGrouping && sectionCategory && (
+                  <button
+                    onClick={handleAutoSelectByCategory}
+                    className="text-sm bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700"
+                  >
+                    Auto Pilih Kategori
+                  </button>
+                )}
                 <button
                   onClick={handleSelectAll}
                   className="text-sm text-blue-600 hover:text-blue-800"
@@ -311,7 +358,8 @@ export default function QuestionSelector({
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={!!(autoGrouping && sectionCategory)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="">Semua Kategori</option>
                       {filters.categories.map((category) => (
@@ -323,6 +371,11 @@ export default function QuestionSelector({
                         </option>
                       ))}
                     </select>
+                    {autoGrouping && sectionCategory && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Filter kategori dikunci untuk auto-grouping
+                      </p>
+                    )}
                   </div>
 
                   <div>

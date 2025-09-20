@@ -42,7 +42,8 @@ export async function GET(request: NextRequest, context: any) {
           u.registration_id as user_registration_id,
           t.name as test_name,
           t.description as test_description,
-          t.duration as test_duration
+          t.duration as test_duration,
+          t."minimumScore" as minimum_score
         FROM test_sessions ts
         LEFT JOIN users u ON ts."userId" = u.id
         LEFT JOIN tests t ON ts."testId" = t.id
@@ -134,15 +135,9 @@ export async function GET(request: NextRequest, context: any) {
       client.release();
     }
   } catch (error) {
-    console.error("[ERROR GET SESSION DETAIL]", error);
+    console.error("Error fetching test session:", error);
     return NextResponse.json(
-      {
-        error: "Terjadi kesalahan server",
-        detail:
-          error && typeof error === "object" && "message" in error
-            ? (error as any).message
-            : String(error),
-      },
+      { error: "Terjadi kesalahan saat mengambil data sesi tes" },
       { status: 500 }
     );
   }

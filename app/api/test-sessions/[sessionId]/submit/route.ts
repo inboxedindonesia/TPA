@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/database";
 import { getUserFromRequest, getFallbackUserInfo } from "@/lib/auth";
+import { logTestCompleted } from "@/lib/activityLogger";
 
 // Endpoint: /api/test-sessions/[sessionId]/submit
 export async function POST(request: Request, context: any) {
@@ -157,6 +158,30 @@ export async function POST(request: Request, context: any) {
         ["COMPLETED", score, maxScore, scoreVerbal, scoreAngka, scoreLogika, scoreGambar, 
          maxScoreVerbal, maxScoreAngka, maxScoreLogika, maxScoreGambar, sessionId]
       );
+
+      // Get user info and test name for notification
+      const userInfo = (await getUserFromRequest(request)) || getFallbackUserInfo();
+      
+      // Get test name
+      const testRes = await client.query(
+        `SELECT name FROM tests WHERE id = $1`,
+        [session.testId]
+      );
+      const testName = testRes.rows[0]?.name || "Unknown Test";
+
+      // Log test completed activity
+      try {
+        await logTestCompleted(
+          userInfo.userId,
+          userInfo.userName,
+          userInfo.userRole || "peserta",
+          session.testId,
+          testName,
+          score
+        );
+      } catch (error) {
+        console.error("Error logging test completion activity:", error);
+      }
 
       return NextResponse.json({ success: true });
     } finally {

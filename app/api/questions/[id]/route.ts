@@ -307,17 +307,7 @@ export async function DELETE(request: Request, { params }: any) {
       // Delete the question (CASCADE will delete from test_questions)
       await client.query("DELETE FROM questions WHERE id = $1", [questionId]);
 
-      // Update totalQuestions for all affected tests
-      for (const testId of affectedTestIds) {
-        const updateTestQuery = `
-          UPDATE tests 
-          SET "totalQuestions" = (
-            SELECT COUNT(*) FROM test_questions WHERE test_id = $1
-          )
-          WHERE id = $1
-        `;
-        await client.query(updateTestQuery, [testId]);
-      }
+      // No need to update totalQuestions - we calculate it dynamically from test_questions table
 
       console.log(`Question ${questionId} deleted successfully`);
       return NextResponse.json(

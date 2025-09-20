@@ -76,6 +76,9 @@ export default function CreateTestPage() {
     name: string;
     duration: number;
     questions: Question[];
+    autoGrouping?: boolean;
+    category?: string;
+    questionCount?: number;
   };
   const [sections, setSections] = useState<Section[]>([]);
   const [activeSectionIdx, setActiveSectionIdx] = useState<number | null>(null);
@@ -83,6 +86,9 @@ export default function CreateTestPage() {
   const [showSectionModal, setShowSectionModal] = useState(false);
   const [sectionNameInput, setSectionNameInput] = useState("");
   const [sectionDurationInput, setSectionDurationInput] = useState(10);
+  const [sectionAutoGrouping, setSectionAutoGrouping] = useState(false);
+  const [sectionCategory, setSectionCategory] = useState("");
+  const [sectionQuestionCount, setSectionQuestionCount] = useState(10);
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -144,10 +150,16 @@ export default function CreateTestPage() {
         name: sectionNameInput.trim(),
         duration: sectionDurationInput,
         questions: [],
+        autoGrouping: sectionAutoGrouping,
+        category: sectionAutoGrouping ? sectionCategory : undefined,
+        questionCount: sectionAutoGrouping ? sectionQuestionCount : undefined,
       },
     ]);
     setSectionNameInput("");
     setSectionDurationInput(10);
+    setSectionAutoGrouping(false);
+    setSectionCategory("");
+    setSectionQuestionCount(10);
     setShowSectionModal(false);
   };
 
@@ -305,11 +317,12 @@ export default function CreateTestPage() {
       );
       return;
     }
-    if (sections.some((s) => s.questions.length === 0)) {
+    // Validasi: setiap section harus memiliki soal (kecuali yang menggunakan auto-grouping)
+    if (sections.some((s) => !s.autoGrouping && s.questions.length === 0)) {
       showFeedback(
         "warning",
         "Validasi Gagal",
-        "Setiap section harus memiliki minimal satu soal"
+        "Setiap section harus memiliki minimal satu soal atau menggunakan auto-grouping"
       );
       return;
     }
@@ -358,6 +371,9 @@ export default function CreateTestPage() {
           name: s.name,
           duration: s.duration,
           questionIds: s.questions.map((q) => q.id),
+          autoGrouping: s.autoGrouping,
+          category: s.category,
+          questionCount: s.questionCount,
         })),
       };
       
@@ -694,7 +710,13 @@ export default function CreateTestPage() {
                               </div>
                               <div className="text-xs text-gray-600">
                                 Durasi: {section.duration} menit &bull;{" "}
-                                {section.questions.length} soal
+                                {section.autoGrouping ? (
+                                  <span className="text-blue-600 font-medium">
+                                    Auto-grouping: {section.questionCount || 10} soal dari kategori {section.category?.replace('TES_', '').replace('_', ' ')}
+                                  </span>
+                                ) : (
+                                  `${section.questions.length} soal`
+                                )}
                               </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -785,18 +807,37 @@ export default function CreateTestPage() {
                               </button>
                               <button
                                 type="button"
-                                className="px-2 py-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+                                className={`px-2 py-1 rounded transition-colors ${
+                                  section.autoGrouping 
+                                    ? 'text-gray-400 cursor-not-allowed' 
+                                    : 'text-green-600 hover:bg-green-50'
+                                }`}
                                 onClick={() => {
-                                  setActiveSectionIdx(idx);
-                                  setShowQuestionSelector(true);
+                                  if (!section.autoGrouping) {
+                                    setActiveSectionIdx(idx);
+                                    setShowQuestionSelector(true);
+                                  }
                                 }}
+                                disabled={section.autoGrouping}
+                                title={section.autoGrouping ? 'Soal akan dipilih otomatis' : 'Pilih soal manual'}
                               >
-                                Pilih Soal
+                                {section.autoGrouping ? 'Auto-grouping Aktif' : 'Pilih Soal'}
                               </button>
                             </div>
                           </div>
                           {/* List soal per section */}
-                          {section.questions.length === 0 ? (
+                          {section.autoGrouping ? (
+                            <div className="text-xs text-blue-600 italic mt-2 bg-blue-50 p-2 rounded">
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span>
+                                  Soal akan dipilih otomatis saat tes dibuat ({section.questionCount || 10} soal dari kategori {section.category?.replace('TES_', '').replace('_', ' ')})
+                                </span>
+                              </div>
+                            </div>
+                          ) : section.questions.length === 0 ? (
                             <div className="text-xs text-gray-400 italic">
                               Belum ada soal
                             </div>
@@ -860,7 +901,7 @@ export default function CreateTestPage() {
                     disabled={
                       loading ||
                       sections.length === 0 ||
-                      sections.some((s) => s.questions.length === 0)
+                      sections.some((s) => !s.autoGrouping && s.questions.length === 0)
                     }
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                   >
@@ -926,13 +967,72 @@ export default function CreateTestPage() {
                 type="number"
                 min={1}
                 max={300}
-                className="w-full border px-3 py-2 rounded"
+                className="w-full border px-3 py-2 rounded mb-3"
                 placeholder="Durasi section (menit)"
                 value={sectionDurationInput}
                 onChange={(e) =>
                   setSectionDurationInput(parseInt(e.target.value) || 1)
                 }
               />
+              
+              {/* Auto-grouping toggle */}
+              <div className="mb-3">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={sectionAutoGrouping}
+                    onChange={(e) => setSectionAutoGrouping(e.target.checked)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Auto-grouping soal berdasarkan kategori
+                  </span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Sistem akan otomatis memilih soal berdasarkan kategori yang dipilih
+                </p>
+              </div>
+
+              {/* Category selection when auto-grouping is enabled */}
+              {sectionAutoGrouping && (
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Kategori Soal
+                  </label>
+                  <select
+                    value={sectionCategory}
+                    onChange={(e) => setSectionCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Pilih Kategori</option>
+                    <option value="TES_VERBAL">Tes Verbal</option>
+                    <option value="TES_GAMBAR">Tes Gambar</option>
+                    <option value="TES_LOGIKA">Tes Logika</option>
+                    <option value="TES_ANGKA">Tes Angka</option>
+                  </select>
+                </div>
+              )}
+
+              {sectionAutoGrouping && (
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Jumlah Soal
+                  </label>
+                  <input
+                    type="number"
+                    value={sectionQuestionCount}
+                    onChange={(e) => setSectionQuestionCount(parseInt(e.target.value) || 10)}
+                    min="1"
+                    max="50"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Jumlah soal yang akan dipilih otomatis"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Sistem akan memilih soal secara acak dari kategori yang dipilih
+                  </p>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <button
@@ -946,7 +1046,7 @@ export default function CreateTestPage() {
                 type="button"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 onClick={handleAddSection}
-                disabled={!sectionNameInput.trim() || !sectionDurationInput}
+                disabled={!sectionNameInput.trim() || !sectionDurationInput || (sectionAutoGrouping && (!sectionCategory || !sectionQuestionCount))}
               >
                 Tambah
               </button>
@@ -964,6 +1064,26 @@ export default function CreateTestPage() {
           activeSectionIdx !== null
             ? sections[activeSectionIdx]?.questions.map((q) => q.id)
             : []
+        }
+        sectionName={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.name
+            : undefined
+        }
+        autoGrouping={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.autoGrouping || false
+            : false
+        }
+        sectionCategory={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.category
+            : undefined
+        }
+        sectionQuestionCount={
+          activeSectionIdx !== null
+            ? sections[activeSectionIdx]?.questionCount
+            : undefined
         }
       />
 

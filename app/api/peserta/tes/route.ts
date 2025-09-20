@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
         t.name,
         t.description,
         t.duration,
-        t."totalQuestions",
+        (SELECT COUNT(*) FROM test_questions WHERE test_id = t.id) as "totalQuestions",
         t."isActive",
         t."createdAt"
       FROM tests t
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       name: row.name,
       description: row.description,
       duration: row.duration,
-      totalQuestions: row.totalquestions,
+      totalQuestions: parseInt(row.totalQuestions) || 0,
       isActive: row.isactive,
       createdAt: row.createdAt,
       participantCount: 0, // Default karena tidak ada data

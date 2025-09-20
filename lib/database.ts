@@ -89,7 +89,6 @@ export async function initDatabase() {
         name VARCHAR(255) NOT NULL,
         description TEXT,
         duration INTEGER NOT NULL,
-        "totalQuestions" INTEGER DEFAULT 0,
   "isActive" BOOLEAN DEFAULT TRUE,
         "creatorId" VARCHAR(255) NOT NULL,
         "maxAttempts" INTEGER DEFAULT 1,
@@ -111,6 +110,9 @@ export async function initDatabase() {
         name VARCHAR(255) NOT NULL,
         duration INTEGER NOT NULL,
         "order" INTEGER NOT NULL,
+        autoGrouping BOOLEAN DEFAULT FALSE,
+        category VARCHAR(100),
+        questionCount INTEGER DEFAULT 10,
         "createdAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         "updatedAt" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta'),
         CONSTRAINT fk_sections_test FOREIGN KEY (testId) REFERENCES tests(id) ON DELETE CASCADE
@@ -273,13 +275,12 @@ export async function seedDatabase() {
 
       // Create test
       await client.query(
-        'INSERT INTO tests (id, name, description, duration, "totalQuestions", "creatorId") VALUES ($1, $2, $3, $4, $5, $6)',
+        'INSERT INTO tests (id, name, description, duration, "creatorId") VALUES ($1, $2, $3, $4, $5)',
         [
           "test-1",
           "TPA Matematika Dasar",
           "Tes kemampuan matematika dasar untuk masuk universitas",
           60,
-          5,
           "admin-1",
         ]
       );
