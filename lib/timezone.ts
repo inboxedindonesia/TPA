@@ -43,10 +43,16 @@ export function getTimeDifferenceMs(startTime: string | Date, endTime?: Date): n
  * Calculate remaining time for test timer
  */
 export function calculateRemainingTime(startTime: string, durationMinutes: number): number {
-  const startMs = new Date(startTime).getTime();
+  // Parse startTime as Asia/Jakarta timezone
+  const startDate = new Date(startTime);
+  const startMs = startDate.getTime();
+  
   const durationMs = durationMinutes * 60 * 1000;
   const endMs = startMs + durationMs;
-  const now = Date.now();
+  
+  // Get current time in Asia/Jakarta timezone
+  const nowWIB = getCurrentTimeWIB();
+  const now = nowWIB.getTime();
   
   return Math.max(0, Math.floor((endMs - now) / 1000));
 }
