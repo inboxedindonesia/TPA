@@ -59,21 +59,6 @@ export function calculateRemainingTime(startTime: string, durationMinutes: numbe
   
   const remainingSeconds = Math.max(0, Math.floor((endMs - now) / 1000));
   
-  // Debug logging for production
-  console.log('Timer Debug - UTC Based:', {
-    startTime,
-    durationMinutes,
-    startDate: startDate.toISOString(),
-    startMs,
-    currentUTC: new Date(now).toISOString(),
-    now,
-    endMs,
-    timeDiff: endMs - now,
-    remainingSeconds,
-    remainingMinutes: Math.floor(remainingSeconds / 60),
-    remainingHours: Math.floor(remainingSeconds / 3600)
-  });
-  
   return remainingSeconds;
 }
 
