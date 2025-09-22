@@ -47,7 +47,10 @@ const formatCategoryName = (category: string) => {
     case "TES_ANGKA":
       return "Tes Angka";
     default:
-      return category?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || category;
+      return (
+        category?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) ||
+        category
+      );
   }
 };
 
@@ -83,6 +86,7 @@ export default function TakeTestPage() {
   const [dataLoading, setDataLoading] = useState(true); // loading test & questions in background
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const isExitingRef = useRef(false);
   const hasAutoSubmitted = useRef(false);
@@ -199,21 +203,24 @@ export default function TakeTestPage() {
   useEffect(() => {
     if (showInstruction) return;
     if (!test || !session?.startTime) return;
-    
+
     const durationMinutes = Number(test.duration) || 0;
     if (durationMinutes <= 0) {
       setTimeLeft(0);
       return;
     }
-    
+
     let stopped = false;
     const tick = () => {
       if (stopped) return;
-      
+
       // Use timezone utility for consistent calculation
-      const remaining = calculateRemainingTime(session.startTime, durationMinutes);
+      const remaining = calculateRemainingTime(
+        session.startTime,
+        durationMinutes
+      );
       setTimeLeft(remaining);
-      
+
       if (remaining <= 0) {
         stopped = true;
         if (!hasSubmitted && !submitting) {
@@ -222,7 +229,7 @@ export default function TakeTestPage() {
         }
       }
     };
-    
+
     tick();
     const id = window.setInterval(tick, 1000);
     return () => {
@@ -492,10 +499,9 @@ export default function TakeTestPage() {
       if (response.ok) {
         setHasSubmitted(true);
         if (auto) {
-          window.location.replace("/peserta/dashboard");
+          window.location.replace(`/peserta/tes/hasil/${session?.id}`);
         } else {
-          alert("Tes berhasil diselesaikan!");
-          router.replace(`/peserta/dashboard`);
+          setShowSuccessModal(true);
         }
       } else {
         if (!auto) alert("Gagal menyelesaikan tes");
@@ -884,6 +890,48 @@ export default function TakeTestPage() {
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md text-center border border-gray-200">
+            <div className="mb-4">
+              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg
+                  className="w-8 h-8 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Selamat!
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Tes berhasil diselesaikan! Jawaban Anda telah tersimpan dengan
+                aman.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowSuccessModal(false);
+                router.replace(`/peserta/tes/hasil/${session?.id}`);
+              }}
+              className="w-full px-6 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 font-semibold transition-colors duration-200"
+            >
+              Lihat Hasil Tes
+            </button>
+          </div>
+        </div>
+      )}
+
       {showTabWarning &&
         (tabLeaveCount < tabLeaveLimit || mouseLeaveCount < tabLeaveLimit) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">

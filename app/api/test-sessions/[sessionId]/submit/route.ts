@@ -43,14 +43,32 @@ export async function POST(request: Request, context: any) {
         );
       }
 
-      // Simpan jawaban peserta
+      // Simpan jawaban peserta ke tabel answers
       for (const [questionId, answer] of Object.entries(answers)) {
-        await client.query(
-          `INSERT INTO test_answers ("sessionId", "questionId", answer)
-           VALUES ($1, $2, $3)
-           ON CONFLICT ("sessionId", "questionId") DO UPDATE SET answer = $3`,
-          [sessionId, questionId, answer]
+        // Generate unique ID untuk answer
+        const answerId = `ans_${sessionId}_${questionId}_${Date.now()}`;
+        
+        // Check if answer already exists
+        const existingAnswer = await client.query(
+          `SELECT id FROM answers WHERE "sessionId" = $1 AND "questionId" = $2`,
+          [sessionId, questionId]
         );
+        
+        if (existingAnswer.rows.length > 0) {
+          // Update existing answer
+          await client.query(
+            `UPDATE answers SET "selectedAnswer" = $1, "answeredAt" = NOW() AT TIME ZONE 'Asia/Jakarta'
+             WHERE "sessionId" = $2 AND "questionId" = $3`,
+            [answer, sessionId, questionId]
+          );
+        } else {
+          // Insert new answer
+          await client.query(
+            `INSERT INTO answers (id, "sessionId", "questionId", "selectedAnswer", "isCorrect", "pointsEarned", "answeredAt")
+             VALUES ($1, $2, $3, $4, $5, $6, NOW() AT TIME ZONE 'Asia/Jakarta')`,
+            [answerId, sessionId, questionId, answer, false, 0]
+          );
+        }
       }
 
       // Penilaian: ambil semua soal untuk test ini dengan kategori
@@ -97,6 +115,8 @@ export async function POST(request: Request, context: any) {
         // Jawaban benar bisa array/string, samakan format
         let correct = false;
         let correctAnswer = q.correctAnswer;
+        
+        // Parse correctAnswer if it's a JSON string
         if (typeof correctAnswer === "string") {
           const trimmed = correctAnswer.trim();
           if (
@@ -110,10 +130,11 @@ export async function POST(request: Request, context: any) {
               correctAnswer = trimmed;
             }
           } else {
-            // Bukan JSON, gunakan string apa adanya
             correctAnswer = trimmed;
           }
         }
+        
+        // Check if answer is correct
         if (Array.isArray(correctAnswer)) {
           correct = Array.isArray(userAnswer)
             ? JSON.stringify(userAnswer.sort()) ===
@@ -122,6 +143,15 @@ export async function POST(request: Request, context: any) {
         } else {
           correct = userAnswer == correctAnswer;
         }
+        
+        const pointsEarned = correct ? point : 0;
+        
+        // Update answer record with correct status and points
+        await client.query(
+          `UPDATE answers SET "isCorrect" = $1, "pointsEarned" = $2 
+           WHERE "sessionId" = $3 AND "questionId" = $4`,
+          [correct, pointsEarned, sessionId, q.id]
+        );
         
         if (correct) {
           score += point;
