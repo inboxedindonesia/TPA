@@ -47,18 +47,32 @@ export function getTimeDifferenceMs(startTime: string | Date, endTime?: Date): n
  * Calculate remaining time for test timer
  */
 export function calculateRemainingTime(startTime: string, durationMinutes: number): number {
-  // Parse startTime - it should already be in Asia/Jakarta from database
+  // Parse startTime as UTC from database
   const startDate = new Date(startTime);
   const startMs = startDate.getTime();
   
   const durationMs = durationMinutes * 60 * 1000;
   const endMs = startMs + durationMs;
   
-  // Get current time in Asia/Jakarta timezone
-  const nowWIB = getCurrentTimeWIB();
-  const now = nowWIB.getTime();
+  // Use current UTC time for consistent calculation
+  const now = Date.now();
   
   const remainingSeconds = Math.max(0, Math.floor((endMs - now) / 1000));
+  
+  // Debug logging for production
+  console.log('Timer Debug - UTC Based:', {
+    startTime,
+    durationMinutes,
+    startDate: startDate.toISOString(),
+    startMs,
+    currentUTC: new Date(now).toISOString(),
+    now,
+    endMs,
+    timeDiff: endMs - now,
+    remainingSeconds,
+    remainingMinutes: Math.floor(remainingSeconds / 60),
+    remainingHours: Math.floor(remainingSeconds / 3600)
+  });
   
   return remainingSeconds;
 }
