@@ -9,5 +9,9 @@
     "app/api/**/*.ts": {
       "maxDuration": 30
     }
+  },
+  "env": {
+    "TZ": "Asia/Jakarta",
+    "PGTZ": "Asia/Jakarta"
   }
 }

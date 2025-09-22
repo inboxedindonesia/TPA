@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { calculateRemainingTime, formatTimeRemaining } from "@/lib/timezone";
 const CameraMonitor = dynamic(() => import("@/app/components/CameraMonitor"), {
   ssr: false,
 });
@@ -197,21 +198,22 @@ export default function TakeTestPage() {
   // Countdown timer based on session start time and test duration
   useEffect(() => {
     if (showInstruction) return;
-    if (!test) return;
-    const durationMs = (Number(test.duration) || 0) * 60 * 1000;
-    if (durationMs <= 0) {
+    if (!test || !session?.startTime) return;
+    
+    const durationMinutes = Number(test.duration) || 0;
+    if (durationMinutes <= 0) {
       setTimeLeft(0);
       return;
     }
-    const startMs = session?.startTime
-      ? new Date(session.startTime).getTime()
-      : Date.now();
-    const endMs = startMs + durationMs;
+    
     let stopped = false;
     const tick = () => {
       if (stopped) return;
-      const remaining = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+      
+      // Use timezone utility for consistent calculation
+      const remaining = calculateRemainingTime(session.startTime, durationMinutes);
       setTimeLeft(remaining);
+      
       if (remaining <= 0) {
         stopped = true;
         if (!hasSubmitted && !submitting) {
@@ -220,6 +222,7 @@ export default function TakeTestPage() {
         }
       }
     };
+    
     tick();
     const id = window.setInterval(tick, 1000);
     return () => {
