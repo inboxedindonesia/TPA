@@ -6,10 +6,14 @@
 export const TIMEZONE = 'Asia/Jakarta';
 
 /**
- * Get current time in WIB timezone
+ * Get current time in WIB (Asia/Jakarta timezone)
  */
 export function getCurrentTimeWIB(): Date {
-  return new Date();
+  // Create a date object that represents the current time in Asia/Jakarta
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const jakartaOffset = 7 * 60 * 60000; // UTC+7 in milliseconds
+  return new Date(utc + jakartaOffset);
 }
 
 /**
@@ -43,7 +47,7 @@ export function getTimeDifferenceMs(startTime: string | Date, endTime?: Date): n
  * Calculate remaining time for test timer
  */
 export function calculateRemainingTime(startTime: string, durationMinutes: number): number {
-  // Parse startTime as Asia/Jakarta timezone
+  // Parse startTime - it should already be in Asia/Jakarta from database
   const startDate = new Date(startTime);
   const startMs = startDate.getTime();
   
@@ -54,7 +58,9 @@ export function calculateRemainingTime(startTime: string, durationMinutes: numbe
   const nowWIB = getCurrentTimeWIB();
   const now = nowWIB.getTime();
   
-  return Math.max(0, Math.floor((endMs - now) / 1000));
+  const remainingSeconds = Math.max(0, Math.floor((endMs - now) / 1000));
+  
+  return remainingSeconds;
 }
 
 /**
