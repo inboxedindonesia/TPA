@@ -33,7 +33,6 @@ interface TestSession {
   status: string;
   startTime: string;
   currentQuestionIndex: number;
-  duration: number;
 }
 
 // Format category name to be more user-friendly
@@ -203,14 +202,10 @@ export default function TakeTestPage() {
   // Countdown timer based on session start time and test duration
   useEffect(() => {
     if (showInstruction) return;
-    if (!session?.startTime || session?.status !== 'ONGOING') {
-      setTimeLeft(0);
-      return;
-    }
+    if (!test || !session?.startTime) return;
 
-    // Make sure duration is a number and greater than 0
-    const durationMinutes = parseInt(session?.duration, 10);
-    if (isNaN(durationMinutes) || durationMinutes <= 0) {
+    const durationMinutes = Number(test.duration) || 0;
+    if (durationMinutes <= 0) {
       setTimeLeft(0);
       return;
     }
@@ -224,11 +219,6 @@ export default function TakeTestPage() {
         session.startTime,
         durationMinutes
       );
-      console.log("[DEBUG] Timer tick:", {
-        startTime: session.startTime,
-        duration: durationMinutes,
-        remaining,
-      });
       setTimeLeft(remaining);
 
       if (remaining <= 0) {
@@ -246,7 +236,7 @@ export default function TakeTestPage() {
       stopped = true;
       window.clearInterval(id);
     };
-  }, [showInstruction, session, hasSubmitted, submitting]);
+  }, [showInstruction, test, session, hasSubmitted, submitting]);
 
   // Background-load test & questions while on instruction for faster start
   useEffect(() => {
@@ -444,7 +434,6 @@ export default function TakeTestPage() {
       }
 
       // Start or continue test session
-      console.log("[DEBUG] Starting new test session...");
       const sessionResponse = await fetch(
         `/api/test-sessions/start/${testId}`,
         {
@@ -457,24 +446,8 @@ export default function TakeTestPage() {
 
       if (sessionResponse.ok) {
         const sessionData = await sessionResponse.json();
-        console.log("[DEBUG] Session response:", sessionData);
-
-        if (sessionData.session.status === "COMPLETED") {
-          console.log("[DEBUG] Warning: Received COMPLETED session from API");
-        }
-
-        if (!sessionData.session.duration) {
-          console.log("[DEBUG] Warning: No duration in session data");
-        }
-
         setSession(sessionData.session);
         setCurrentQuestionIndex(sessionData.session.currentQuestionIndex || 0);
-        console.log("[DEBUG] Session set in state:", sessionData.session);
-      } else {
-        console.log(
-          "[DEBUG] Failed to start session:",
-          await sessionResponse.text()
-        );
       }
     } catch (error) {
       setError("Terjadi kesalahan server");
