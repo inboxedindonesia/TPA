@@ -102,72 +102,94 @@ export default function DetailHasilTesPesertaPage() {
     try {
       setIsGeneratingPDF(true);
 
-      // Create a temporary container for the PDF template
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '210mm';
-      tempContainer.style.backgroundColor = 'white';
+      const tempContainer = document.createElement("div");
+      tempContainer.style.position = "absolute";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.width = "210mm";
+      tempContainer.style.minHeight = "297mm";
+      tempContainer.style.backgroundColor = "white";
       document.body.appendChild(tempContainer);
 
-      // Render the PDF template in the temporary container
-      const { createRoot } = await import('react-dom/client');
+      const { createRoot } = await import("react-dom/client");
       const root = createRoot(tempContainer);
-      
+
       await new Promise<void>((resolve) => {
-        root.render(
-          <PDFResultTemplate session={session} />
-        );
-        // Wait for rendering to complete
-        setTimeout(resolve, 1000);
+        root.render(<PDFResultTemplate session={session} />);
+        setTimeout(resolve, 2000); // Beri waktu rendering
       });
 
-      // Generate PDF using html2canvas and jsPDF
+      const contentHeight = tempContainer.scrollHeight;
+      const contentWidth = tempContainer.scrollWidth;
+
       const canvas = await html2canvas(tempContainer, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 794, // A4 width in pixels at 96 DPI
-        height: 1123, // A4 height in pixels at 96 DPI
+        backgroundColor: "#ffffff",
+        width: contentWidth,
+        height: contentHeight,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: contentWidth,
+        windowHeight: contentHeight,
       });
 
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgData = canvas.toDataURL("image/jpeg", 0.85);
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
       let heightLeft = imgHeight;
       let position = 0;
 
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
 
-      // Add additional pages if needed
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
       }
 
-      // Generate PDF blob and open directly in new tab
-      const pdfBlob = pdf.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      
-      // Open PDF directly in new tab
-      window.open(pdfUrl, '_blank');
-
-      // Clean up
       root.unmount();
       document.body.removeChild(tempContainer);
 
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, "-");
+      const filename = `Hasil_Tes_${
+        session.user_name || "Peserta"
+      }_${timestamp}.pdf`;
+
+      const pdfBlob = pdf.output("blob");
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      // --- Logika perbaikan dimulai di sini ---
+      const previewWindow = window.open(
+        pdfUrl,
+        "_blank",
+        "width=800,height=600,scrollbars=yes,resizable=yes"
+      );
+
+      if (previewWindow) {
+        // Jika preview berhasil dibuka, batalkan URL saat jendela ditutup
+        previewWindow.addEventListener("beforeunload", () => {
+          URL.revokeObjectURL(pdfUrl);
+        });
+      } else {
+        // Jika pop-up diblokir, unduh langsung
+        alert("Pop-up diblokir. PDF akan langsung diunduh.");
+        pdf.save(filename);
+        URL.revokeObjectURL(pdfUrl);
+      }
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Terjadi kesalahan saat membuat PDF. Silakan coba lagi.');
+      console.error("Error generating PDF:", error);
+      alert("Terjadi kesalahan saat membuat PDF. Silakan coba lagi.");
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -178,9 +200,9 @@ export default function DetailHasilTesPesertaPage() {
     const base = minimumScore || 60;
     return {
       excellent: Math.max(base + 20, 80), // minimal 80 atau base + 20
-      good: Math.max(base + 10, 60),      // minimal 60 atau base + 10  
-      average: base,                       // menggunakan minimum score
-      poor: Math.max(base - 20, 20)       // minimal 20 atau base - 20
+      good: Math.max(base + 10, 60), // minimal 60 atau base + 10
+      average: base, // menggunakan minimum score
+      poor: Math.max(base - 20, 20), // minimal 20 atau base - 20
     };
   };
 
@@ -605,16 +627,30 @@ export default function DetailHasilTesPesertaPage() {
               >
                 {isGeneratingPDF ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-700"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Membuat PDF...
                   </>
                 ) : (
-                  <>
-                    📄 Download PDF
-                  </>
+                  <>📄 Download PDF</>
                 )}
               </button>
               <button
@@ -662,16 +698,42 @@ export default function DetailHasilTesPesertaPage() {
               >
                 {isGeneratingPDF ? (
                   <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Membuat PDF...
                   </>
                 ) : (
                   <>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
                     </svg>
                     Unduh PDF
                   </>
@@ -719,16 +781,42 @@ export default function DetailHasilTesPesertaPage() {
               >
                 {isGeneratingPDF ? (
                   <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Membuat PDF...
                   </>
                 ) : (
                   <>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
                     </svg>
                     Unduh PDF
                   </>
@@ -957,11 +1045,17 @@ export default function DetailHasilTesPesertaPage() {
                   </div>
                   <div className="text-center">
                     <div className="text-sm text-gray-600">Pesan</div>
-                    <div className={`text-lg font-bold ${
-                      (session.overallPercentage ||
-                        calculatePercentage(session.score, session.maxScore)) >=
-                      (session.minimum_score || 60) ? "text-green-600" : "text-red-600"
-                    }`}>
+                    <div
+                      className={`text-lg font-bold ${
+                        (session.overallPercentage ||
+                          calculatePercentage(
+                            session.score,
+                            session.maxScore
+                          )) >= (session.minimum_score || 60)
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
                       {getScoreMessage(
                         session.overallPercentage ||
                           calculatePercentage(session.score, session.maxScore),
@@ -1032,9 +1126,13 @@ export default function DetailHasilTesPesertaPage() {
                                 <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                                   <div
                                     className={`h-2 rounded-full transition-all duration-300 ${
-                                      data.percentage >= getThresholds(session.minimum_score).excellent
+                                      data.percentage >=
+                                      getThresholds(session.minimum_score)
+                                        .excellent
                                         ? "bg-green-500"
-                                        : data.percentage >= getThresholds(session.minimum_score).average
+                                        : data.percentage >=
+                                          getThresholds(session.minimum_score)
+                                            .average
                                         ? "bg-yellow-500"
                                         : "bg-red-500"
                                     }`}
@@ -1050,16 +1148,24 @@ export default function DetailHasilTesPesertaPage() {
                                 <div className="text-xs mt-2">
                                   <span
                                     className={`px-2 py-1 rounded-full ${
-                                      data.percentage >= getThresholds(session.minimum_score).excellent
+                                      data.percentage >=
+                                      getThresholds(session.minimum_score)
+                                        .excellent
                                         ? "bg-green-100 text-green-800"
-                                        : data.percentage >= getThresholds(session.minimum_score).average
+                                        : data.percentage >=
+                                          getThresholds(session.minimum_score)
+                                            .average
                                         ? "bg-yellow-100 text-yellow-800"
                                         : "bg-red-100 text-red-800"
                                     }`}
                                   >
-                                    {data.percentage >= getThresholds(session.minimum_score).excellent
+                                    {data.percentage >=
+                                    getThresholds(session.minimum_score)
+                                      .excellent
                                       ? "Sangat Baik"
-                                      : data.percentage >= getThresholds(session.minimum_score).average
+                                      : data.percentage >=
+                                        getThresholds(session.minimum_score)
+                                          .average
                                       ? "Baik"
                                       : "Perlu Perbaikan"}
                                   </span>
@@ -1420,7 +1526,9 @@ export default function DetailHasilTesPesertaPage() {
                               const getStandardInterpretation = (
                                 perc: number
                               ) => {
-                                const thresholds = getThresholds(session.minimum_score);
+                                const thresholds = getThresholds(
+                                  session.minimum_score
+                                );
                                 if (perc >= 95)
                                   return {
                                     level: "Superior",
@@ -1501,7 +1609,9 @@ export default function DetailHasilTesPesertaPage() {
 
                               // Prediksi Potensi Akademik
                               const getAcademicPotential = (perc: number) => {
-                                const thresholds = getThresholds(session.minimum_score);
+                                const thresholds = getThresholds(
+                                  session.minimum_score
+                                );
                                 if (perc >= thresholds.excellent)
                                   return "Sangat berpotensi untuk program studi kompetitif (Kedokteran, Teknik, dll)";
                                 if (perc >= thresholds.good + 15)
@@ -1513,7 +1623,9 @@ export default function DetailHasilTesPesertaPage() {
                                 return "Disarankan mengikuti program remedial sebelum melanjutkan ke jenjang berikutnya";
                               };
 
-                              const thresholds = getThresholds(session.minimum_score);
+                              const thresholds = getThresholds(
+                                session.minimum_score
+                              );
                               const analyses = {
                                 TES_VERBAL: {
                                   name: "Kemampuan Verbal",

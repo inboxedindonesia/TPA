@@ -74,6 +74,8 @@ export async function GET(request: NextRequest) {
         t.duration, 
         t."isActive" as status,
         t."createdAt",
+        t."availableFrom",
+        t."availableUntil",
         COALESCE((SELECT COUNT(*) FROM test_questions tq WHERE tq.test_id = t.id), 0) as "jumlahSoal",
         COALESCE((SELECT COUNT(*) FROM test_sessions ts WHERE ts."testId" = t.id), 0) as "peserta"
       FROM tests t
@@ -89,6 +91,8 @@ export async function GET(request: NextRequest) {
         status: row.status ? "aktif" : "nonaktif",
         peserta: parseInt(row.peserta) || 0,
         createdAt: row.createdAt,
+        availableFrom: row.availableFrom,
+        availableUntil: row.availableUntil,
       })) || [];
 
     // Statistik tambahan

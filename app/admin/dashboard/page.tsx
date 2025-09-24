@@ -52,7 +52,10 @@ const formatCategoryName = (category: string) => {
     case "TES_ANGKA":
       return "Tes Angka";
     default:
-      return category?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || category;
+      return (
+        category?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) ||
+        category
+      );
   }
 };
 
@@ -145,12 +148,17 @@ export default function AdminDashboard() {
           return;
         }
 
-        const searchParam = searchTes ? `&search=${encodeURIComponent(searchTes)}` : '';
-        const res = await fetch(`/api/admin/stats/tes?page=${tesPage}${searchParam}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
+        const searchParam = searchTes
+          ? `&search=${encodeURIComponent(searchTes)}`
+          : "";
+        const res = await fetch(
+          `/api/admin/stats/tes?page=${tesPage}${searchParam}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
+        );
         if (res.ok) {
           const data = await res.json();
           setDashboardData((prev) => ({
@@ -183,13 +191,20 @@ export default function AdminDashboard() {
           return;
         }
 
-        const searchParam = searchPeserta ? `&search=${encodeURIComponent(searchPeserta)}` : '';
-        const statusParam = filterStatusKelulusan ? `&status=${encodeURIComponent(filterStatusKelulusan)}` : '';
-        const res = await fetch(`/api/admin/stats/peserta?page=${pesertaPage}${searchParam}${statusParam}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
+        const searchParam = searchPeserta
+          ? `&search=${encodeURIComponent(searchPeserta)}`
+          : "";
+        const statusParam = filterStatusKelulusan
+          ? `&status=${encodeURIComponent(filterStatusKelulusan)}`
+          : "";
+        const res = await fetch(
+          `/api/admin/stats/peserta?page=${pesertaPage}${searchParam}${statusParam}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
+        );
         if (res.ok) {
           const data = await res.json();
           setDashboardData((prev) => ({
@@ -251,36 +266,41 @@ export default function AdminDashboard() {
 
       // Add timestamp to prevent caching
       const timestamp = Date.now();
-      
+
       // Build search parameter for soal API
-      const soalSearchParam = search ? `&search=${encodeURIComponent(search)}` : '';
-      
+      const soalSearchParam = search
+        ? `&search=${encodeURIComponent(search)}`
+        : "";
+
       const headers = {
-        "Authorization": `Bearer ${token}`,
-        "Cache-Control": "no-cache"
+        Authorization: `Bearer ${token}`,
+        "Cache-Control": "no-cache",
       };
-      
+
       const [
         dashboardResponse,
         pesertaResponse,
         soalResponse,
         activitiesResponse,
       ] = await Promise.all([
-        fetch(`/api/admin/dashboard?_t=${timestamp}`, { 
-          cache: 'no-store',
-          headers 
+        fetch(`/api/admin/dashboard?_t=${timestamp}`, {
+          cache: "no-store",
+          headers,
         }),
-        fetch(`/api/admin/stats/peserta?_t=${timestamp}`, { 
-          cache: 'no-store',
-          headers 
+        fetch(`/api/admin/stats/peserta?_t=${timestamp}`, {
+          cache: "no-store",
+          headers,
         }),
-        fetch(`/api/admin/stats/soal?page=${page}${soalSearchParam}&_t=${timestamp}`, { 
-          cache: 'no-store',
-          headers 
-        }),
-        fetch(`/api/admin/notifications/logs?limit=5&_t=${timestamp}`, { 
-          cache: 'no-store',
-          headers 
+        fetch(
+          `/api/admin/stats/soal?page=${page}${soalSearchParam}&_t=${timestamp}`,
+          {
+            cache: "no-store",
+            headers,
+          }
+        ),
+        fetch(`/api/admin/notifications/logs?limit=5&_t=${timestamp}`, {
+          cache: "no-store",
+          headers,
         }),
       ]);
 
@@ -315,10 +335,12 @@ export default function AdminDashboard() {
         };
       } else {
         // Check for authentication errors
-        if (dashboardResponse.status === 401 || 
-            pesertaResponse.status === 401 || 
-            soalResponse.status === 401 || 
-            activitiesResponse.status === 401) {
+        if (
+          dashboardResponse.status === 401 ||
+          pesertaResponse.status === 401 ||
+          soalResponse.status === 401 ||
+          activitiesResponse.status === 401
+        ) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           router.push("/login");
@@ -442,9 +464,9 @@ export default function AdminDashboard() {
 
   // Handle checkbox selection
   const handleSelectSoal = (soalId: string) => {
-    setSelectedSoal(prev => {
+    setSelectedSoal((prev) => {
       if (prev.includes(soalId)) {
-        return prev.filter(id => id !== soalId);
+        return prev.filter((id) => id !== soalId);
       } else {
         return [...prev, soalId];
       }
@@ -484,10 +506,10 @@ export default function AdminDashboard() {
 
   const confirmBulkDelete = async () => {
     try {
-      const response = await fetch('/api/admin/soal/bulk-delete', {
-        method: 'POST',
+      const response = await fetch("/api/admin/soal/bulk-delete", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ ids: selectedSoal }),
       });
@@ -999,17 +1021,10 @@ export default function AdminDashboard() {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             <input
                               type="checkbox"
-                              checked={selectAll && dashboardData.daftarSoal && dashboardData.daftarSoal.filter(
-                                (soal: any) =>
-                                  soal.question
-                                    .toLowerCase()
-                                    .includes(searchSoal.toLowerCase()) ||
-                                  soal.category
-                                    .toLowerCase()
-                                    .includes(searchSoal.toLowerCase())
-                              ).length > 0}
-                              onChange={() => {
-                                const filtered = dashboardData.daftarSoal ? dashboardData.daftarSoal.filter(
+                              checked={
+                                selectAll &&
+                                dashboardData.daftarSoal &&
+                                dashboardData.daftarSoal.filter(
                                   (soal: any) =>
                                     soal.question
                                       .toLowerCase()
@@ -1017,7 +1032,20 @@ export default function AdminDashboard() {
                                     soal.category
                                       .toLowerCase()
                                       .includes(searchSoal.toLowerCase())
-                                ) : [];
+                                ).length > 0
+                              }
+                              onChange={() => {
+                                const filtered = dashboardData.daftarSoal
+                                  ? dashboardData.daftarSoal.filter(
+                                      (soal: any) =>
+                                        soal.question
+                                          .toLowerCase()
+                                          .includes(searchSoal.toLowerCase()) ||
+                                        soal.category
+                                          .toLowerCase()
+                                          .includes(searchSoal.toLowerCase())
+                                    )
+                                  : [];
                                 handleSelectAll(filtered);
                               }}
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
@@ -1063,7 +1091,7 @@ export default function AdminDashboard() {
                                 />
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div 
+                                <div
                                   className="text-sm font-medium text-gray-900 max-w-[200px] truncate"
                                   title={soal.question}
                                 >
@@ -1072,86 +1100,101 @@ export default function AdminDashboard() {
                                     : soal.question}
                                 </div>
                               </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span
-                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      soal.category === "TES_VERBAL"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : soal.category === "TES_ANGKA"
-                                        ? "bg-green-100 text-green-800"
-                                        : soal.category === "TES_LOGIKA"
-                                        ? "bg-purple-100 text-purple-800"
-                                        : soal.category === "TES_GAMBAR"
-                                        ? "bg-orange-100 text-orange-800"
-                                        : "bg-gray-100 text-gray-800"
-                                    }`}
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    soal.category === "TES_VERBAL"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : soal.category === "TES_ANGKA"
+                                      ? "bg-green-100 text-green-800"
+                                      : soal.category === "TES_LOGIKA"
+                                      ? "bg-purple-100 text-purple-800"
+                                      : soal.category === "TES_GAMBAR"
+                                      ? "bg-orange-100 text-orange-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}
+                                >
+                                  {soal.category === "TES_VERBAL"
+                                    ? "Tes Verbal"
+                                    : soal.category === "TES_ANGKA"
+                                    ? "Tes Angka"
+                                    : soal.category === "TES_LOGIKA"
+                                    ? "Tes Logika"
+                                    : soal.category === "TES_GAMBAR"
+                                    ? "Tes Gambar"
+                                    : formatCategoryName(soal.category)}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">
+                                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    {soal.points || 1} poin
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    (soal.levelKesulitan || soal.difficulty) ===
+                                    "MUDAH"
+                                      ? "bg-green-100 text-green-800"
+                                      : (soal.levelKesulitan ||
+                                          soal.difficulty) === "SEDANG"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : (soal.levelKesulitan ||
+                                          soal.difficulty) === "SULIT"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}
+                                >
+                                  {(soal.levelKesulitan || soal.difficulty) ===
+                                  "MUDAH"
+                                    ? "Mudah"
+                                    : (soal.levelKesulitan ||
+                                        soal.difficulty) === "SEDANG"
+                                    ? "Sedang"
+                                    : (soal.levelKesulitan ||
+                                        soal.difficulty) === "SULIT"
+                                    ? "Sulit"
+                                    : "Sedang"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                  {soal.tipeSoal === "PILIHAN_GANDA"
+                                    ? "Pilihan Ganda"
+                                    : soal.tipeSoal || "Pilihan Ganda"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                  Aktif
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleViewSoal(soal)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                                   >
-                                    {soal.category === "TES_VERBAL" ? "Tes Verbal" : 
-                                     soal.category === "TES_ANGKA" ? "Tes Angka" :
-                                     soal.category === "TES_LOGIKA" ? "Tes Logika" :
-                                     soal.category === "TES_GAMBAR" ? "Tes Gambar" :
-                                     formatCategoryName(soal.category)}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                      {soal.points || 1} poin
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span
-                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      (soal.levelKesulitan || soal.difficulty) === "MUDAH"
-                                        ? "bg-green-100 text-green-800"
-                                        : (soal.levelKesulitan || soal.difficulty) === "SEDANG"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : (soal.levelKesulitan || soal.difficulty) === "SULIT"
-                                        ? "bg-red-100 text-red-800"
-                                        : "bg-gray-100 text-gray-800"
-                                    }`}
+                                    <Eye className="w-4 h-4 mr-1" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleEditSoal(soal)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-600 hover:text-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                   >
-                                    {(soal.levelKesulitan || soal.difficulty) === "MUDAH" ? "Mudah" :
-                                     (soal.levelKesulitan || soal.difficulty) === "SEDANG" ? "Sedang" :
-                                     (soal.levelKesulitan || soal.difficulty) === "SULIT" ? "Sulit" :
-                                     "Sedang"}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                                    {soal.tipeSoal === "PILIHAN_GANDA" ? "Pilihan Ganda" : soal.tipeSoal || "Pilihan Ganda"}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                    Aktif
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex space-x-2">
-                                    <button
-                                      onClick={() => handleViewSoal(soal)}
-                                      className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                    >
-                                      <Eye className="w-4 h-4 mr-1" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleEditSoal(soal)}
-                                      className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-600 hover:text-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                                    >
-                                      <Edit className="w-4 h-4 mr-1" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteSoal(soal)}
-                                      className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-red-600 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-1" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
+                                    <Edit className="w-4 h-4 mr-1" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSoal(soal)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-red-600 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-1" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
                         ) : (
                           <tr>
                             <td
@@ -1235,6 +1278,9 @@ export default function AdminDashboard() {
                             Durasi
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Periode Tes
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1254,7 +1300,7 @@ export default function AdminDashboard() {
                               className="hover:bg-gray-50"
                             >
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div 
+                                <div
                                   className="text-sm font-medium text-gray-900 max-w-[150px] truncate"
                                   title={tes.nama}
                                 >
@@ -1271,6 +1317,49 @@ export default function AdminDashboard() {
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm text-gray-900">
                                   {tes.durasi || 0} menit
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {tes.availableFrom && tes.availableUntil ? (
+                                    (() => {
+                                      const endDate = new Date(
+                                        tes.availableUntil
+                                      );
+                                      const currentYear =
+                                        new Date().getFullYear();
+                                      // Jika tahun berakhir >= 2099 atau lebih dari 50 tahun dari sekarang, anggap tidak terbatas
+                                      if (
+                                        endDate.getFullYear() >= 2099 ||
+                                        endDate.getFullYear() > currentYear + 50
+                                      ) {
+                                        return (
+                                          <span className="text-gray-900">
+                                            Tidak terbatas
+                                          </span>
+                                        );
+                                      }
+                                      return (
+                                        <>
+                                          <div>
+                                            {new Date(
+                                              tes.availableFrom
+                                            ).toLocaleDateString("id-ID")}
+                                          </div>
+                                          <div className="text-xs text-gray-500">
+                                            s/d{" "}
+                                            {endDate.toLocaleDateString(
+                                              "id-ID"
+                                            )}
+                                          </div>
+                                        </>
+                                      );
+                                    })()
+                                  ) : (
+                                    <span className="text-gray-400">
+                                      Tidak terbatas
+                                    </span>
+                                  )}
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
@@ -1318,7 +1407,7 @@ export default function AdminDashboard() {
                         ) : (
                           <tr>
                             <td
-                              colSpan={6}
+                              colSpan={7}
                               className="px-6 py-4 text-center text-gray-500"
                             >
                               {searchTes
