@@ -72,6 +72,12 @@ export default function TakeTestPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
 
+  useEffect(() => {
+    if (test?.duration) {
+      setTimeLeft(test.duration * 60);
+    }
+  }, [test]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [attemptCount, setAttemptCount] = useState<number | null>(null);

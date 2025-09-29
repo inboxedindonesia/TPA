@@ -89,7 +89,7 @@ export async function POST(request: Request, context: any) {
       // Buat sesi baru
       const sessionId = randomUUID();
       const res = await client.query(
-        `INSERT INTO test_sessions (id, "userId", "testId", status, "startTime") VALUES ($1, $2, $3, 'ONGOING', NOW()) RETURNING *`,
+        `INSERT INTO test_sessions (id, "userId", "testId", status, "startTime") VALUES ($1, $2, $3, 'ONGOING', NOW() AT TIME ZONE 'Asia/Jakarta') RETURNING *`,
         [sessionId, user.userId, testId]
       );
 

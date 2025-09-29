@@ -25,8 +25,8 @@ export async function GET(request: Request, { params }: any) {
       if (!withSections) {
         return NextResponse.json(test);
       }
-      // Ambil sections dan soal per section (Supabase: kolom testId, bukan test_id)
-      const sectionQuery = `SELECT * FROM sections WHERE testid = $1 ORDER BY "order" ASC, createdat ASC`;
+      // Ambil sections dan soal per section (Supabase: kolom testid)
+      const sectionQuery = `SELECT * FROM sections WHERE testid = $1 ORDER BY "order" ASC`;
       const sectionResult = await client.query(sectionQuery, [id]);
       const sections = [];
       for (const section of sectionResult.rows) {
@@ -35,7 +35,7 @@ export async function GET(request: Request, { params }: any) {
           SELECT q.* FROM test_questions tq
           INNER JOIN questions q ON tq.question_id = q.id
           WHERE tq.test_id = $1 AND tq.section_id = $2
-          ORDER BY q."order" ASC, q."createdAt" ASC
+          ORDER BY q."order" ASC
         `;
         const questionsResult = await client.query(questionsQuery, [
           id,
@@ -46,9 +46,9 @@ export async function GET(request: Request, { params }: any) {
           name: section.name,
           duration: section.duration,
           questions: questionsResult.rows,
-          autoGrouping: section.autogrouping || false,
+          autoGrouping: section.autoGrouping || false,
           category: section.category || null,
-          questionCount: section.questioncount || null,
+          questionCount: section.questionCount || null,
         });
       }
       return NextResponse.json({ ...test, sections });
@@ -164,6 +164,8 @@ export async function DELETE(
       }
       const testName: string = checkResult.rows[0].name;
 
+      // Hapus sections dulu jika ada
+      await client.query(`DELETE FROM sections WHERE testid = $1`, [id]);
       // Hapus tes; relasi ber-ON DELETE CASCADE akan menangani child rows
       const deleteQuery = `DELETE FROM tests WHERE id = $1`;
       await client.query(deleteQuery, [id]);
@@ -309,16 +311,24 @@ export async function PUT(request: Request, { params }: any) {
         await client.query(`DELETE FROM test_questions WHERE test_id = $1`, [
           id,
         ]);
-        await client.query(`DELETE FROM sections WHERE testId = $1`, [id]);
+        await client.query(`DELETE FROM sections WHERE testid = $1`, [id]);
 
         // Insert ulang sections dan test_questions
         for (const [order, s] of sections.entries()) {
           const sec = await client.query(
-            `INSERT INTO sections (testId, name, duration, "order", autoGrouping, category, questionCount) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-            [id, s.name, s.duration, order + 1, s.autoGrouping || false, s.category || null, s.questionCount || 10]
+            `INSERT INTO sections (testid, name, duration, "order", autoGrouping, category, questionCount) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+            [
+              id,
+              s.name,
+              s.duration,
+              order + 1,
+              s.autoGrouping || false,
+              s.category || null,
+              s.questionCount || 10,
+            ]
           );
           const sectionId = sec.rows[0].id;
-          
+
           // Handle questions based on section type
           if (s.autoGrouping && s.category) {
             // Auto-grouping: select random questions from category
@@ -327,13 +337,15 @@ export async function PUT(request: Request, { params }: any) {
               `SELECT id FROM questions WHERE category = $1 ORDER BY RANDOM() LIMIT $2`,
               [s.category, questionCount]
             );
-            const questionIds = categoryQuestions.rows.map(row => row.id);
-            
+            const questionIds = categoryQuestions.rows.map((row) => row.id);
+
             // Log if not enough questions found
             if (questionIds.length < questionCount) {
-              console.warn(`Only ${questionIds.length} questions found for category ${s.category}, requested ${questionCount}`);
+              console.warn(
+                `Only ${questionIds.length} questions found for category ${s.category}, requested ${questionCount}`
+              );
             }
-            
+
             // Insert selected questions
             for (const questionId of questionIds) {
               await client.query(

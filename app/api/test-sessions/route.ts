@@ -9,17 +9,19 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId");
     const testId = searchParams.get("testId");
     const status = searchParams.get("status");
+    const testType = searchParams.get("testType");
 
     const client = await pool.connect();
 
     try {
       let query = `
-        SELECT 
+        SELECT
           ts.*,
           u.name as "userName",
           u.email as "userEmail",
           t.name as "testName",
-          t.duration as "testDuration"
+          t.duration as "testDuration",
+          t.test_type as "testType"
         FROM test_sessions ts
         LEFT JOIN users u ON ts."userId" = u.id
         LEFT JOIN tests t ON ts."testId" = t.id
@@ -44,6 +46,12 @@ export async function GET(request: NextRequest) {
       if (status) {
         query += ` AND ts.status = $${paramIndex}`;
         params.push(status);
+        paramIndex++;
+      }
+
+      if (testType) {
+        query += ` AND t.test_type = $${paramIndex}`;
+        params.push(testType);
         paramIndex++;
       }
 
