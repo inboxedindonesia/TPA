@@ -283,6 +283,86 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
     return session.holland_code || top;
   };
 
+  // ===== Aptitude / Multiple Intelligences (Derived from TPA categories) =====
+  // Mapping:
+  //  - Visual-Spatial        <- TES_GAMBAR
+  //  - Logical-Mathematical  <- Weighted (60% TES_LOGIKA + 40% TES_ANGKA)
+  //  - Linguistic            <- TES_VERBAL
+  // Only render intelligences whose underlying categories have maxScore > 0
+  const deriveMultipleIntelligences = (
+    cb: Record<string, CategoryBreakdown>
+  ) => {
+    const verbal = cb.TES_VERBAL;
+    const angka = cb.TES_ANGKA;
+    const logika = cb.TES_LOGIKA;
+    const gambar = cb.TES_GAMBAR;
+    const pct = (v?: CategoryBreakdown) => (v ? v.percentage : 0);
+
+    const weightedLogicalMath = (() => {
+      const l = pct(logika);
+      const a = pct(angka);
+      if (l === 0 && a === 0) return 0;
+      return Math.round(l * 0.6 + a * 0.4);
+    })();
+
+    const list = [
+      gambar &&
+        gambar.maxScore > 0 && {
+          key: "visual_spatial",
+          name: "Visual-Spatial Intelligence",
+          percentage: pct(gambar),
+          score: gambar.score,
+          max: gambar.maxScore,
+          bg: "#ECFDF5",
+          border: "#A7F3D0",
+          bar: "#059669",
+          desc: "Kemampuan memproses informasi visual & pola spasial",
+        },
+      (logika?.maxScore || 0) + (angka?.maxScore || 0) > 0 && {
+        key: "logical_mathematical",
+        name: "Logical-Mathematical Intelligence",
+        percentage: weightedLogicalMath,
+        score: (logika?.score || 0) + (angka?.score || 0),
+        max: (logika?.maxScore || 0) + (angka?.maxScore || 0),
+        bg: "#EFF6FF",
+        border: "#BFDBFE",
+        bar: "#2563EB",
+        desc: "Penalaran abstrak, pola, numerik & struktur logis",
+      },
+      verbal &&
+        verbal.maxScore > 0 && {
+          key: "linguistic",
+          name: "Linguistic Intelligence",
+          percentage: pct(verbal),
+          score: verbal.score,
+          max: verbal.maxScore,
+          bg: "#F0F9FF",
+          border: "#BAE6FD",
+          bar: "#0284C7",
+          desc: "Pemahaman teks, kosakata, relasi antar kata",
+        },
+    ].filter(Boolean) as Array<{
+      key: string;
+      name: string;
+      percentage: number;
+      score: number;
+      max: number;
+      bg: string;
+      border: string;
+      bar: string;
+      desc: string;
+    }>;
+    return list;
+  };
+
+  const miLevelFromPct = (p: number) => {
+    if (p >= 85) return "Dominan";
+    if (p >= 70) return "Tinggi";
+    if (p >= 55) return "Sedang";
+    if (p >= 40) return "Dasar";
+    return "Rendah";
+  };
+
   return (
     <>
       <style jsx>{`
@@ -540,159 +620,8 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
               </p>
             </div>
           </div>
-        </div>
 
-        {/* ringkasan hasil tes */}
-        <div
-          style={{
-            padding: "44px 4px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "22px",
-              fontWeight: "bold",
-              textAlign: "left",
-              color: "#111827",
-              margin: "0 0 16px 0",
-              paddingBottom: "8px",
-            }}
-          >
-            II. Ringkasan Hasil Tes
-          </h2>
-          <div
-            style={{
-              marginTop: "16px",
-              backgroundColor: "#ffffff",
-              border: "1px solid #d1d5db",
-            }}
-          ></div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "center",
-              marginTop: "16px",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            <div
-              style={{
-                border: "0.5px solid #1D4CD6",
-                backgroundColor: "#DBE8FE",
-                borderRadius: "8px",
-                display: "flex",
-                flex: "1 1 0",
-                height: "110px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  padding: "0 16px",
-                  gap: "6px",
-                  width: "100%",
-                  height: "100%",
-                  color: "#1D4CD6",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "32px",
-                    fontWeight: "bold",
-                    lineHeight: 1,
-                    margin: 0,
-                    textAlign: "center",
-                  }}
-                >
-                  {calculatePercentage(session.score, session.maxScore)}
-                </p>
-                <p style={{ margin: 0, textAlign: "center" }}>TPA</p>
-              </div>
-            </div>
-            <div
-              style={{
-                border: "0.5px solid #1F822F",
-                backgroundColor: "#DAFCE4",
-                borderRadius: "8px",
-                display: "flex",
-                flex: "1 1 0",
-                height: "110px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  padding: "0 16px",
-                  gap: "6px",
-                  width: "100%",
-                  height: "100%",
-                  color: "#1F822F",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "32px",
-                    fontWeight: "bold",
-                    lineHeight: 1,
-                    margin: 0,
-                    textAlign: "center",
-                  }}
-                >
-                  {calculatePercentage(session.score, session.maxScore)}
-                </p>
-                <p style={{ margin: 0, textAlign: "center" }}>RIASEC</p>
-              </div>
-            </div>
-            <div
-              style={{
-                border: "0.5px solid #DA7B17",
-                backgroundColor: "#FEF2C7",
-                borderRadius: "8px",
-                display: "flex",
-                flex: "1 1 0",
-                height: "110px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  padding: "0 16px",
-                  gap: "6px",
-                  width: "100%",
-                  height: "100%",
-                  color: "#DA7B17",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "32px",
-                    fontWeight: "bold",
-                    lineHeight: 1,
-                    margin: 0,
-                    textAlign: "center",
-                  }}
-                >
-                  {calculatePercentage(session.score, session.maxScore)}
-                </p>
-                <p style={{ margin: 0, textAlign: "center" }}>APTITUDE</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* TPA */}
-        {session.categoryBreakdown && (
+          {/* ringkasan hasil tes */}
           <div
             style={{
               padding: "44px 4px",
@@ -708,7 +637,7 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
                 paddingBottom: "8px",
               }}
             >
-              III. Hasil Tes Potensi Akademik
+              II. Ringkasan Hasil Tes
             </h2>
             <div
               style={{
@@ -717,858 +646,1749 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
                 border: "1px solid #d1d5db",
               }}
             ></div>
-            <h3 style={{ fontWeight: "bold", marginTop: "16px" }}>
-              Komponen TPA
-            </h3>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr",
-                gap: "10px",
-                marginBottom: "24px",
-                marginTop: "24px",
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "center",
+                marginTop: "16px",
+                alignItems: "center",
+                gap: "8px",
               }}
             >
-              {Object.entries(session.categoryBreakdown)
-                .filter(([_, data]) => data.maxScore > 0)
-                .map(([category, data]) => {
-                  const percentage =
-                    data.percentage ||
-                    calculatePercentage(data.score, data.maxScore);
-                  return (
-                    <div
-                      key={category}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "120px 1fr 48px",
-                        alignItems: "center",
-                        gap: "12px",
-                      }}
-                    >
+              <div
+                style={{
+                  border: "0.5px solid #1D4CD6",
+                  backgroundColor: "#DBE8FE",
+                  borderRadius: "8px",
+                  display: "flex",
+                  flex: "1 1 0",
+                  height: "110px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    padding: "0 16px",
+                    gap: "6px",
+                    width: "100%",
+                    height: "100%",
+                    color: "#1D4CD6",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "32px",
+                      fontWeight: "bold",
+                      lineHeight: 1,
+                      margin: 0,
+                      textAlign: "center",
+                    }}
+                  >
+                    {calculatePercentage(session.score, session.maxScore)}
+                  </p>
+                  <p style={{ margin: 0, textAlign: "center" }}>TPA</p>
+                </div>
+              </div>
+              <div
+                style={{
+                  border: "0.5px solid #1F822F",
+                  backgroundColor: "#DAFCE4",
+                  borderRadius: "8px",
+                  display: "flex",
+                  flex: "1 1 0",
+                  height: "110px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    padding: "0 16px",
+                    gap: "6px",
+                    width: "100%",
+                    height: "100%",
+                    color: "#1F822F",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "32px",
+                      fontWeight: "bold",
+                      lineHeight: 1,
+                      margin: 0,
+                      textAlign: "center",
+                    }}
+                  >
+                    {calculatePercentage(session.score, session.maxScore)}
+                  </p>
+                  <p style={{ margin: 0, textAlign: "center" }}>RIASEC</p>
+                </div>
+              </div>
+              <div
+                style={{
+                  border: "0.5px solid #DA7B17",
+                  backgroundColor: "#FEF2C7",
+                  borderRadius: "8px",
+                  display: "flex",
+                  flex: "1 1 0",
+                  height: "110px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    padding: "0 16px",
+                    gap: "6px",
+                    width: "100%",
+                    height: "100%",
+                    color: "#DA7B17",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "32px",
+                      fontWeight: "bold",
+                      lineHeight: 1,
+                      margin: 0,
+                      textAlign: "center",
+                    }}
+                  >
+                    {calculatePercentage(session.score, session.maxScore)}
+                  </p>
+                  <p style={{ margin: 0, textAlign: "center" }}>APTITUDE</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* TPA */}
+          {session.categoryBreakdown && (
+            <div
+              style={{
+                padding: "44px 4px",
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: "22px",
+                  fontWeight: "bold",
+                  textAlign: "left",
+                  color: "#111827",
+                  margin: "0 0 16px 0",
+                  paddingBottom: "8px",
+                }}
+              >
+                III. Hasil Tes Potensi Akademik
+              </h2>
+              <div
+                style={{
+                  marginTop: "16px",
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #d1d5db",
+                }}
+              ></div>
+              <h3 style={{ fontWeight: "bold", marginTop: "16px" }}>
+                Komponen TPA
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr",
+                  gap: "10px",
+                  marginBottom: "24px",
+                  marginTop: "24px",
+                }}
+              >
+                {Object.entries(session.categoryBreakdown)
+                  .filter(([_, data]) => data.maxScore > 0)
+                  .map(([category, data]) => {
+                    const percentage =
+                      data.percentage ||
+                      calculatePercentage(data.score, data.maxScore);
+                    return (
                       <div
+                        key={category}
                         style={{
-                          fontWeight: 700,
-                          color: "#111827",
-                        }}
-                      >
-                        {getCategoryName(category)}
-                      </div>
-                      <div
-                        style={{
-                          width: "100%",
-                          height: "14px",
-                          background: "#E5E7EB",
-                          borderRadius: "9999px",
-                          overflow: "hidden",
+                          display: "grid",
+                          gridTemplateColumns: "120px 1fr 48px",
+                          alignItems: "center",
+                          gap: "12px",
                         }}
                       >
                         <div
                           style={{
-                            width: `${Math.min(100, Math.max(0, percentage))}%`,
-                            height: "100%",
-                            background: "#2563EB",
-                            borderRadius: "9999px",
+                            fontWeight: 700,
+                            color: "#111827",
                           }}
-                        ></div>
+                        >
+                          {getCategoryName(category)}
+                        </div>
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "14px",
+                            background: "#E5E7EB",
+                            borderRadius: "9999px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.max(0, percentage)
+                              )}%`,
+                              height: "100%",
+                              background: "#2563EB",
+                              borderRadius: "9999px",
+                            }}
+                          ></div>
+                        </div>
+                        <div
+                          style={{
+                            textAlign: "right",
+                            fontWeight: 700,
+                            color: "#111827",
+                          }}
+                        >
+                          {percentage}%
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          textAlign: "right",
-                          fontWeight: 700,
-                          color: "#111827",
-                        }}
-                      >
-                        {percentage}%
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+              </div>
             </div>
-          </div>
-        )}
-        {/* Statistik & Interpretasi */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            gap: "16px",
-            marginBottom: "24px",
-            paddingTop: "250px",
-            justifyContent: "space-between",
-          }}
-        >
-          {/* Z-Score */}
+          )}
+          {/* Statistik & Interpretasi */}
           <div
             style={{
-              borderRadius: "8px",
-              backgroundColor: "#DBE8FE",
-              flex: 1,
-              minWidth: 0,
               display: "flex",
-              flexDirection: "column",
-              height: "350px",
-              padding: "32px 16px",
+              flexDirection: "row",
+              gap: "16px",
+              marginBottom: "24px",
+              paddingTop: "250px",
+              justifyContent: "space-between",
             }}
           >
+            {/* Z-Score */}
             <div
               style={{
+                borderRadius: "8px",
+                backgroundColor: "#DBE8FE",
+                flex: 1,
+                minWidth: 0,
                 display: "flex",
                 flexDirection: "column",
-                gap: "12px",
-                width: "100%",
+                height: "350px",
+                padding: "32px 16px",
               }}
             >
-              <h3>Statistik Z-score</h3>
               <div
-                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  width: "100%",
+                }}
               >
-                <p>
-                  <b>Z-Score :</b>{" "}
-                  {calculateZScore(
-                    session.overallPercentage ||
-                      calculatePercentage(session.score, session.maxScore)
-                  )}
-                </p>
-                <p>
-                  <b>Persentil :</b> {session.overallPercentage}%
-                </p>
-                <p>
-                  <b>Detail :</b>{" "}
-                  {getZScoreInterpretation(
-                    parseFloat(
-                      calculateZScore(
-                        session.overallPercentage ||
-                          calculatePercentage(session.score, session.maxScore)
+                <h3>Statistik Z-score</h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <p>
+                    <b>Z-Score :</b>{" "}
+                    {calculateZScore(
+                      session.overallPercentage ||
+                        calculatePercentage(session.score, session.maxScore)
+                    )}
+                  </p>
+                  <p>
+                    <b>Persentil :</b> {session.overallPercentage}%
+                  </p>
+                  <p>
+                    <b>Detail :</b>{" "}
+                    {getZScoreInterpretation(
+                      parseFloat(
+                        calculateZScore(
+                          session.overallPercentage ||
+                            calculatePercentage(session.score, session.maxScore)
+                        )
                       )
-                    )
-                  )}
-                </p>
+                    )}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-          {/* Interpretasi & Rekomendasi */}
-          <div
-            style={{
-              borderRadius: "8px",
-              backgroundColor: "#DCFCE5",
-              flex: 1,
-              minWidth: 0,
-              display: "flex",
-              flexDirection: "column",
-              height: "350px",
-              padding: "32px 16px",
-            }}
-          >
+            {/* Interpretasi & Rekomendasi */}
             <div
               style={{
+                borderRadius: "8px",
+                backgroundColor: "#DCFCE5",
+                flex: 1,
+                minWidth: 0,
                 display: "flex",
                 flexDirection: "column",
-                gap: "12px",
-                width: "100%",
+                height: "350px",
+                padding: "32px 16px",
               }}
             >
-              <h3>Interpretasi & Rekomendasi</h3>
               <div
-                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  width: "100%",
+                }}
               >
-                <p>
-                  <b>Interpretasi :</b>{" "}
-                  {(() => {
-                    const percentage = session.overallPercentage;
-                    const categoryBreakdown = session.categoryBreakdown;
+                <h3>Interpretasi & Rekomendasi</h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <p>
+                    <b>Interpretasi :</b>{" "}
+                    {(() => {
+                      const percentage = session.overallPercentage;
+                      const categoryBreakdown = session.categoryBreakdown;
 
-                    // Analisis distribusi kemampuan per kategori - hanya kategori yang ada dalam tes
-                    const categories = Object.entries(categoryBreakdown).filter(
-                      ([name, data]) => data.maxScore > 0
-                    ) as [string, CategoryBreakdown][];
-                    const categoryPercentages = categories.map(
-                      ([name, data]) => ({
-                        name: getCategoryName(name),
-                        percentage: data.percentage,
-                      })
-                    );
+                      // Analisis distribusi kemampuan per kategori - hanya kategori yang ada dalam tes
+                      const categories = Object.entries(
+                        categoryBreakdown
+                      ).filter(([name, data]) => data.maxScore > 0) as [
+                        string,
+                        CategoryBreakdown
+                      ][];
+                      const categoryPercentages = categories.map(
+                        ([name, data]) => ({
+                          name: getCategoryName(name),
+                          percentage: data.percentage,
+                        })
+                      );
 
-                    const excellentCategories = categoryPercentages.filter(
-                      (cat) => cat.percentage >= 85
-                    );
-                    const goodCategories = categoryPercentages.filter(
-                      (cat) => cat.percentage >= 70 && cat.percentage < 85
-                    );
-                    const averageCategories = categoryPercentages.filter(
-                      (cat) => cat.percentage >= 55 && cat.percentage < 70
-                    );
-                    const weakCategories = categoryPercentages.filter(
-                      (cat) => cat.percentage < 55
-                    );
+                      const excellentCategories = categoryPercentages.filter(
+                        (cat) => cat.percentage >= 85
+                      );
+                      const goodCategories = categoryPercentages.filter(
+                        (cat) => cat.percentage >= 70 && cat.percentage < 85
+                      );
+                      const averageCategories = categoryPercentages.filter(
+                        (cat) => cat.percentage >= 55 && cat.percentage < 70
+                      );
+                      const weakCategories = categoryPercentages.filter(
+                        (cat) => cat.percentage < 55
+                      );
 
-                    let interpretation = "";
+                      let interpretation = "";
 
-                    if (percentage >= 85) {
-                      interpretation = `Kemampuan TPA Anda sangat excellent! Anda berada di kategori superior dengan kemampuan analisis yang luar biasa. `;
-                      if (excellentCategories.length >= 3) {
-                        interpretation += `Anda menunjukkan konsistensi tinggi di hampir semua aspek TPA dengan ${excellentCategories.length} kategori mencapai level excellent.`;
-                      } else if (excellentCategories.length >= 2) {
-                        interpretation += `Anda memiliki keunggulan di ${excellentCategories
-                          .map((c) => c.name)
-                          .join(
-                            " dan "
-                          )}, dengan potensi besar untuk mengoptimalkan kategori lainnya.`;
+                      if (percentage >= 85) {
+                        interpretation = `Kemampuan TPA Anda sangat excellent! Anda berada di kategori superior dengan kemampuan analisis yang luar biasa. `;
+                        if (excellentCategories.length >= 3) {
+                          interpretation += `Anda menunjukkan konsistensi tinggi di hampir semua aspek TPA dengan ${excellentCategories.length} kategori mencapai level excellent.`;
+                        } else if (excellentCategories.length >= 2) {
+                          interpretation += `Anda memiliki keunggulan di ${excellentCategories
+                            .map((c) => c.name)
+                            .join(
+                              " dan "
+                            )}, dengan potensi besar untuk mengoptimalkan kategori lainnya.`;
+                        } else {
+                          interpretation += `Meskipun skor keseluruhan excellent, masih ada peluang untuk meningkatkan konsistensi di semua kategori.`;
+                        }
+                      } else if (percentage >= 75) {
+                        interpretation = `Kemampuan TPA Anda sangat baik dan berada di atas rata-rata populasi. `;
+                        if (excellentCategories.length > 0) {
+                          interpretation += `Anda menunjukkan keunggulan di ${excellentCategories
+                            .map((c) => c.name)
+                            .join(", ")} dengan kemampuan analitis yang kuat. `;
+                        }
+                        if (goodCategories.length > 0) {
+                          interpretation += `Kategori ${goodCategories
+                            .map((c) => c.name)
+                            .join(", ")} juga menunjukkan performa yang baik. `;
+                        }
+                        interpretation += `Dengan sedikit peningkatan, Anda berpotensi mencapai level excellent.`;
+                      } else if (percentage >= 65) {
+                        interpretation = `Kemampuan TPA Anda berada pada level yang baik dan sesuai dengan rata-rata populasi. `;
+                        if (goodCategories.length > 0) {
+                          interpretation += `Anda menunjukkan kemampuan yang baik di ${goodCategories
+                            .map((c) => c.name)
+                            .join(", ")}. `;
+                        }
+                        if (averageCategories.length > 0) {
+                          interpretation += `Kategori ${averageCategories
+                            .map((c) => c.name)
+                            .join(
+                              ", "
+                            )} berada pada level rata-rata dengan potensi pengembangan. `;
+                        }
+                        interpretation += `Anda memiliki fondasi yang solid untuk pengembangan lebih lanjut di semua aspek.`;
+                      } else if (percentage >= 55) {
+                        interpretation = `Kemampuan TPA Anda cukup namun masih ada ruang signifikan untuk perbaikan. `;
+                        if (averageCategories.length > 0) {
+                          interpretation += `Kategori ${averageCategories
+                            .map((c) => c.name)
+                            .join(", ")} menunjukkan fondasi yang cukup baik. `;
+                        }
+                        if (weakCategories.length > 0) {
+                          interpretation += `Namun, ${weakCategories
+                            .map((c) => c.name)
+                            .join(", ")} memerlukan perhatian khusus. `;
+                        }
+                        interpretation += `Dengan latihan yang tepat dan terstruktur, Anda dapat meningkatkan performa secara substansial.`;
                       } else {
-                        interpretation += `Meskipun skor keseluruhan excellent, masih ada peluang untuk meningkatkan konsistensi di semua kategori.`;
+                        interpretation = `Kemampuan TPA Anda saat ini memerlukan perhatian khusus dan latihan intensif. `;
+                        if (averageCategories.length > 0) {
+                          interpretation += `Meskipun demikian, ${averageCategories
+                            .map((c) => c.name)
+                            .join(
+                              ", "
+                            )} menunjukkan potensi yang dapat dikembangkan. `;
+                        }
+                        if (weakCategories.length > 0) {
+                          interpretation += `Fokus utama perlu diberikan pada ${weakCategories
+                            .map((c) => c.name)
+                            .join(", ")}. `;
+                        }
+                        interpretation += `Jangan berkecil hati, dengan dedikasi dan strategi yang tepat, peningkatan yang signifikan sangat mungkin dicapai.`;
                       }
-                    } else if (percentage >= 75) {
-                      interpretation = `Kemampuan TPA Anda sangat baik dan berada di atas rata-rata populasi. `;
-                      if (excellentCategories.length > 0) {
-                        interpretation += `Anda menunjukkan keunggulan di ${excellentCategories
-                          .map((c) => c.name)
-                          .join(", ")} dengan kemampuan analitis yang kuat. `;
-                      }
-                      if (goodCategories.length > 0) {
-                        interpretation += `Kategori ${goodCategories
-                          .map((c) => c.name)
-                          .join(", ")} juga menunjukkan performa yang baik. `;
-                      }
-                      interpretation += `Dengan sedikit peningkatan, Anda berpotensi mencapai level excellent.`;
-                    } else if (percentage >= 65) {
-                      interpretation = `Kemampuan TPA Anda berada pada level yang baik dan sesuai dengan rata-rata populasi. `;
-                      if (goodCategories.length > 0) {
-                        interpretation += `Anda menunjukkan kemampuan yang baik di ${goodCategories
-                          .map((c) => c.name)
-                          .join(", ")}. `;
-                      }
-                      if (averageCategories.length > 0) {
-                        interpretation += `Kategori ${averageCategories
-                          .map((c) => c.name)
-                          .join(
-                            ", "
-                          )} berada pada level rata-rata dengan potensi pengembangan. `;
-                      }
-                      interpretation += `Anda memiliki fondasi yang solid untuk pengembangan lebih lanjut di semua aspek.`;
-                    } else if (percentage >= 55) {
-                      interpretation = `Kemampuan TPA Anda cukup namun masih ada ruang signifikan untuk perbaikan. `;
-                      if (averageCategories.length > 0) {
-                        interpretation += `Kategori ${averageCategories
-                          .map((c) => c.name)
-                          .join(", ")} menunjukkan fondasi yang cukup baik. `;
-                      }
-                      if (weakCategories.length > 0) {
-                        interpretation += `Namun, ${weakCategories
-                          .map((c) => c.name)
-                          .join(", ")} memerlukan perhatian khusus. `;
-                      }
-                      interpretation += `Dengan latihan yang tepat dan terstruktur, Anda dapat meningkatkan performa secara substansial.`;
-                    } else {
-                      interpretation = `Kemampuan TPA Anda saat ini memerlukan perhatian khusus dan latihan intensif. `;
-                      if (averageCategories.length > 0) {
-                        interpretation += `Meskipun demikian, ${averageCategories
-                          .map((c) => c.name)
-                          .join(
-                            ", "
-                          )} menunjukkan potensi yang dapat dikembangkan. `;
-                      }
-                      if (weakCategories.length > 0) {
-                        interpretation += `Fokus utama perlu diberikan pada ${weakCategories
-                          .map((c) => c.name)
-                          .join(", ")}. `;
-                      }
-                      interpretation += `Jangan berkecil hati, dengan dedikasi dan strategi yang tepat, peningkatan yang signifikan sangat mungkin dicapai.`;
-                    }
 
-                    return interpretation;
-                  })()}
-                </p>
-                <p>
-                  <b>Rekomendasi :</b>{" "}
-                  {(() => {
-                    const percentage = session.overallPercentage;
-                    const categoryBreakdown = session.categoryBreakdown;
+                      return interpretation;
+                    })()}
+                  </p>
+                  <p>
+                    <b>Rekomendasi :</b>{" "}
+                    {(() => {
+                      const percentage = session.overallPercentage;
+                      const categoryBreakdown = session.categoryBreakdown;
 
-                    // Analisis detail per kategori untuk rekomendasi yang lebih spesifik - hanya kategori yang ada dalam tes
-                    const categories = Object.entries(categoryBreakdown).filter(
-                      ([name, data]) => data.maxScore > 0
-                    ) as [string, CategoryBreakdown][];
-                    const categoryAnalysis = categories
-                      .map(([name, data]) => ({
-                        name: getCategoryName(name),
-                        key: name,
-                        percentage: data.percentage,
-                        score: data.score,
-                        maxScore: data.maxScore,
-                      }))
-                      .sort((a, b) => a.percentage - b.percentage); // Urutkan dari terlemah
+                      // Analisis detail per kategori untuk rekomendasi yang lebih spesifik - hanya kategori yang ada dalam tes
+                      const categories = Object.entries(
+                        categoryBreakdown
+                      ).filter(([name, data]) => data.maxScore > 0) as [
+                        string,
+                        CategoryBreakdown
+                      ][];
+                      const categoryAnalysis = categories
+                        .map(([name, data]) => ({
+                          name: getCategoryName(name),
+                          key: name,
+                          percentage: data.percentage,
+                          score: data.score,
+                          maxScore: data.maxScore,
+                        }))
+                        .sort((a, b) => a.percentage - b.percentage); // Urutkan dari terlemah
 
-                    const weakestCategory = categoryAnalysis[0];
-                    const strongestCategory =
-                      categoryAnalysis[categoryAnalysis.length - 1];
-                    const weakCategories = categoryAnalysis.filter(
-                      (cat) => cat.percentage < 60
-                    );
-                    const strongCategories = categoryAnalysis.filter(
-                      (cat) => cat.percentage >= 75
-                    );
+                      const weakestCategory = categoryAnalysis[0];
+                      const strongestCategory =
+                        categoryAnalysis[categoryAnalysis.length - 1];
+                      const weakCategories = categoryAnalysis.filter(
+                        (cat) => cat.percentage < 60
+                      );
+                      const strongCategories = categoryAnalysis.filter(
+                        (cat) => cat.percentage >= 75
+                      );
 
-                    let recommendation = "";
+                      let recommendation = "";
 
-                    if (percentage >= 85) {
-                      recommendation = `Pertahankan konsistensi latihan dan fokus pada fine-tuning di area yang masih bisa ditingkatkan. `;
-                      if (weakestCategory.percentage < 80) {
-                        recommendation += `Khususnya di ${
-                          weakestCategory.name
-                        } (${weakestCategory.percentage.toFixed(
-                          1
-                        )}%) yang masih bisa dioptimalkan untuk mencapai konsistensi excellent di semua kategori. `;
-                      }
-                      if (strongCategories.length >= 3) {
-                        recommendation += `Manfaatkan kekuatan Anda di ${strongCategories
-                          .slice(0, 2)
-                          .map((c) => c.name)
-                          .join(
-                            " dan "
-                          )} untuk membantu meningkatkan kategori lainnya.`;
+                      if (percentage >= 85) {
+                        recommendation = `Pertahankan konsistensi latihan dan fokus pada fine-tuning di area yang masih bisa ditingkatkan. `;
+                        if (weakestCategory.percentage < 80) {
+                          recommendation += `Khususnya di ${
+                            weakestCategory.name
+                          } (${weakestCategory.percentage.toFixed(
+                            1
+                          )}%) yang masih bisa dioptimalkan untuk mencapai konsistensi excellent di semua kategori. `;
+                        }
+                        if (strongCategories.length >= 3) {
+                          recommendation += `Manfaatkan kekuatan Anda di ${strongCategories
+                            .slice(0, 2)
+                            .map((c) => c.name)
+                            .join(
+                              " dan "
+                            )} untuk membantu meningkatkan kategori lainnya.`;
+                        } else {
+                          recommendation += `Lanjutkan dengan latihan rutin dan tantang diri dengan soal-soal tingkat kompetisi.`;
+                        }
+                      } else if (percentage >= 75) {
+                        recommendation = `Fokus pada peningkatan di area yang masih lemah untuk mencapai level excellent. `;
+                        if (weakCategories.length > 0) {
+                          recommendation += `Prioritaskan latihan intensif di ${weakCategories
+                            .map(
+                              (c) => `${c.name} (${c.percentage.toFixed(1)}%)`
+                            )
+                            .join(
+                              ", "
+                            )} dengan soal-soal yang lebih menantang. `;
+                        }
+                        if (strongCategories.length > 0) {
+                          recommendation += `Manfaatkan kekuatan Anda di ${strongCategories
+                            .map((c) => c.name)
+                            .join(
+                              ", "
+                            )} sebagai fondasi untuk meningkatkan kategori lainnya. `;
+                        }
+                        recommendation += `Alokasikan 60% waktu latihan untuk kategori terlemah dan 40% untuk mempertahankan kategori yang sudah baik.`;
+                      } else if (percentage >= 65) {
+                        recommendation = `Perbanyak latihan soal dengan fokus pada pemahaman konsep dasar di semua kategori. `;
+                        if (weakCategories.length > 0) {
+                          recommendation += `Berikan perhatian khusus pada ${weakCategories
+                            .map(
+                              (c) => `${c.name} (${c.percentage.toFixed(1)}%)`
+                            )
+                            .join(
+                              ", "
+                            )} dengan mempelajari strategi penyelesaian yang tepat. `;
+                        }
+                        if (strongestCategory.percentage >= 70) {
+                          recommendation += `Gunakan kekuatan Anda di ${
+                            strongestCategory.name
+                          } (${strongestCategory.percentage.toFixed(
+                            1
+                          )}%) sebagai motivasi dan model pembelajaran untuk kategori lain. `;
+                        }
+                        recommendation += `Latihan rutin 30-45 menit per hari dengan pembagian waktu yang proporsional untuk setiap kategori akan membantu peningkatan yang stabil.`;
+                      } else if (percentage >= 55) {
+                        recommendation = `Mulai dengan memperkuat fondasi di semua area TPA secara sistematis. `;
+                        if (weakestCategory.percentage < 45) {
+                          recommendation += `Prioritaskan ${
+                            weakestCategory.name
+                          } (${weakestCategory.percentage.toFixed(
+                            1
+                          )}%) dengan latihan intensif dan bimbingan tambahan jika diperlukan. `;
+                        }
+                        if (strongestCategory.percentage >= 60) {
+                          recommendation += `Kembangkan kepercayaan diri melalui ${
+                            strongestCategory.name
+                          } (${strongestCategory.percentage.toFixed(
+                            1
+                          )}%) sambil secara bertahap meningkatkan kategori lainnya. `;
+                        }
+                        recommendation += `Ikuti program bimbingan terstruktur dengan jadwal latihan harian yang konsisten, mulai dari level dasar hingga menengah.`;
                       } else {
-                        recommendation += `Lanjutkan dengan latihan rutin dan tantang diri dengan soal-soal tingkat kompetisi.`;
+                        recommendation = `Disarankan mengikuti program bimbingan intensif dengan pendekatan step-by-step yang disesuaikan dengan kebutuhan individual. `;
+                        if (weakestCategory.percentage < 35) {
+                          recommendation += `Mulai dari penguatan ${
+                            weakestCategory.name
+                          } (${weakestCategory.percentage.toFixed(
+                            1
+                          )}%) dengan materi dasar dan latihan terbimbing. `;
+                        }
+                        if (strongestCategory.percentage >= 45) {
+                          recommendation += `Bangun kepercayaan diri melalui ${
+                            strongestCategory.name
+                          } (${strongestCategory.percentage.toFixed(
+                            1
+                          )}%) sebagai titik awal pembelajaran. `;
+                        }
+                        recommendation += `Fokus pada pemahaman konsep fundamental sebelum berlatih soal-soal kompleks. Pertimbangkan untuk mengikuti kelas persiapan TPA yang terstruktur.`;
                       }
-                    } else if (percentage >= 75) {
-                      recommendation = `Fokus pada peningkatan di area yang masih lemah untuk mencapai level excellent. `;
-                      if (weakCategories.length > 0) {
-                        recommendation += `Prioritaskan latihan intensif di ${weakCategories
-                          .map((c) => `${c.name} (${c.percentage.toFixed(1)}%)`)
-                          .join(", ")} dengan soal-soal yang lebih menantang. `;
-                      }
-                      if (strongCategories.length > 0) {
-                        recommendation += `Manfaatkan kekuatan Anda di ${strongCategories
-                          .map((c) => c.name)
-                          .join(
-                            ", "
-                          )} sebagai fondasi untuk meningkatkan kategori lainnya. `;
-                      }
-                      recommendation += `Alokasikan 60% waktu latihan untuk kategori terlemah dan 40% untuk mempertahankan kategori yang sudah baik.`;
-                    } else if (percentage >= 65) {
-                      recommendation = `Perbanyak latihan soal dengan fokus pada pemahaman konsep dasar di semua kategori. `;
-                      if (weakCategories.length > 0) {
-                        recommendation += `Berikan perhatian khusus pada ${weakCategories
-                          .map((c) => `${c.name} (${c.percentage.toFixed(1)}%)`)
-                          .join(
-                            ", "
-                          )} dengan mempelajari strategi penyelesaian yang tepat. `;
-                      }
-                      if (strongestCategory.percentage >= 70) {
-                        recommendation += `Gunakan kekuatan Anda di ${
-                          strongestCategory.name
-                        } (${strongestCategory.percentage.toFixed(
-                          1
-                        )}%) sebagai motivasi dan model pembelajaran untuk kategori lain. `;
-                      }
-                      recommendation += `Latihan rutin 30-45 menit per hari dengan pembagian waktu yang proporsional untuk setiap kategori akan membantu peningkatan yang stabil.`;
-                    } else if (percentage >= 55) {
-                      recommendation = `Mulai dengan memperkuat fondasi di semua area TPA secara sistematis. `;
-                      if (weakestCategory.percentage < 45) {
-                        recommendation += `Prioritaskan ${
-                          weakestCategory.name
-                        } (${weakestCategory.percentage.toFixed(
-                          1
-                        )}%) dengan latihan intensif dan bimbingan tambahan jika diperlukan. `;
-                      }
-                      if (strongestCategory.percentage >= 60) {
-                        recommendation += `Kembangkan kepercayaan diri melalui ${
-                          strongestCategory.name
-                        } (${strongestCategory.percentage.toFixed(
-                          1
-                        )}%) sambil secara bertahap meningkatkan kategori lainnya. `;
-                      }
-                      recommendation += `Ikuti program bimbingan terstruktur dengan jadwal latihan harian yang konsisten, mulai dari level dasar hingga menengah.`;
-                    } else {
-                      recommendation = `Disarankan mengikuti program bimbingan intensif dengan pendekatan step-by-step yang disesuaikan dengan kebutuhan individual. `;
-                      if (weakestCategory.percentage < 35) {
-                        recommendation += `Mulai dari penguatan ${
-                          weakestCategory.name
-                        } (${weakestCategory.percentage.toFixed(
-                          1
-                        )}%) dengan materi dasar dan latihan terbimbing. `;
-                      }
-                      if (strongestCategory.percentage >= 45) {
-                        recommendation += `Bangun kepercayaan diri melalui ${
-                          strongestCategory.name
-                        } (${strongestCategory.percentage.toFixed(
-                          1
-                        )}%) sebagai titik awal pembelajaran. `;
-                      }
-                      recommendation += `Fokus pada pemahaman konsep fundamental sebelum berlatih soal-soal kompleks. Pertimbangkan untuk mengikuti kelas persiapan TPA yang terstruktur.`;
-                    }
 
-                    return recommendation;
-                  })()}
-                </p>
+                      return recommendation;
+                    })()}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div>
-          <h3 style={{ fontWeight: "bold", marginTop: "16px" }}>
-            Analisis Detail Komponen TPA
-          </h3>
-          {/* Hitung jumlah kolom grid sebelum return */}
-          {/* di atas return, tambahkan: */}
-          {/*
+          <div>
+            <h3 style={{ fontWeight: "bold", marginTop: "16px" }}>
+              Analisis Detail Komponen TPA
+            </h3>
+            {/* Hitung jumlah kolom grid sebelum return */}
+            {/* di atas return, tambahkan: */}
+            {/*
           const categoryCount = Object.entries(session.categoryBreakdown).filter(([category, data]) => (data as any).maxScore > 0).length;
           let gridColumns = "1fr";
           if (categoryCount === 2) gridColumns = "1fr 1fr";
           else if (categoryCount === 3) gridColumns = "1fr 1fr 1fr";
           else if (categoryCount >= 4) gridColumns = "1fr 1fr 1fr 1fr";
           */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: gridColumns,
-              gap: "10px",
-              marginTop: "24px",
-            }}
-          >
-            {Object.entries(session.categoryBreakdown)
-              .filter(([category, data]) => (data as any).maxScore > 0)
-              .map(([category, data]) => {
-                const getCategoryAnalysis = (
-                  cat: string,
-                  percentage: number,
-                  score: number,
-                  maxScore: number
-                ) => {
-                  // Standar Interpretasi Nasional TPA
-                  const getStandardInterpretation = (perc: number) => {
-                    const thresholds = getThresholds(session.minimum_score);
-                    if (perc >= 95)
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: gridColumns,
+                gap: "10px",
+                marginTop: "24px",
+              }}
+            >
+              {Object.entries(session.categoryBreakdown)
+                .filter(([category, data]) => (data as any).maxScore > 0)
+                .map(([category, data]) => {
+                  const getCategoryAnalysis = (
+                    cat: string,
+                    percentage: number,
+                    score: number,
+                    maxScore: number
+                  ) => {
+                    // Standar Interpretasi Nasional TPA
+                    const getStandardInterpretation = (perc: number) => {
+                      const thresholds = getThresholds(session.minimum_score);
+                      if (perc >= 95)
+                        return {
+                          level: "Superior",
+                          desc: "Kemampuan luar biasa (Top 5%)",
+                          percentile: "95-100",
+                        };
+                      if (perc >= thresholds.excellent + 5)
+                        return {
+                          level: "Sangat Tinggi",
+                          desc: "Kemampuan sangat baik (Top 15%)",
+                          percentile: "85-94",
+                        };
+                      if (perc >= thresholds.good + 15)
+                        return {
+                          level: "Tinggi",
+                          desc: "Kemampuan baik (Top 25%)",
+                          percentile: "75-84",
+                        };
+                      if (perc >= thresholds.average)
+                        return {
+                          level: "Sedang-Tinggi",
+                          desc: "Kemampuan cukup baik (Top 40%)",
+                          percentile: "60-74",
+                        };
+                      if (perc >= thresholds.poor + 20)
+                        return {
+                          level: "Sedang",
+                          desc: "Kemampuan rata-rata (40-60%)",
+                          percentile: "40-59",
+                        };
+                      if (perc >= 25)
+                        return {
+                          level: "Sedang-Rendah",
+                          desc: "Perlu peningkatan (25-40%)",
+                          percentile: "25-39",
+                        };
                       return {
-                        level: "Superior",
-                        desc: "Kemampuan luar biasa (Top 5%)",
-                        percentile: "95-100",
+                        level: "Rendah",
+                        desc: "Perlu perbaikan menyeluruh (Bottom 25%)",
+                        percentile: "0-24",
                       };
-                    if (perc >= thresholds.excellent + 5)
-                      return {
-                        level: "Sangat Tinggi",
-                        desc: "Kemampuan sangat baik (Top 15%)",
-                        percentile: "85-94",
-                      };
-                    if (perc >= thresholds.good + 15)
-                      return {
-                        level: "Tinggi",
-                        desc: "Kemampuan baik (Top 25%)",
-                        percentile: "75-84",
-                      };
-                    if (perc >= thresholds.average)
-                      return {
-                        level: "Sedang-Tinggi",
-                        desc: "Kemampuan cukup baik (Top 40%)",
-                        percentile: "60-74",
-                      };
-                    if (perc >= thresholds.poor + 20)
-                      return {
-                        level: "Sedang",
-                        desc: "Kemampuan rata-rata (40-60%)",
-                        percentile: "40-59",
-                      };
-                    if (perc >= 25)
-                      return {
-                        level: "Sedang-Rendah",
-                        desc: "Perlu peningkatan (25-40%)",
-                        percentile: "25-39",
-                      };
-                    return {
-                      level: "Rendah",
-                      desc: "Perlu perbaikan menyeluruh (Bottom 25%)",
-                      percentile: "0-24",
                     };
-                  };
 
-                  // Analisis Perbandingan dengan Rata-rata Nasional
-                  const getComparisonAnalysis = (perc: number) => {
-                    const nationalAvg = 65; // Asumsi rata-rata nasional
-                    const diff = perc - nationalAvg;
-                    if (diff >= 20)
+                    // Analisis Perbandingan dengan Rata-rata Nasional
+                    const getComparisonAnalysis = (perc: number) => {
+                      const nationalAvg = 65; // Asumsi rata-rata nasional
+                      const diff = perc - nationalAvg;
+                      if (diff >= 20)
+                        return {
+                          status: "Jauh di atas rata-rata",
+                          color: "text-green-700",
+                          icon: "",
+                        };
+                      if (diff >= 10)
+                        return {
+                          status: "Di atas rata-rata",
+                          color: "text-green-600",
+                          icon: "",
+                        };
+                      if (diff >= -5)
+                        return {
+                          status: "Sekitar rata-rata",
+                          color: "text-yellow-600",
+                          icon: "",
+                        };
+                      if (diff >= -15)
+                        return {
+                          status: "Di bawah rata-rata",
+                          color: "text-orange-600",
+                          icon: "",
+                        };
                       return {
-                        status: "Jauh di atas rata-rata",
-                        color: "text-green-700",
+                        status: "Jauh di bawah rata-rata",
+                        color: "text-red-600",
                         icon: "",
                       };
-                    if (diff >= 10)
-                      return {
-                        status: "Di atas rata-rata",
-                        color: "text-green-600",
-                        icon: "",
-                      };
-                    if (diff >= -5)
-                      return {
-                        status: "Sekitar rata-rata",
-                        color: "text-yellow-600",
-                        icon: "",
-                      };
-                    if (diff >= -15)
-                      return {
-                        status: "Di bawah rata-rata",
-                        color: "text-orange-600",
-                        icon: "",
-                      };
-                    return {
-                      status: "Jauh di bawah rata-rata",
-                      color: "text-red-600",
-                      icon: "",
                     };
-                  };
 
-                  // Prediksi Potensi Akademik
-                  const getAcademicPotential = (perc: number) => {
+                    // Prediksi Potensi Akademik
+                    const getAcademicPotential = (perc: number) => {
+                      const thresholds = getThresholds(session.minimum_score);
+                      if (perc >= thresholds.excellent)
+                        return "Sangat berpotensi untuk program studi kompetitif (Kedokteran, Teknik, dll)";
+                      if (perc >= thresholds.good + 15)
+                        return "Berpotensi untuk program studi pilihan dengan persiapan tambahan";
+                      if (perc >= thresholds.average)
+                        return "Cocok untuk berbagai program studi dengan fokus peningkatan";
+                      if (perc >= thresholds.poor + 20)
+                        return "Perlu persiapan intensif untuk program studi yang diinginkan";
+                      return "Disarankan mengikuti program remedial sebelum melanjutkan ke jenjang berikutnya";
+                    };
+
                     const thresholds = getThresholds(session.minimum_score);
-                    if (perc >= thresholds.excellent)
-                      return "Sangat berpotensi untuk program studi kompetitif (Kedokteran, Teknik, dll)";
-                    if (perc >= thresholds.good + 15)
-                      return "Berpotensi untuk program studi pilihan dengan persiapan tambahan";
-                    if (perc >= thresholds.average)
-                      return "Cocok untuk berbagai program studi dengan fokus peningkatan";
-                    if (perc >= thresholds.poor + 20)
-                      return "Perlu persiapan intensif untuk program studi yang diinginkan";
-                    return "Disarankan mengikuti program remedial sebelum melanjutkan ke jenjang berikutnya";
+                    const analyses = {
+                      TES_VERBAL: {
+                        name: "Kemampuan Verbal",
+                        shortName: "Verbal",
+                        color: "bg-blue-50 border-blue-200",
+                        icon: "",
+                        description:
+                          "Mengukur kemampuan memahami dan menganalisis teks, sinonim, antonim, dan analogi kata",
+
+                        // Analisis Kekuatan & Kelemahan
+                        strengths:
+                          percentage >= thresholds.good + 15
+                            ? "Pemahaman konsep verbal sangat baik, mampu menganalisis hubungan kata dengan tepat, dan memiliki kosakata yang luas"
+                            : percentage >= thresholds.average
+                            ? "Pemahaman dasar bahasa baik, dapat menangkap makna teks sederhana dengan cukup baik"
+                            : "Dasar pemahaman bahasa ada, namun perlu pengembangan kosakata dan kemampuan analisis",
+
+                        weaknesses:
+                          percentage < thresholds.average
+                            ? "Perlu peningkatan signifikan dalam analisis teks kompleks, pemahaman sinonim-antonim, dan penguasaan kosakata"
+                            : percentage < thresholds.excellent
+                            ? "Dapat ditingkatkan pada soal analogi yang lebih kompleks dan pemahaman teks akademik"
+                            : "Pertahankan kemampuan dengan tantangan yang lebih tinggi",
+
+                        // Rekomendasi Spesifik
+                        recommendations:
+                          percentage >= thresholds.excellent
+                            ? [
+                                "Pertahankan dengan membaca literatur akademik",
+                                "Latih soal verbal tingkat olimpiade",
+                                "Pelajari etimologi kata untuk memperdalam pemahaman",
+                              ]
+                            : percentage >= thresholds.average
+                            ? [
+                                "Perbanyak membaca artikel ilmiah",
+                                "Latihan sinonim-antonim rutin",
+                                "Belajar analogi kata bertingkat",
+                                "Gunakan aplikasi kosakata harian",
+                              ]
+                            : [
+                                "Mulai dari kosakata dasar 1000 kata",
+                                "Baca artikel sederhana setiap hari",
+                                "Gunakan kamus untuk setiap kata baru",
+                                "Latihan soal verbal dasar",
+                              ],
+
+                        // Tingkat Kesulitan yang Cocok
+                        difficulty:
+                          percentage >= thresholds.excellent + 5
+                            ? "Siap untuk soal verbal tingkat universitas dan tes masuk PTN"
+                            : percentage >= thresholds.good + 10
+                            ? "Cocok untuk soal tingkat SMA dan persiapan UTBK"
+                            : percentage >= thresholds.average - 10
+                            ? "Mulai dari soal tingkat SMP-SMA"
+                            : "Fokus pada soal dasar dan penguasaan kosakata",
+
+                        // Waktu Optimal
+                        timeManagement:
+                          percentage >= thresholds.excellent
+                            ? "Dapat menyelesaikan soal dengan cepat dan akurat"
+                            : percentage >= thresholds.average
+                            ? "Perlu latihan kecepatan membaca dan analisis"
+                            : "Fokus pada akurasi terlebih dahulu, kecepatan akan mengikuti",
+
+                        // Standar Nasional
+                        standardLevel: getStandardInterpretation(percentage),
+                        comparison: getComparisonAnalysis(percentage),
+                        academicPotential: getAcademicPotential(percentage),
+                      },
+
+                      TES_ANGKA: {
+                        name: "Kemampuan Numerik",
+                        shortName: "Numerik",
+                        color: "bg-green-50 border-green-200",
+                        icon: "",
+                        description:
+                          "Mengukur kemampuan operasi matematika dasar, deret angka, dan pemecahan masalah numerik",
+
+                        strengths:
+                          percentage >= thresholds.good + 15
+                            ? "Kemampuan matematika sangat solid, dapat menyelesaikan deret kompleks dan operasi dengan akurasi tinggi"
+                            : percentage >= thresholds.average
+                            ? "Pemahaman konsep dasar matematika baik, dapat menyelesaikan soal standar dengan benar"
+                            : "Pemahaman konsep dasar matematika perlu diperkuat dengan latihan intensif",
+
+                        weaknesses:
+                          percentage < thresholds.average
+                            ? "Perlu peningkatan menyeluruh dalam operasi dasar, deret angka, dan pemecahan masalah matematika"
+                            : percentage < thresholds.excellent
+                            ? "Dapat ditingkatkan pada soal matematika aplikatif dan deret yang lebih kompleks"
+                            : "Tantang diri dengan soal matematika tingkat lanjut",
+
+                        recommendations:
+                          percentage >= thresholds.excellent
+                            ? [
+                                "Latih soal matematika tingkat olimpiade",
+                                "Pelajari statistik dan probabilitas",
+                                "Fokus pada soal cerita kompleks",
+                              ]
+                            : percentage >= thresholds.average
+                            ? [
+                                "Kuatkan operasi dasar (+-×÷)",
+                                "Latihan deret angka rutin",
+                                "Pelajari pola matematika",
+                                "Latih soal cerita sederhana",
+                              ]
+                            : [
+                                "Hafalkan tabel perkalian 1-12",
+                                "Latihan operasi dasar setiap hari",
+                                "Mulai dari soal matematika SD-SMP",
+                                "Gunakan kalkulator untuk verifikasi",
+                              ],
+
+                        difficulty:
+                          percentage >= thresholds.excellent + 5
+                            ? "Siap untuk matematika tingkat universitas dan tes masuk teknik"
+                            : percentage >= thresholds.good + 10
+                            ? "Cocok untuk matematika SMA dan persiapan SAINTEK"
+                            : percentage >= thresholds.average - 10
+                            ? "Mulai dari matematika SMP-SMA"
+                            : "Fokus pada operasi dasar dan konsep fundamental",
+
+                        timeManagement:
+                          percentage >= thresholds.excellent
+                            ? "Dapat menyelesaikan perhitungan dengan cepat dan efisien"
+                            : percentage >= thresholds.average
+                            ? "Perlu latihan kecepatan perhitungan mental"
+                            : "Fokus pada akurasi, gunakan strategi step-by-step",
+
+                        standardLevel: getStandardInterpretation(percentage),
+                        comparison: getComparisonAnalysis(percentage),
+                        academicPotential: getAcademicPotential(percentage),
+                      },
+
+                      TES_LOGIKA: {
+                        name: "Kemampuan Logika",
+                        shortName: "Logika",
+                        color: "bg-purple-50 border-purple-200",
+                        icon: "",
+                        description:
+                          "Mengukur kemampuan penalaran logis, deduksi, induksi, dan pemecahan masalah sistematis",
+
+                        strengths:
+                          percentage >= thresholds.good + 15
+                            ? "Kemampuan penalaran logis sangat baik, dapat berpikir sistematis dan analitis dengan pola yang kompleks"
+                            : percentage >= thresholds.average
+                            ? "Kemampuan penalaran dasar baik, dapat mengikuti alur logika sederhana dengan benar"
+                            : "Dasar penalaran logis ada, namun perlu pengembangan pola pikir sistematis dan terstruktur",
+
+                        weaknesses:
+                          percentage < thresholds.average
+                            ? "Perlu peningkatan signifikan dalam penalaran deduktif, induktif, dan pemecahan masalah kompleks"
+                            : percentage < thresholds.excellent
+                            ? "Dapat ditingkatkan pada soal logika multi-tahap dan penalaran abstrak"
+                            : "Tantang dengan soal logika tingkat kompetisi",
+
+                        recommendations:
+                          percentage >= thresholds.excellent
+                            ? [
+                                "Latih soal logika tingkat olimpiade",
+                                "Pelajari logika formal dan silogisme",
+                                "Berlatih puzzle kompleks",
+                              ]
+                            : percentage >= thresholds.average
+                            ? [
+                                "Latihan soal penalaran rutin",
+                                "Pelajari pola logika dasar",
+                                "Berlatih deduksi-induksi",
+                                "Mainkan game puzzle logika",
+                              ]
+                            : [
+                                "Mulai dari logika sederhana",
+                                "Latihan pola dasar setiap hari",
+                                "Belajar berpikir step-by-step",
+                                "Gunakan diagram untuk membantu",
+                              ],
+
+                        difficulty:
+                          percentage >= thresholds.excellent + 5
+                            ? "Siap untuk tes logika tingkat universitas dan kompetisi"
+                            : percentage >= thresholds.good + 10
+                            ? "Cocok untuk soal logika SMA dan UTBK"
+                            : percentage >= thresholds.average - 10
+                            ? "Mulai dari logika SMP-SMA"
+                            : "Fokus pada pola dasar dan penalaran sederhana",
+
+                        timeManagement:
+                          percentage >= thresholds.excellent
+                            ? "Dapat menganalisis pola dengan cepat dan akurat"
+                            : percentage >= thresholds.average
+                            ? "Perlu latihan kecepatan analisis pola"
+                            : "Fokus pada pemahaman konsep, kecepatan akan mengikuti",
+
+                        standardLevel: getStandardInterpretation(percentage),
+                        comparison: getComparisonAnalysis(percentage),
+                        academicPotential: getAcademicPotential(percentage),
+                      },
+
+                      TES_GAMBAR: {
+                        name: "Kemampuan Spasial",
+                        shortName: "Gambar",
+                        color: "bg-yellow-50 border-yellow-200",
+                        icon: "",
+                        description:
+                          "Mengukur kemampuan visualisasi spasial, pengenalan pola, dan analisis bentuk geometris",
+
+                        strengths:
+                          percentage >= thresholds.good + 15
+                            ? "Kemampuan visualisasi spasial sangat baik, dapat menganalisis bentuk 3D dan pola kompleks dengan akurat"
+                            : percentage >= thresholds.average
+                            ? "Kemampuan visual dasar baik, dapat mengenali pola sederhana dan orientasi spasial"
+                            : "Dasar kemampuan visual ada, namun perlu latihan intensif pengenalan pola dan orientasi spasial",
+
+                        weaknesses:
+                          percentage < thresholds.average
+                            ? "Perlu peningkatan menyeluruh dalam analisis visual, pengenalan pola, dan kemampuan spasial"
+                            : percentage < thresholds.excellent
+                            ? "Dapat ditingkatkan pada soal spasial 3D dan transformasi geometris yang kompleks"
+                            : "Tantang dengan soal spasial tingkat arsitektur dan engineering",
+
+                        recommendations:
+                          percentage >= thresholds.excellent
+                            ? [
+                                "Latih soal spasial tingkat arsitektur",
+                                "Pelajari geometri 3D lanjut",
+                                "Berlatih dengan software CAD",
+                              ]
+                            : percentage >= thresholds.average
+                            ? [
+                                "Latihan pengenalan pola rutin",
+                                "Belajar rotasi dan refleksi",
+                                "Latih visualisasi spasial",
+                                "Mainkan game puzzle 3D",
+                              ]
+                            : [
+                                "Mulai dari pola 2D sederhana",
+                                "Latihan menggambar bentuk dasar",
+                                "Belajar orientasi spasial",
+                                "Gunakan manipulatif fisik",
+                              ],
+
+                        difficulty:
+                          percentage >= thresholds.excellent + 5
+                            ? "Siap untuk tes spasial tingkat arsitektur dan engineering"
+                            : percentage >= thresholds.good + 10
+                            ? "Cocok untuk soal spasial SMA dan tes masuk teknik"
+                            : percentage >= thresholds.average - 10
+                            ? "Mulai dari soal visual SMP-SMA"
+                            : "Fokus pada pola dasar dan orientasi sederhana",
+
+                        timeManagement:
+                          percentage >= thresholds.excellent
+                            ? "Dapat memvisualisasikan dengan cepat dan akurat"
+                            : percentage >= thresholds.average
+                            ? "Perlu latihan kecepatan visualisasi"
+                            : "Fokus pada akurasi visualisasi, gunakan bantuan sketsa",
+
+                        standardLevel: getStandardInterpretation(percentage),
+                        comparison: getComparisonAnalysis(percentage),
+                        academicPotential: getAcademicPotential(percentage),
+                      },
+                    };
+                    return (
+                      analyses[cat as keyof typeof analyses] ||
+                      analyses.TES_VERBAL
+                    );
                   };
 
-                  const thresholds = getThresholds(session.minimum_score);
-                  const analyses = {
-                    TES_VERBAL: {
-                      name: "Kemampuan Verbal",
-                      shortName: "Verbal",
-                      color: "bg-blue-50 border-blue-200",
-                      icon: "",
-                      description:
-                        "Mengukur kemampuan memahami dan menganalisis teks, sinonim, antonim, dan analogi kata",
-
-                      // Analisis Kekuatan & Kelemahan
-                      strengths:
-                        percentage >= thresholds.good + 15
-                          ? "Pemahaman konsep verbal sangat baik, mampu menganalisis hubungan kata dengan tepat, dan memiliki kosakata yang luas"
-                          : percentage >= thresholds.average
-                          ? "Pemahaman dasar bahasa baik, dapat menangkap makna teks sederhana dengan cukup baik"
-                          : "Dasar pemahaman bahasa ada, namun perlu pengembangan kosakata dan kemampuan analisis",
-
-                      weaknesses:
-                        percentage < thresholds.average
-                          ? "Perlu peningkatan signifikan dalam analisis teks kompleks, pemahaman sinonim-antonim, dan penguasaan kosakata"
-                          : percentage < thresholds.excellent
-                          ? "Dapat ditingkatkan pada soal analogi yang lebih kompleks dan pemahaman teks akademik"
-                          : "Pertahankan kemampuan dengan tantangan yang lebih tinggi",
-
-                      // Rekomendasi Spesifik
-                      recommendations:
-                        percentage >= thresholds.excellent
-                          ? [
-                              "Pertahankan dengan membaca literatur akademik",
-                              "Latih soal verbal tingkat olimpiade",
-                              "Pelajari etimologi kata untuk memperdalam pemahaman",
-                            ]
-                          : percentage >= thresholds.average
-                          ? [
-                              "Perbanyak membaca artikel ilmiah",
-                              "Latihan sinonim-antonim rutin",
-                              "Belajar analogi kata bertingkat",
-                              "Gunakan aplikasi kosakata harian",
-                            ]
-                          : [
-                              "Mulai dari kosakata dasar 1000 kata",
-                              "Baca artikel sederhana setiap hari",
-                              "Gunakan kamus untuk setiap kata baru",
-                              "Latihan soal verbal dasar",
-                            ],
-
-                      // Tingkat Kesulitan yang Cocok
-                      difficulty:
-                        percentage >= thresholds.excellent + 5
-                          ? "Siap untuk soal verbal tingkat universitas dan tes masuk PTN"
-                          : percentage >= thresholds.good + 10
-                          ? "Cocok untuk soal tingkat SMA dan persiapan UTBK"
-                          : percentage >= thresholds.average - 10
-                          ? "Mulai dari soal tingkat SMP-SMA"
-                          : "Fokus pada soal dasar dan penguasaan kosakata",
-
-                      // Waktu Optimal
-                      timeManagement:
-                        percentage >= thresholds.excellent
-                          ? "Dapat menyelesaikan soal dengan cepat dan akurat"
-                          : percentage >= thresholds.average
-                          ? "Perlu latihan kecepatan membaca dan analisis"
-                          : "Fokus pada akurasi terlebih dahulu, kecepatan akan mengikuti",
-
-                      // Standar Nasional
-                      standardLevel: getStandardInterpretation(percentage),
-                      comparison: getComparisonAnalysis(percentage),
-                      academicPotential: getAcademicPotential(percentage),
-                    },
-
-                    TES_ANGKA: {
-                      name: "Kemampuan Numerik",
-                      shortName: "Numerik",
-                      color: "bg-green-50 border-green-200",
-                      icon: "",
-                      description:
-                        "Mengukur kemampuan operasi matematika dasar, deret angka, dan pemecahan masalah numerik",
-
-                      strengths:
-                        percentage >= thresholds.good + 15
-                          ? "Kemampuan matematika sangat solid, dapat menyelesaikan deret kompleks dan operasi dengan akurasi tinggi"
-                          : percentage >= thresholds.average
-                          ? "Pemahaman konsep dasar matematika baik, dapat menyelesaikan soal standar dengan benar"
-                          : "Pemahaman konsep dasar matematika perlu diperkuat dengan latihan intensif",
-
-                      weaknesses:
-                        percentage < thresholds.average
-                          ? "Perlu peningkatan menyeluruh dalam operasi dasar, deret angka, dan pemecahan masalah matematika"
-                          : percentage < thresholds.excellent
-                          ? "Dapat ditingkatkan pada soal matematika aplikatif dan deret yang lebih kompleks"
-                          : "Tantang diri dengan soal matematika tingkat lanjut",
-
-                      recommendations:
-                        percentage >= thresholds.excellent
-                          ? [
-                              "Latih soal matematika tingkat olimpiade",
-                              "Pelajari statistik dan probabilitas",
-                              "Fokus pada soal cerita kompleks",
-                            ]
-                          : percentage >= thresholds.average
-                          ? [
-                              "Kuatkan operasi dasar (+-×÷)",
-                              "Latihan deret angka rutin",
-                              "Pelajari pola matematika",
-                              "Latih soal cerita sederhana",
-                            ]
-                          : [
-                              "Hafalkan tabel perkalian 1-12",
-                              "Latihan operasi dasar setiap hari",
-                              "Mulai dari soal matematika SD-SMP",
-                              "Gunakan kalkulator untuk verifikasi",
-                            ],
-
-                      difficulty:
-                        percentage >= thresholds.excellent + 5
-                          ? "Siap untuk matematika tingkat universitas dan tes masuk teknik"
-                          : percentage >= thresholds.good + 10
-                          ? "Cocok untuk matematika SMA dan persiapan SAINTEK"
-                          : percentage >= thresholds.average - 10
-                          ? "Mulai dari matematika SMP-SMA"
-                          : "Fokus pada operasi dasar dan konsep fundamental",
-
-                      timeManagement:
-                        percentage >= thresholds.excellent
-                          ? "Dapat menyelesaikan perhitungan dengan cepat dan efisien"
-                          : percentage >= thresholds.average
-                          ? "Perlu latihan kecepatan perhitungan mental"
-                          : "Fokus pada akurasi, gunakan strategi step-by-step",
-
-                      standardLevel: getStandardInterpretation(percentage),
-                      comparison: getComparisonAnalysis(percentage),
-                      academicPotential: getAcademicPotential(percentage),
-                    },
-
-                    TES_LOGIKA: {
-                      name: "Kemampuan Logika",
-                      shortName: "Logika",
-                      color: "bg-purple-50 border-purple-200",
-                      icon: "",
-                      description:
-                        "Mengukur kemampuan penalaran logis, deduksi, induksi, dan pemecahan masalah sistematis",
-
-                      strengths:
-                        percentage >= thresholds.good + 15
-                          ? "Kemampuan penalaran logis sangat baik, dapat berpikir sistematis dan analitis dengan pola yang kompleks"
-                          : percentage >= thresholds.average
-                          ? "Kemampuan penalaran dasar baik, dapat mengikuti alur logika sederhana dengan benar"
-                          : "Dasar penalaran logis ada, namun perlu pengembangan pola pikir sistematis dan terstruktur",
-
-                      weaknesses:
-                        percentage < thresholds.average
-                          ? "Perlu peningkatan signifikan dalam penalaran deduktif, induktif, dan pemecahan masalah kompleks"
-                          : percentage < thresholds.excellent
-                          ? "Dapat ditingkatkan pada soal logika multi-tahap dan penalaran abstrak"
-                          : "Tantang dengan soal logika tingkat kompetisi",
-
-                      recommendations:
-                        percentage >= thresholds.excellent
-                          ? [
-                              "Latih soal logika tingkat olimpiade",
-                              "Pelajari logika formal dan silogisme",
-                              "Berlatih puzzle kompleks",
-                            ]
-                          : percentage >= thresholds.average
-                          ? [
-                              "Latihan soal penalaran rutin",
-                              "Pelajari pola logika dasar",
-                              "Berlatih deduksi-induksi",
-                              "Mainkan game puzzle logika",
-                            ]
-                          : [
-                              "Mulai dari logika sederhana",
-                              "Latihan pola dasar setiap hari",
-                              "Belajar berpikir step-by-step",
-                              "Gunakan diagram untuk membantu",
-                            ],
-
-                      difficulty:
-                        percentage >= thresholds.excellent + 5
-                          ? "Siap untuk tes logika tingkat universitas dan kompetisi"
-                          : percentage >= thresholds.good + 10
-                          ? "Cocok untuk soal logika SMA dan UTBK"
-                          : percentage >= thresholds.average - 10
-                          ? "Mulai dari logika SMP-SMA"
-                          : "Fokus pada pola dasar dan penalaran sederhana",
-
-                      timeManagement:
-                        percentage >= thresholds.excellent
-                          ? "Dapat menganalisis pola dengan cepat dan akurat"
-                          : percentage >= thresholds.average
-                          ? "Perlu latihan kecepatan analisis pola"
-                          : "Fokus pada pemahaman konsep, kecepatan akan mengikuti",
-
-                      standardLevel: getStandardInterpretation(percentage),
-                      comparison: getComparisonAnalysis(percentage),
-                      academicPotential: getAcademicPotential(percentage),
-                    },
-
-                    TES_GAMBAR: {
-                      name: "Kemampuan Spasial",
-                      shortName: "Gambar",
-                      color: "bg-yellow-50 border-yellow-200",
-                      icon: "",
-                      description:
-                        "Mengukur kemampuan visualisasi spasial, pengenalan pola, dan analisis bentuk geometris",
-
-                      strengths:
-                        percentage >= thresholds.good + 15
-                          ? "Kemampuan visualisasi spasial sangat baik, dapat menganalisis bentuk 3D dan pola kompleks dengan akurat"
-                          : percentage >= thresholds.average
-                          ? "Kemampuan visual dasar baik, dapat mengenali pola sederhana dan orientasi spasial"
-                          : "Dasar kemampuan visual ada, namun perlu latihan intensif pengenalan pola dan orientasi spasial",
-
-                      weaknesses:
-                        percentage < thresholds.average
-                          ? "Perlu peningkatan menyeluruh dalam analisis visual, pengenalan pola, dan kemampuan spasial"
-                          : percentage < thresholds.excellent
-                          ? "Dapat ditingkatkan pada soal spasial 3D dan transformasi geometris yang kompleks"
-                          : "Tantang dengan soal spasial tingkat arsitektur dan engineering",
-
-                      recommendations:
-                        percentage >= thresholds.excellent
-                          ? [
-                              "Latih soal spasial tingkat arsitektur",
-                              "Pelajari geometri 3D lanjut",
-                              "Berlatih dengan software CAD",
-                            ]
-                          : percentage >= thresholds.average
-                          ? [
-                              "Latihan pengenalan pola rutin",
-                              "Belajar rotasi dan refleksi",
-                              "Latih visualisasi spasial",
-                              "Mainkan game puzzle 3D",
-                            ]
-                          : [
-                              "Mulai dari pola 2D sederhana",
-                              "Latihan menggambar bentuk dasar",
-                              "Belajar orientasi spasial",
-                              "Gunakan manipulatif fisik",
-                            ],
-
-                      difficulty:
-                        percentage >= thresholds.excellent + 5
-                          ? "Siap untuk tes spasial tingkat arsitektur dan engineering"
-                          : percentage >= thresholds.good + 10
-                          ? "Cocok untuk soal spasial SMA dan tes masuk teknik"
-                          : percentage >= thresholds.average - 10
-                          ? "Mulai dari soal visual SMP-SMA"
-                          : "Fokus pada pola dasar dan orientasi sederhana",
-
-                      timeManagement:
-                        percentage >= thresholds.excellent
-                          ? "Dapat memvisualisasikan dengan cepat dan akurat"
-                          : percentage >= thresholds.average
-                          ? "Perlu latihan kecepatan visualisasi"
-                          : "Fokus pada akurasi visualisasi, gunakan bantuan sketsa",
-
-                      standardLevel: getStandardInterpretation(percentage),
-                      comparison: getComparisonAnalysis(percentage),
-                      academicPotential: getAcademicPotential(percentage),
-                    },
-                  };
-                  return (
-                    analyses[cat as keyof typeof analyses] ||
-                    analyses.TES_VERBAL
+                  const analysis = getCategoryAnalysis(
+                    category,
+                    data.percentage,
+                    data.score,
+                    data.maxScore
                   );
-                };
 
-                const analysis = getCategoryAnalysis(
-                  category,
-                  data.percentage,
-                  data.score,
-                  data.maxScore
-                );
+                  // Hitung jumlah soal dari answers
+                  const categoryAnswers =
+                    session?.answers?.filter(
+                      (answer: Answer) => answer.question.category === category
+                    ) || [];
+                  const correctAnswers = categoryAnswers.filter(
+                    (answer: Answer) => answer.isCorrect
+                  ).length;
+                  const totalQuestions = categoryAnswers.length;
 
-                // Hitung jumlah soal dari answers
-                const categoryAnswers =
-                  session?.answers?.filter(
-                    (answer: Answer) => answer.question.category === category
-                  ) || [];
-                const correctAnswers = categoryAnswers.filter(
-                  (answer: Answer) => answer.isCorrect
-                ).length;
-                const totalQuestions = categoryAnswers.length;
-
-                return (
-                  <div
-                    key={category}
-                    className={`p-4 rounded-lg ${analysis.color} space-y-3`}
-                  >
+                  return (
                     <div
-                      style={{
-                        display: "flex",
-                        alignItems: "justifyStart",
-                        justifyContent: "spaceBetween",
-                        marginBottom: "8px",
-                      }}
+                      key={category}
+                      className={`p-4 rounded-lg ${analysis.color} space-y-3`}
                     >
-                      <div style={{ display: "flex", alignItems: "center" }}>
-                        <span>{analysis.icon}</span>
-                        <div>
-                          <h4 style={{ marginBottom: "8px" }}>
-                            {analysis.shortName}
-                          </h4>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "justifyStart",
+                          justifyContent: "spaceBetween",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                          <span>{analysis.icon}</span>
                           <div>
-                            <b>Skor:</b> {data.percentage.toFixed(1)}%
-                          </div>
-                          <div>
-                            <b>Level:</b> {analysis.standardLevel.level}
-                          </div>
-                          <div>
-                            <p
-                              style={{
-                                display: "flex",
-                                gap: "12px",
-                                fontSize: "14px",
-                                marginTop: "12px",
-                                marginBottom: "12px",
-                              }}
-                            >
-                              <b>Detail Analisis</b>
-                            </p>
-                          </div>
-                          <div>
-                            <b>Kekuatan:</b> {analysis.strengths}
-                          </div>
-                          <div>
-                            <b>Area Pengembangan:</b> {analysis.weaknesses}
+                            <h4 style={{ marginBottom: "8px" }}>
+                              {analysis.shortName}
+                            </h4>
+                            <div>
+                              <b>Skor:</b> {data.percentage.toFixed(1)}%
+                            </div>
+                            <div>
+                              <b>Level:</b> {analysis.standardLevel.level}
+                            </div>
+                            <div>
+                              <p
+                                style={{
+                                  display: "flex",
+                                  gap: "12px",
+                                  fontSize: "14px",
+                                  marginTop: "12px",
+                                  marginBottom: "12px",
+                                }}
+                              >
+                                <b>Detail Analisis</b>
+                              </p>
+                            </div>
+                            <div>
+                              <b>Kekuatan:</b> {analysis.strengths}
+                            </div>
+                            <div>
+                              <b>Area Pengembangan:</b> {analysis.weaknesses}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* IV. Hasil Tes RIASEC (Minat & Kepribadian Karir) */}
+          <div style={{ padding: "44px 4px" }}>
+            <h2
+              style={{
+                fontSize: "22px",
+                fontWeight: "bold",
+                textAlign: "left",
+                color: "#111827",
+                margin: "200px 0 16px 0",
+              }}
+            >
+              IV. Hasil Tes RIASEC
+            </h2>
+            <div
+              style={{
+                marginTop: "16px",
+                backgroundColor: "#ffffff",
+                border: "1px solid #d1d5db",
+              }}
+            ></div>
+            {(() => {
+              const codes: Array<{
+                code: string;
+                label: string;
+                score: number;
+                max?: number;
+                color: string;
+                bar: string;
+                desc: string;
+              }> = [
+                {
+                  code: "R",
+                  label: "Realistic",
+                  score: session.score_realistic || 0,
+                  max: session.max_score_realistic,
+                  color: "#EFF6FF",
+                  bar: "#2563EB",
+                  desc: "Praktis, teknis, menyukai aktivitas fisik & mekanik",
+                },
+                {
+                  code: "I",
+                  label: "Investigative",
+                  score: session.score_investigative || 0,
+                  max: session.max_score_investigative,
+                  color: "#F0FDFA",
+                  bar: "#0D9488",
+                  desc: "Analitis, pemecah masalah, berbasis riset & logika",
+                },
+                {
+                  code: "A",
+                  label: "Artistic",
+                  score: session.score_artistic || 0,
+                  max: session.max_score_artistic,
+                  color: "#FFF7ED",
+                  bar: "#EA580C",
+                  desc: "Kreatif, ekspresif, imajinatif & non-konvensional",
+                },
+                {
+                  code: "S",
+                  label: "Social",
+                  score: session.score_social || 0,
+                  max: session.max_score_social,
+                  color: "#ECFDF5",
+                  bar: "#059669",
+                  desc: "Membantu orang lain, edukatif, empatik & kolaboratif",
+                },
+                {
+                  code: "E",
+                  label: "Enterprising",
+                  score: session.score_enterprising || 0,
+                  max: session.max_score_enterprising,
+                  color: "#FEF2F2",
+                  bar: "#DC2626",
+                  desc: "Persuasif, kepemimpinan, bisnis & pengambilan risiko",
+                },
+                {
+                  code: "C",
+                  label: "Conventional",
+                  score: session.score_conventional || 0,
+                  max: session.max_score_conventional,
+                  color: "#F5F3FF",
+                  bar: "#7C3AED",
+                  desc: "Terstruktur, detail, administrasi & akurasi data",
+                },
+              ];
+              const active = codes.filter((c) => c.max && c.max > 0);
+              if (active.length === 0) {
+                return (
+                  <div style={{ marginTop: "24px" }}>
+                    <h3 style={{ fontWeight: "bold", marginTop: "8px" }}>
+                      Ringkasan RIASEC
+                    </h3>
+                    <div
+                      style={{
+                        marginTop: 12,
+                        padding: "16px 18px",
+                        border: "1px solid #E5E7EB",
+                        background: "#F9FAFB",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        color: "#374151",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Data RIASEC tidak tersedia untuk tes ini. Modul atau soal
+                      RIASEC belum diaktifkan sehingga belum ada skor yang
+                      dihitung. Bagian ini tetap ditampilkan agar format laporan
+                      konsisten.
+                    </div>
                   </div>
                 );
-              })}
+              }
+              const withPct = active.map((c) => ({
+                ...c,
+                pct:
+                  c.max && c.max > 0 ? Math.round((c.score / c.max) * 100) : 0,
+              }));
+              const sorted = [...withPct].sort((a, b) => b.pct - a.pct);
+              const top3 = sorted
+                .slice(0, 3)
+                .map((s) => s.code)
+                .join("-");
+              return (
+                <div style={{ marginTop: "24px" }}>
+                  <h3 style={{ fontWeight: "bold", marginTop: "8px" }}>
+                    Ringkasan RIASEC
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "16px",
+                      flexWrap: "wrap",
+                      marginTop: "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        flex: "1 1 240px",
+                        background: "#DBE8FE",
+                        border: "1px solid #93C5FD",
+                        borderRadius: 8,
+                        padding: "12px 16px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#1E3A8A",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Kode Holland Dominan
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 26,
+                          fontWeight: 700,
+                          letterSpacing: 1,
+                        }}
+                      >
+                        {session.holland_code || top3}
+                      </div>
+                      <div
+                        style={{ fontSize: 10, color: "#374151", marginTop: 4 }}
+                      >
+                        Tiga kecenderungan tertinggi membentuk pola minat karir
+                        utama.
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        flex: "2 1 380px",
+                        background: "#F8FAFC",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: 8,
+                        padding: "12px 16px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#111827",
+                        }}
+                      >
+                        Distribusi Skor
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns:
+                            "repeat(auto-fill, minmax(140px,1fr))",
+                          gap: 8,
+                        }}
+                      >
+                        {withPct.map((item) => (
+                          <div
+                            key={item.code}
+                            style={{
+                              background: item.color,
+                              borderRadius: 6,
+                              padding: "8px 10px",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 6,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <span style={{ fontSize: 11, fontWeight: 600 }}>
+                                {item.code} - {item.label}
+                              </span>
+                              <span style={{ fontSize: 10, fontWeight: 500 }}>
+                                {item.pct}%
+                              </span>
+                            </div>
+                            <div
+                              style={{
+                                width: "100%",
+                                height: 6,
+                                background: "#E5E7EB",
+                                borderRadius: 4,
+                                overflow: "hidden",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: `${Math.min(item.pct, 100)}%`,
+                                  height: "100%",
+                                  background: item.bar,
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 14,
+                      marginTop: 24,
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: "#FFFBEB",
+                        border: "1px solid #FDE68A",
+                        borderRadius: 8,
+                        padding: "16px 18px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: "#92400E",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Interpretasi
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "#374151",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        Dominan: <b>{sorted[0]?.label || "-"}</b>
+                        {sorted[1] ? `, diikuti ${sorted[1].label}` : ""}
+                        {sorted[2] ? ` dan ${sorted[2].label}` : ""}. Pola ini
+                        menunjukkan kecenderungan utama pada aktivitas{" "}
+                        {(() => {
+                          const first = sorted[0]?.code;
+                          switch (first) {
+                            case "R":
+                              return "praktis dan teknis";
+                            case "I":
+                              return "analitis dan investigatif";
+                            case "A":
+                              return "kreatif dan ekspresif";
+                            case "S":
+                              return "sosial dan edukatif";
+                            case "E":
+                              return "kepemimpinan dan wirausaha";
+                            case "C":
+                              return "terstruktur dan administratif";
+                            default:
+                              return "umum";
+                          }
+                        })()}
+                        . Kombinasi kode membantu pemetaan jurusan & rencana
+                        karir lebih presisi.
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        background: "#ECFDF5",
+                        border: "1px solid #A7F3D0",
+                        borderRadius: 8,
+                        padding: "16px 18px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: "#065F46",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Rekomendasi Umum
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "#374151",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {(() => {
+                          const primary = sorted[0]?.code;
+                          if (!primary) return "Belum cukup data.";
+                          const map: Record<string, string[]> = {
+                            R: [
+                              "Teknik Mesin",
+                              "Teknik Sipil",
+                              "Penerbangan",
+                              "Robotik",
+                              "Logistik",
+                            ],
+                            I: [
+                              "Data Science",
+                              "Bioteknologi",
+                              "Kedokteran",
+                              "Riset & Laboratorium",
+                              "Statistika",
+                            ],
+                            A: [
+                              "Desain Komunikasi Visual",
+                              "Seni & Multimedia",
+                              "Arsitektur",
+                              "UI/UX",
+                              "Animasi",
+                            ],
+                            S: [
+                              "Psikologi",
+                              "Pendidikan",
+                              "Keperawatan",
+                              "Bimbingan & Konseling",
+                              "HR Development",
+                            ],
+                            E: [
+                              "Manajemen Bisnis",
+                              "Marketing",
+                              "Kewirausahaan",
+                              "Hukum Bisnis",
+                              "Public Relations",
+                            ],
+                            C: [
+                              "Akuntansi",
+                              "Administrasi",
+                              "Perpajakan",
+                              "Manajemen Operasional",
+                              "Data Entry & QC",
+                            ],
+                          };
+                          const list = map[primary] || [];
+                          return list.length
+                            ? "Potensi bidang kuat pada: " +
+                                list.slice(0, 5).join(", ") +
+                                "."
+                            : "Belum cukup data.";
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
-        {/* Hasil Tes */}
+        {/* V. Hasil Tes Bakat / Aptitude (Multiple Intelligences) */}
+        {session.categoryBreakdown && (
+          <div style={{ padding: "44px 4px" }}>
+            <h2
+              style={{
+                fontSize: "22px",
+                fontWeight: "bold",
+                textAlign: "left",
+                color: "#111827",
+                paddingBottom: "8px",
+              }}
+            >
+              V. Hasil Tes Bakat / Aptitude
+            </h2>
+            <div
+              style={{
+                marginTop: "16px",
+                backgroundColor: "#ffffff",
+                border: "1px solid #d1d5db",
+              }}
+            ></div>
+
+            {(() => {
+              const mi = deriveMultipleIntelligences(
+                session.categoryBreakdown as any
+              );
+              if (mi.length === 0) return null;
+
+              const THRESHOLD_MIN = 15; // harus selaras dengan UI
+              const sorted = [...mi].sort(
+                (a, b) => b.percentage - a.percentage
+              );
+              const allZero = mi.every((m) => m.percentage <= 0);
+              const allBelow = mi.every((m) => m.percentage < THRESHOLD_MIN);
+              const dominant = !allZero && !allBelow ? sorted[0] : undefined;
+              const second = dominant
+                ? sorted.find((m) => m.key !== dominant.key)
+                : undefined;
+              const delta =
+                second && dominant
+                  ? dominant.percentage - second.percentage
+                  : null;
+
+              const interpretation = (() => {
+                if (!dominant) {
+                  if (allZero)
+                    return "Belum ada data untuk dianalisis (semua komponen 0).";
+                  if (allBelow)
+                    return `Skor masih di bawah ambang interpretasi (< ${THRESHOLD_MIN}%). Lanjutkan latihan untuk memunculkan pola dominan.`;
+                  return "Belum cukup data.";
+                }
+                let base = "";
+                switch (dominant.key) {
+                  case "visual_spatial":
+                    base =
+                      "Dominasi pada pemrosesan visual-spasial: kuat dalam mengenali pola, bentuk, rotasi dan hubungan ruang.";
+                    break;
+                  case "logical_mathematical":
+                    base =
+                      "Dominasi penalaran logis & numerik: cepat dalam analisis pola, struktur dan pemecahan masalah sistematis.";
+                    break;
+                  case "linguistic":
+                    base =
+                      "Dominasi kecerdasan linguistik: kuat dalam pemahaman teks, pemilihan kata, dan relasi semantik.";
+                    break;
+                  default:
+                    base = "Profil umum tanpa dominasi jelas.";
+                }
+                if (delta !== null && delta <= 5 && second) {
+                  base += ` (Nyaris seimbang dengan ${second.name.toLowerCase()})`;
+                }
+                return base;
+              })();
+
+              const detail = (() => {
+                if (!dominant) return "";
+                if (second && delta !== null && delta <= 8) {
+                  return `Kombinasi kuat: ${dominant.name} & ${second.name}`;
+                }
+                return `Fokus utama pada ${dominant.name}`;
+              })();
+
+              const bidang = (() => {
+                if (!dominant) return [] as string[];
+                const rec = (arr: string[]) => arr.slice(0, 5);
+                switch (dominant.key) {
+                  case "visual_spatial":
+                    return rec([
+                      "Desain & Arsitektur",
+                      "UI/UX & Product Design",
+                      "Data Visualization",
+                      "Engineering CAD",
+                      "Animasi & Multimedia",
+                    ]);
+                  case "logical_mathematical":
+                    return rec([
+                      "Software Engineering",
+                      "Data Science & Analytics",
+                      "Research & Development",
+                      "Financial Quantitative",
+                      "AI / Machine Learning",
+                    ]);
+                  case "linguistic":
+                    return rec([
+                      "Content Strategy",
+                      "Hukum & Legal Drafting",
+                      "Pendidikan & Pelatihan",
+                      "Public Relations",
+                      "Copywriting / Editorial",
+                    ]);
+                  default:
+                    return [];
+                }
+              })();
+
+              return (
+                <div style={{ marginTop: "24px" }}>
+                  <h3 style={{ fontWeight: "bold", marginTop: "8px" }}>
+                    Multiple Intelligences Terdeteksi
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "10px",
+                      marginTop: "20px",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    {mi.map((m) => (
+                      <div
+                        key={m.key}
+                        style={{
+                          flex: "1 1 260px",
+                          border: `1px solid ${m.border}`,
+                          background: m.bg,
+                          borderRadius: "8px",
+                          padding: "12px 14px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              color: "#111827",
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {m.name}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 500,
+                              color: "#6b7280",
+                            }}
+                          >
+                            {miLevelFromPct(m.percentage)}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            color: "#374151",
+                          }}
+                        >
+                          Skor: {m.score} / {m.max}
+                        </div>
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "6px",
+                            background: "#E5E7EB",
+                            borderRadius: "4px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${Math.min(m.percentage, 100)}%`,
+                              height: "100%",
+                              background: m.bar,
+                            }}
+                          ></div>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "9px",
+                            color: "#4b5563",
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {m.desc}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "14px",
+                      marginTop: "28px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: "#FFFBEB",
+                        border: "1px solid #FDE68A",
+                        borderRadius: "8px",
+                        padding: "16px 18px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                        minHeight: "170px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: "#92400E",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Interpretasi & Peta Kekuatan
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "10px",
+                          color: "#374151",
+                          lineHeight: 1.5,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px",
+                        }}
+                      >
+                        {dominant ? (
+                          <>
+                            <div>
+                              <b>Interpretasi:</b> {interpretation}
+                            </div>
+                            <div>
+                              <b>Kekuatan Utama:</b> {dominant?.name || "-"}
+                            </div>
+                            <div>
+                              <b>Detail:</b> {detail}
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{ fontStyle: "italic" }}>
+                            {interpretation || "Belum cukup data."}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        background: "#ECFDF5",
+                        border: "1px solid #A7F3D0",
+                        borderRadius: "8px",
+                        padding: "16px 18px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                        minHeight: "170px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: "#065F46",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Rekomendasi Bidang
+                      </div>
+                      <div style={{ fontSize: "10px", color: "#374151" }}>
+                        {dominant && bidang.length > 0 ? (
+                          <ul
+                            style={{
+                              margin: 0,
+                              paddingLeft: "16px",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "2px",
+                            }}
+                          >
+                            {bidang.map((b) => (
+                              <li key={b}>{b}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div style={{ fontStyle: "italic" }}>
+                            Belum ada rekomendasi karena skor masih di bawah
+                            ambang ({THRESHOLD_MIN}%).
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Footer */}
         <div

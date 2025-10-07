@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import PesertaHeader from "../../../components/PesertaHeader";
 import PDFResultTemplate from "../../../components/PDFResultTemplate";
+import AptitudeMultipleIntelligences from "../../../components/AptitudeMultipleIntelligences";
+import RiasecSummary from "../../../components/RiasecSummary";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -48,6 +50,10 @@ interface TestSession {
     TES_LOGIKA: CategoryBreakdown;
     TES_GAMBAR: CategoryBreakdown;
   };
+  // Aptitude aggregation (sum of TPA components)
+  aptitude_score_total?: number;
+  aptitude_max_score_total?: number;
+  aptitude_percentage?: number;
   // RIASEC scores
   score_realistic?: number;
   score_investigative?: number;
@@ -757,6 +763,23 @@ export default function DetailHasilTesPesertaPage() {
     localStorage.removeItem("user");
     router.push("/login");
   };
+
+  // Fallback: jika aptitude_* belum ada (versi lama API), hitung dari categoryBreakdown
+  if (session && typeof session.aptitude_percentage === "undefined") {
+    const totalScore = Object.values(session.categoryBreakdown).reduce(
+      (acc, c) => acc + (c?.score || 0),
+      0
+    );
+    const totalMax = Object.values(session.categoryBreakdown).reduce(
+      (acc, c) => acc + (c?.maxScore || 0),
+      0
+    );
+    const pct = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
+    // Mutasi aman: buat shallow copy agar tidak mengubah state langsung (namun ini di render path, jadi kita tidak setState agar tidak loop)
+    (session as any).aptitude_score_total = totalScore;
+    (session as any).aptitude_max_score_total = totalMax;
+    (session as any).aptitude_percentage = pct;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -2049,424 +2072,34 @@ export default function DetailHasilTesPesertaPage() {
               </div>
             </div>
 
-            {/* Blok 4: Hasil Tes RIASEC */}
             <div className="bg-white shadow rounded-lg mt-8">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Hasil Tes RIASEC
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      Profil Minat dan Kepribadian Karir
-                    </p>
-                  </div>
-                </div>
-
-                {/* Check if RIASEC data is available */}
-                {session.score_realistic !== undefined &&
-                session.score_investigative !== undefined &&
-                session.score_artistic !== undefined &&
-                session.score_social !== undefined &&
-                session.score_enterprising !== undefined &&
-                session.score_conventional !== undefined ? (
-                  <div className="space-y-6">
-                    {/* Holland Code */}
-                    {session.holland_code && (
-                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                        <div className="text-center">
-                          <h4 className="text-lg font-bold text-purple-800 mb-2">
-                            Kode Holland Anda
-                          </h4>
-                          <div className="text-3xl font-bold text-purple-600 mb-2">
-                            {session.holland_code}
-                          </div>
-                          <p className="text-sm text-purple-700">
-                            Kombinasi tiga dimensi tertinggi dari profil RIASEC
-                            Anda
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* RIASEC Scores Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* Realistic */}
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <h4 className="font-bold text-green-800">
-                              Realistic
-                            </h4>
-                            <p className="text-xs text-green-600">
-                              Praktis & Teknis
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-green-800">
-                              {session.score_realistic || 0}
-                            </div>
-                            <div className="text-xs text-green-600">
-                              dari {session.max_score_realistic || 0}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="w-full bg-green-200 rounded-full h-2">
-                          <div
-                            className="bg-green-600 h-2 rounded-full"
-                            style={{
-                              width: `${
-                                session.max_score_realistic
-                                  ? (session.score_realistic /
-                                      session.max_score_realistic) *
-                                    100
-                                  : 0
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-green-700 mt-2">
-                          {session.max_score_realistic
-                            ? `${(
-                                (session.score_realistic /
-                                  session.max_score_realistic) *
-                                100
-                              ).toFixed(1)}%`
-                            : "0%"}
-                        </div>
-                      </div>
-
-                      {/* Investigative */}
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <h4 className="font-bold text-blue-800">
-                              Investigative
-                            </h4>
-                            <p className="text-xs text-blue-600">
-                              Analitis & Ilmiah
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-blue-800">
-                              {session.score_investigative || 0}
-                            </div>
-                            <div className="text-xs text-blue-600">
-                              dari {session.max_score_investigative || 0}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="w-full bg-blue-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{
-                              width: `${
-                                session.max_score_investigative
-                                  ? (session.score_investigative /
-                                      session.max_score_investigative) *
-                                    100
-                                  : 0
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-blue-700 mt-2">
-                          {session.max_score_investigative
-                            ? `${(
-                                (session.score_investigative /
-                                  session.max_score_investigative) *
-                                100
-                              ).toFixed(1)}%`
-                            : "0%"}
-                        </div>
-                      </div>
-
-                      {/* Artistic */}
-                      <div className="bg-pink-50 border border-pink-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <h4 className="font-bold text-pink-800">
-                              Artistic
-                            </h4>
-                            <p className="text-xs text-pink-600">
-                              Kreatif & Ekspresif
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-pink-800">
-                              {session.score_artistic || 0}
-                            </div>
-                            <div className="text-xs text-pink-600">
-                              dari {session.max_score_artistic || 0}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="w-full bg-pink-200 rounded-full h-2">
-                          <div
-                            className="bg-pink-600 h-2 rounded-full"
-                            style={{
-                              width: `${
-                                session.max_score_artistic
-                                  ? (session.score_artistic /
-                                      session.max_score_artistic) *
-                                    100
-                                  : 0
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-pink-700 mt-2">
-                          {session.max_score_artistic
-                            ? `${(
-                                (session.score_artistic /
-                                  session.max_score_artistic) *
-                                100
-                              ).toFixed(1)}%`
-                            : "0%"}
-                        </div>
-                      </div>
-
-                      {/* Social */}
-                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <h4 className="font-bold text-orange-800">
-                              Social
-                            </h4>
-                            <p className="text-xs text-orange-600">
-                              Membantu & Mengajar
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-orange-800">
-                              {session.score_social || 0}
-                            </div>
-                            <div className="text-xs text-orange-600">
-                              dari {session.max_score_social || 0}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="w-full bg-orange-200 rounded-full h-2">
-                          <div
-                            className="bg-orange-600 h-2 rounded-full"
-                            style={{
-                              width: `${
-                                session.max_score_social
-                                  ? (session.score_social /
-                                      session.max_score_social) *
-                                    100
-                                  : 0
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-orange-700 mt-2">
-                          {session.max_score_social
-                            ? `${(
-                                (session.score_social /
-                                  session.max_score_social) *
-                                100
-                              ).toFixed(1)}%`
-                            : "0%"}
-                        </div>
-                      </div>
-
-                      {/* Enterprising */}
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <h4 className="font-bold text-red-800">
-                              Enterprising
-                            </h4>
-                            <p className="text-xs text-red-600">
-                              Memimpin & Menjual
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-red-800">
-                              {session.score_enterprising || 0}
-                            </div>
-                            <div className="text-xs text-red-600">
-                              dari {session.max_score_enterprising || 0}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="w-full bg-red-200 rounded-full h-2">
-                          <div
-                            className="bg-red-600 h-2 rounded-full"
-                            style={{
-                              width: `${
-                                session.max_score_enterprising
-                                  ? (session.score_enterprising /
-                                      session.max_score_enterprising) *
-                                    100
-                                  : 0
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-red-700 mt-2">
-                          {session.max_score_enterprising
-                            ? `${(
-                                (session.score_enterprising /
-                                  session.max_score_enterprising) *
-                                100
-                              ).toFixed(1)}%`
-                            : "0%"}
-                        </div>
-                      </div>
-
-                      {/* Conventional */}
-                      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <h4 className="font-bold text-indigo-800">
-                              Conventional
-                            </h4>
-                            <p className="text-xs text-indigo-600">
-                              Terorganisir & Detail
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-indigo-800">
-                              {session.score_conventional || 0}
-                            </div>
-                            <div className="text-xs text-indigo-600">
-                              dari {session.max_score_conventional || 0}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="w-full bg-indigo-200 rounded-full h-2">
-                          <div
-                            className="bg-indigo-600 h-2 rounded-full"
-                            style={{
-                              width: `${
-                                session.max_score_conventional
-                                  ? (session.score_conventional /
-                                      session.max_score_conventional) *
-                                    100
-                                  : 0
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-indigo-700 mt-2">
-                          {session.max_score_conventional
-                            ? `${(
-                                (session.score_conventional /
-                                  session.max_score_conventional) *
-                                100
-                              ).toFixed(1)}%`
-                            : "0%"}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* RIASEC Interpretation */}
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-bold text-gray-800 mb-3">
-                        📋 Interpretasi Profil RIASEC
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <h5 className="font-medium text-gray-700 mb-2">
-                            Dimensi Tertinggi:
-                          </h5>
-                          <div className="space-y-1">
-                            {(() => {
-                              const scores = [
-                                {
-                                  name: "Realistic",
-                                  score: session.score_realistic || 0,
-                                  max: session.max_score_realistic || 1,
-                                },
-                                {
-                                  name: "Investigative",
-                                  score: session.score_investigative || 0,
-                                  max: session.max_score_investigative || 1,
-                                },
-                                {
-                                  name: "Artistic",
-                                  score: session.score_artistic || 0,
-                                  max: session.max_score_artistic || 1,
-                                },
-                                {
-                                  name: "Social",
-                                  score: session.score_social || 0,
-                                  max: session.max_score_social || 1,
-                                },
-                                {
-                                  name: "Enterprising",
-                                  score: session.score_enterprising || 0,
-                                  max: session.max_score_enterprising || 1,
-                                },
-                                {
-                                  name: "Conventional",
-                                  score: session.score_conventional || 0,
-                                  max: session.max_score_conventional || 1,
-                                },
-                              ];
-
-                              const sortedScores = scores
-                                .map((s) => ({
-                                  ...s,
-                                  percentage: (s.score / s.max) * 100,
-                                }))
-                                .sort((a, b) => b.percentage - a.percentage)
-                                .slice(0, 3);
-
-                              return sortedScores.map((item, index) => (
-                                <div
-                                  key={item.name}
-                                  className="flex justify-between"
-                                >
-                                  <span className="text-gray-600">
-                                    {index + 1}. {item.name}
-                                  </span>
-                                  <span className="font-medium text-gray-800">
-                                    {item.percentage.toFixed(1)}%
-                                  </span>
-                                </div>
-                              ));
-                            })()}
-                          </div>
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-gray-700 mb-2">
-                            Rekomendasi Karir:
-                          </h5>
-                          <div className="text-gray-600 space-y-1">
-                            {session.holland_code && (
-                              <p>
-                                Berdasarkan kode Holland{" "}
-                                <strong>{session.holland_code}</strong>, Anda
-                                cocok untuk bidang karir yang menggabungkan
-                                karakteristik dari dimensi-dimensi tertinggi
-                                Anda.
-                              </p>
-                            )}
-                            <p className="text-xs text-gray-500 mt-2">
-                              Konsultasikan dengan konselor karir untuk panduan
-                              lebih detail.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* No RIASEC Data Available */
-                  <div className="text-center py-8">
-                    <h4 className="text-lg font-medium text-gray-900 mb-2">
-                      Hasil RIASEC Belum Tersedia
-                    </h4>
-                    <p className="text-gray-600 mb-4">
-                      Tes RIASEC belum dilakukan atau hasil belum diproses.
-                    </p>
-                  </div>
-                )}
-              </div>
+              <RiasecSummary
+                score_realistic={session.score_realistic}
+                score_investigative={session.score_investigative}
+                score_artistic={session.score_artistic}
+                score_social={session.score_social}
+                score_enterprising={session.score_enterprising}
+                score_conventional={session.score_conventional}
+                max_score_realistic={session.max_score_realistic}
+                max_score_investigative={session.max_score_investigative}
+                max_score_artistic={session.max_score_artistic}
+                max_score_social={session.max_score_social}
+                max_score_enterprising={session.max_score_enterprising}
+                max_score_conventional={session.max_score_conventional}
+                holland_code={session.holland_code}
+              />
             </div>
+
+            {session.categoryBreakdown && (
+              <div className="bg-white shadow rounded-lg mt-8">
+                <AptitudeMultipleIntelligences
+                  categoryBreakdown={session.categoryBreakdown as any}
+                  aptitude_percentage={session.aptitude_percentage}
+                  aptitude_score_total={session.aptitude_score_total}
+                  aptitude_max_score_total={session.aptitude_max_score_total}
+                />
+              </div>
+            )}
           </>
         )}
       </div>

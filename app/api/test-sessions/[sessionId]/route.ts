@@ -89,45 +89,77 @@ export async function GET(request: NextRequest, context: any) {
         TES_VERBAL: {
           score: session.score_verbal || 0,
           maxScore: session.max_score_verbal || 0,
-          percentage: session.max_score_verbal > 0 
-            ? Math.round((session.score_verbal / session.max_score_verbal) * 100) 
-            : 0
+          percentage:
+            session.max_score_verbal > 0
+              ? Math.round(
+                  (session.score_verbal / session.max_score_verbal) * 100
+                )
+              : 0,
         },
         TES_ANGKA: {
           score: session.score_angka || 0,
           maxScore: session.max_score_angka || 0,
-          percentage: session.max_score_angka > 0 
-            ? Math.round((session.score_angka / session.max_score_angka) * 100) 
-            : 0
+          percentage:
+            session.max_score_angka > 0
+              ? Math.round(
+                  (session.score_angka / session.max_score_angka) * 100
+                )
+              : 0,
         },
         TES_LOGIKA: {
           score: session.score_logika || 0,
           maxScore: session.max_score_logika || 0,
-          percentage: session.max_score_logika > 0 
-            ? Math.round((session.score_logika / session.max_score_logika) * 100) 
-            : 0
+          percentage:
+            session.max_score_logika > 0
+              ? Math.round(
+                  (session.score_logika / session.max_score_logika) * 100
+                )
+              : 0,
         },
         TES_GAMBAR: {
           score: session.score_gambar || 0,
           maxScore: session.max_score_gambar || 0,
-          percentage: session.max_score_gambar > 0 
-            ? Math.round((session.score_gambar / session.max_score_gambar) * 100) 
-            : 0
-        }
-      };
+          percentage:
+            session.max_score_gambar > 0
+              ? Math.round(
+                  (session.score_gambar / session.max_score_gambar) * 100
+                )
+              : 0,
+        },
+      } as const;
+
+      // Aptitude total (sum of TPA components)
+      const aptitude_score_total =
+        (session.score_verbal || 0) +
+        (session.score_angka || 0) +
+        (session.score_logika || 0) +
+        (session.score_gambar || 0);
+      const aptitude_max_score_total =
+        (session.max_score_verbal || 0) +
+        (session.max_score_angka || 0) +
+        (session.max_score_logika || 0) +
+        (session.max_score_gambar || 0);
+      const aptitude_percentage =
+        aptitude_max_score_total > 0
+          ? Math.round((aptitude_score_total / aptitude_max_score_total) * 100)
+          : 0;
 
       // Calculate overall percentage
-      const overallPercentage = session.maxScore > 0 
-        ? Math.round((session.score / session.maxScore) * 100) 
-        : 0;
+      const overallPercentage =
+        session.maxScore > 0
+          ? Math.round((session.score / session.maxScore) * 100)
+          : 0;
 
       const response = {
         session: {
           ...session,
           overallPercentage,
-          categoryBreakdown
+          categoryBreakdown,
+          aptitude_score_total,
+          aptitude_max_score_total,
+          aptitude_percentage,
         },
-        answers: answersRes.rows
+        answers: answersRes.rows,
       };
 
       return NextResponse.json(response);
