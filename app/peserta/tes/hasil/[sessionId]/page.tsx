@@ -17,7 +17,6 @@ interface Answer {
   difficulty: string;
   options: string;
   correctAnswer: string;
-  explanation?: string;
   points?: number;
 }
 
@@ -26,7 +25,6 @@ interface CategoryBreakdown {
   maxScore: number;
   percentage: number;
 }
-
 interface TestSession {
   id: string;
   testId: string;
@@ -44,42 +42,30 @@ interface TestSession {
     TES_LOGIKA: CategoryBreakdown;
     TES_GAMBAR: CategoryBreakdown;
   };
-  test: {
-    name: string;
-    description: string;
-    duration: number;
-  };
+  test: { name: string; description: string; duration: number };
   answers: Answer[];
 }
 
-// Format category name to be more user-friendly
-const formatCategoryName = (category: string) => {
-  switch (category?.toUpperCase()) {
-    case "TES_VERBAL":
-      return "Tes Verbal";
-    case "TES_GAMBAR":
-      return "Tes Gambar";
-    case "TES_LOGIKA":
-      return "Tes Logika";
-    case "TES_ANGKA":
-      return "Tes Angka";
-    default:
-      return (
-        category?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) ||
-        category
-      );
-  }
+const formatCategoryName = (c: string) => {
+  const map: Record<string, string> = {
+    TES_VERBAL: "Tes Verbal",
+    TES_ANGKA: "Tes Angka",
+    TES_LOGIKA: "Tes Logika",
+    TES_GAMBAR: "Tes Gambar",
+  };
+  return (
+    map[c] || c.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+  );
 };
 
 export default function TestResultsPage() {
   const router = useRouter();
-  const params = useParams();
-  const sessionId = params.sessionId as string;
-
+  const { sessionId } = useParams() as { sessionId: string };
   const [session, setSession] = useState<TestSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showAnswerDetails, setShowAnswerDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [allAnswers, setAllAnswers] = useState<Answer[]>([]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -88,83 +74,132 @@ export default function TestResultsPage() {
   };
 
   useEffect(() => {
-    fetchSessionDetail();
-  }, [sessionId]);
-
-  const fetchSessionDetail = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/login");
-        return;
+    (async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+        const r = await fetch(`/api/test-sessions/${sessionId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (r.ok) {
+          const data = await r.json();
+          const s: TestSession = {
+            ...data.session,
+            test: {
+              name: data.session.test_name,
+              description: data.session.test_description,
+              duration: data.session.test_duration,
+            },
+            answers: data.answers || [],
+          };
+          setSession(s);
+          // Fetch all questions for this test to include unanswered
+          if (s.testId) {
+            try {
+              const qRes = await fetch(`/api/questions?testId=${s.testId}`);
+              if (qRes.ok) {
+                const qData = await qRes.json();
+                const rawQuestions = qData.questions || [];
+                const answerMap = new Map<string, Answer>();
+                (s.answers || []).forEach((a: any) => {
+                  answerMap.set(a.questionId, a);
+                });
+                const merged: Answer[] = rawQuestions.map(
+                  (q: any, idx: number) => {
+                    const existing = answerMap.get(q.id);
+                    if (existing) {
+                      // Normalize options if needed
+                      if (Array.isArray(existing.options)) {
+                        existing.options = JSON.stringify(existing.options);
+                      }
+                      return existing as Answer;
+                    }
+                    return {
+                      id: `placeholder-${q.id}`,
+                      questionId: q.id,
+                      selectedAnswer: "",
+                      isCorrect: false,
+                      pointsEarned: 0,
+                      answeredAt: "",
+                      question: q.question,
+                      type: q.type,
+                      category: q.category,
+                      difficulty: q.difficulty,
+                      options: JSON.stringify(q.options || []),
+                      correctAnswer:
+                        typeof q.correctAnswer === "string"
+                          ? q.correctAnswer
+                          : JSON.stringify(q.correctAnswer),
+                      points: q.points,
+                    } as Answer;
+                  }
+                );
+                // Ensure ordering if order field exists
+                merged.sort((a: any, b: any) => {
+                  const qa = rawQuestions.find(
+                    (q: any) => q.id === a.questionId
+                  );
+                  const qb = rawQuestions.find(
+                    (q: any) => q.id === b.questionId
+                  );
+                  return (qa?.order || 0) - (qb?.order || 0);
+                });
+                setAllAnswers(merged);
+              } else {
+                setAllAnswers(s.answers as any);
+              }
+            } catch {
+              setAllAnswers(s.answers as any);
+            }
+          } else {
+            setAllAnswers(s.answers as any);
+          }
+        } else setError("Gagal mengambil hasil tes");
+      } catch {
+        setError("Terjadi kesalahan server");
+      } finally {
+        setLoading(false);
       }
+    })();
+  }, [sessionId, router]);
 
-      const response = await fetch(`/api/test-sessions/${sessionId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log("API Response:", data);
-        console.log("Answers:", data.answers);
-        console.log("Answers length:", data.answers?.length);
-
-        // API returns {session: {...}, answers: [...]}
-        // Data answers sudah dalam format yang benar, tidak perlu transformasi nested
-        const sessionData = {
-          ...data.session,
-          test: {
-            name: data.session.test_name,
-            description: data.session.test_description,
-            duration: data.session.test_duration,
-          },
-          answers: data.answers || [],
-        };
-        console.log("Session Data:", sessionData);
-        setSession(sessionData);
-      } else {
-        setError("Gagal mengambil hasil tes");
-      }
-    } catch (error) {
-      setError("Terjadi kesalahan server");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getScoreColor = (percentage: number, minimumScore?: number) => {
-    const threshold = minimumScore || 60;
-    if (percentage >= threshold + 20) return "text-green-600";
-    if (percentage >= threshold + 10) return "text-blue-600";
-    if (percentage >= threshold) return "text-yellow-600";
+  const getColor = (p: number, m?: number) => {
+    const t = m || 60;
+    if (p >= t + 20) return "text-green-600";
+    if (p >= t + 10) return "text-blue-600";
+    if (p >= t) return "text-yellow-600";
     return "text-red-600";
   };
-
-  const getScoreLabel = (percentage: number, minimumScore?: number) => {
-    const threshold = minimumScore || 60;
-    if (percentage >= threshold + 20) return "Sangat Baik";
-    if (percentage >= threshold + 10) return "Baik";
-    if (percentage >= threshold) return "Cukup";
+  const getLabel = (p: number, m?: number) => {
+    const t = m || 60;
+    if (p >= t + 20) return "Sangat Baik";
+    if (p >= t + 10) return "Baik";
+    if (p >= t) return "Cukup";
     return "Perlu Perbaikan";
   };
+  const getScoreMessage = (percentage: number, minimumScore?: number) => {
+    const threshold = minimumScore || 60;
+    if (percentage >= threshold) return "Selamat! Anda telah lulus!";
+    if (percentage >= threshold * 0.8) return "Hampir lulus! Tingkatkan lagi!";
+    return "Belum lulus. Terus belajar dan coba lagi!";
+  };
 
-  if (loading) {
+  if (loading)
     return (
       <div className="min-h-screen bg-gray-50">
         <PesertaHeader handleLogout={handleLogout} />
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
             <p className="mt-4 text-gray-600">Memuat hasil tes...</p>
           </div>
         </div>
       </div>
     );
-  }
-
-  if (error || !session) {
+  if (error || !session)
     return (
       <div className="min-h-screen bg-gray-50">
         <PesertaHeader handleLogout={handleLogout} />
@@ -185,62 +220,46 @@ export default function TestResultsPage() {
         </div>
       </div>
     );
-  }
 
-  // Add null check for session
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <PesertaHeader handleLogout={handleLogout} />
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <p className="text-gray-600">Data sesi tidak ditemukan</p>
-            <button
-              onClick={() => router.push("/peserta/dashboard")}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Kembali ke Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const total = allAnswers.length;
+  const correct = allAnswers.filter((a) => a.isCorrect).length;
+  const wrong = allAnswers.filter(
+    (a) => !a.isCorrect && a.selectedAnswer
+  ).length;
+  const unanswered = allAnswers.filter((a) => !a.selectedAnswer).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <PesertaHeader handleLogout={handleLogout} />
-
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Selamat! Tes Selesai
-          </h1>
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Tes Selesai</h1>
           <p className="text-gray-600">
-            Berikut adalah hasil tes Anda untuk:{" "}
+            Berikut ringkasan hasil tes:{" "}
             <strong>{session.test?.name || "Tes TPA"}</strong>
           </p>
         </div>
-
-        {/* Overall Score Card */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        <div className="bg-white overflow-hidden shadow rounded-lg mb-8">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-xl text-center font-bold text-gray-900 mb-8">
               Skor Total
-            </h2>
-            <div className="flex items-center justify-center space-x-8">
-              <div>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-2">
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Nilai</div>
                 <div
-                  className={`text-4xl font-bold ${getScoreColor(
+                  className={`text-3xl font-bold ${getColor(
                     session.overallPercentage,
                     session.minimum_score
                   )}`}
                 >
                   {session.score}/{session.maxScore}
                 </div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Persentase</div>
                 <div
-                  className={`text-2xl font-semibold ${getScoreColor(
+                  className={`text-3xl font-bold ${getColor(
                     session.overallPercentage,
                     session.minimum_score
                   )}`}
@@ -249,356 +268,286 @@ export default function TestResultsPage() {
                 </div>
               </div>
               <div className="text-center">
+                <div className="text-sm text-gray-600">Status</div>
+                {session.overallPercentage >= (session.minimum_score || 60) ? (
+                  <div className="text-2xl font-bold text-green-600">Lulus</div>
+                ) : (
+                  <div className="text-2xl font-bold text-red-600">Gagal</div>
+                )}
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Pesan</div>
                 <div
-                  className={`text-lg font-semibold ${getScoreColor(
-                    session.overallPercentage,
-                    session.minimum_score
-                  )}`}
+                  className={`text-lg font-bold ${
+                    session.overallPercentage >= (session.minimum_score || 60)
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
                 >
-                  {getScoreLabel(
+                  {getScoreMessage(
                     session.overallPercentage,
                     session.minimum_score
                   )}
                 </div>
-                {session.minimum_score && (
-                  <div className="text-sm text-gray-500 mt-1">
-                    Minimum: {session.minimum_score}%
-                  </div>
-                )}
               </div>
             </div>
           </div>
         </div>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+          <h3 className="text-xl font-semibold text-gray-900 mb-6">
+            Ringkasan Jawaban
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <Stat
+              label="Benar"
+              value={correct}
+              color="text-green-600"
+            />
+            <Stat
+              label="Salah"
+              value={wrong}
+              color="text-red-600"
+            />
+            <Stat
+              label="Tidak Dijawab"
+              value={unanswered}
+              color="text-gray-600"
+            />
+            <Stat
+              label="Total Soal"
+              value={total}
+              color="text-blue-600"
+            />
+          </div>
+        </div>
 
-        {/* Category Breakdown - Only show categories with data */}
-        {session.categoryBreakdown &&
-          Object.entries(session.categoryBreakdown).some(
-            ([_, breakdown]) => breakdown.maxScore > 0
-          ) && (
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Breakdown per Kategori
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(session.categoryBreakdown)
-                  .filter(([_, breakdown]) => breakdown.maxScore > 0)
-                  .map(([category, breakdown]) => (
-                    <div
-                      key={category}
-                      className="border rounded-lg p-4"
-                    >
-                      <h4 className="font-semibold text-gray-900 mb-2">
-                        {formatCategoryName(category)}
-                      </h4>
-                      <div className="text-center">
-                        <div
-                          className={`text-2xl font-bold ${getScoreColor(
-                            breakdown.percentage
-                          )}`}
-                        >
-                          {breakdown.score}/{breakdown.maxScore}
-                        </div>
-                        <div
-                          className={`text-lg font-semibold ${getScoreColor(
-                            breakdown.percentage
-                          )}`}
-                        >
-                          {breakdown.percentage.toFixed(1)}%
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
-        {/* Answer Review Toggle */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-900">Review Jawaban</h3>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-10">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Detail Per Soal
+            </h3>
             <button
-              onClick={() => setShowAnswerDetails(!showAnswerDetails)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              onClick={() => setShowDetails((v) => !v)}
+              className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
             >
-              {showAnswerDetails ? "Sembunyikan" : "Tampilkan"} Detail Jawaban
+              {showDetails ? "Sembunyikan ▲" : "Tampilkan ▼"}
             </button>
           </div>
-
-          {/* Always show summary */}
-          <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-semibold text-blue-900 mb-2">
-              Ringkasan Jawaban:
-            </h4>
-            {session.answers && session.answers.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {session.answers.filter((a) => a.isCorrect).length}
-                  </div>
-                  <div className="text-gray-600">Benar</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">
-                    {
-                      session.answers.filter(
-                        (a) => !a.isCorrect && a.selectedAnswer
-                      ).length
-                    }
-                  </div>
-                  <div className="text-gray-600">Salah</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-600">
-                    {session.answers.filter((a) => !a.selectedAnswer).length}
-                  </div>
-                  <div className="text-gray-600">Tidak Dijawab</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {session.answers.length}
-                  </div>
-                  <div className="text-gray-600">Total Soal</div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <div className="text-gray-500">
-                  Tidak ada data jawaban yang ditemukan
-                </div>
-                <div className="text-sm text-gray-400 mt-2">
-                  Session ID: {sessionId}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {showAnswerDetails &&
-            session.answers &&
-            session.answers.length > 0 && (
-              <div className="space-y-6">
-                {session.answers.map((answer, index) => (
+          {showDetails && (
+            <div className="space-y-6 text-left">
+              {allAnswers.map((answer, idx) => {
+                const optionsArray = (() => {
+                  try {
+                    return JSON.parse(answer.options);
+                  } catch {
+                    return [];
+                  }
+                })();
+                let selectedArray: string[] = [];
+                try {
+                  selectedArray = answer.selectedAnswer
+                    ? JSON.parse(answer.selectedAnswer)
+                    : [];
+                } catch {
+                  if (answer.selectedAnswer)
+                    selectedArray = [answer.selectedAnswer];
+                }
+                let correctArray: string[] = [];
+                try {
+                  correctArray = answer.correctAnswer
+                    ? JSON.parse(answer.correctAnswer)
+                    : [];
+                } catch {
+                  if (answer.correctAnswer)
+                    correctArray = [answer.correctAnswer];
+                }
+                const unanswered = !selectedArray.length;
+                return (
                   <div
-                    key={answer.id}
-                    className="bg-white rounded-2xl shadow-xl p-6 border border-blue-100 transition-all"
+                    key={answer.id || idx}
+                    className="bg-white rounded-2xl shadow-xl p-5 border border-blue-100 transition-all"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-                      <h2 className="text-lg sm:text-xl font-semibold text-blue-900 flex items-center gap-2">
-                        <span className="flex w-8 h-8 rounded-full bg-blue-100 text-blue-700 items-center justify-center font-bold shadow-sm">
-                          {index + 1}
-                        </span>
-                        <span>Soal</span>
-                      </h2>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                          {formatCategoryName(answer.category)}
-                        </span>
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
-                          {answer.difficulty}
-                        </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                      <h2 className="text-base sm:text-lg font-semibold text-blue-900 flex items-center gap-2">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          className={`flex w-8 h-8 rounded-full items-center justify-center font-bold shadow-sm text-sm ${
                             answer.isCorrect
-                              ? "bg-green-100 text-green-800 border border-green-200"
-                              : "bg-red-100 text-red-800 border border-red-200"
+                              ? "bg-green-100 text-green-700"
+                              : unanswered
+                              ? "bg-gray-100 text-gray-600"
+                              : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {answer.isCorrect ? "✓ Benar" : "✗ Salah"}
+                          {idx + 1}
                         </span>
-                        <span className="text-xs sm:text-sm text-gray-500 font-medium">
-                          {answer.pointsEarned}/{answer.points || 1} poin
-                        </span>
+                        <span>Soal</span>
+                        {unanswered && (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-200 text-gray-700">
+                            Tidak Dijawab
+                          </span>
+                        )}
+                        {answer.isCorrect && !unanswered && (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 text-green-700 border border-green-200">
+                            Benar
+                          </span>
+                        )}
+                        {!answer.isCorrect && !unanswered && (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-red-100 text-red-700 border border-red-200">
+                            Salah
+                          </span>
+                        )}
+                      </h2>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {answer.category && (
+                          <span className="px-2 py-1 text-[10px] font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                            {answer.category}
+                          </span>
+                        )}
+                        {answer.difficulty && (
+                          <span className="px-2 py-1 text-[10px] font-semibold rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
+                            {answer.difficulty}
+                          </span>
+                        )}
+                        {answer.points !== undefined && (
+                          <span className="text-[10px] text-gray-500 font-medium">
+                            {answer.points} poin
+                          </span>
+                        )}
                       </div>
                     </div>
-
-                    <div className="mb-6">
-                      <p className="text-gray-900 text-base sm:text-lg leading-relaxed whitespace-pre-line">
-                        {answer.question}
+                    <div className="mb-5">
+                      <p className="text-gray-900 text-sm sm:text-base leading-relaxed whitespace-pre-line">
+                        {answer.question || "Pertanyaan tidak tersedia."}
                       </p>
                     </div>
-
-                    {/* Jawaban yang dipilih dan jawaban yang benar */}
-                    <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <span className="font-semibold text-blue-900">
-                            Jawaban Anda:{" "}
-                          </span>
-                          <span
-                            className={`font-bold ${
-                              answer.isCorrect
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {answer.selectedAnswer
-                              ? (() => {
-                                  try {
-                                    const selectedAnswerArray = JSON.parse(
-                                      answer.selectedAnswer
-                                    );
-                                    const optionsArray = JSON.parse(
-                                      answer.options
-                                    );
-                                    return `${String.fromCharCode(
-                                      65 +
-                                        optionsArray.indexOf(
-                                          selectedAnswerArray[0]
-                                        )
-                                    )} - ${selectedAnswerArray[0]}`;
-                                  } catch (e) {
-                                    // Fallback jika bukan JSON valid
-                                    const optionsArray = JSON.parse(
-                                      answer.options
-                                    );
-                                    return `${String.fromCharCode(
-                                      65 +
-                                        optionsArray.indexOf(
-                                          answer.selectedAnswer
-                                        )
-                                    )} - ${answer.selectedAnswer}`;
-                                  }
-                                })()
-                              : "Tidak dijawab"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="font-semibold text-blue-900">
-                            Jawaban Benar:{" "}
-                          </span>
-                          <span className="font-bold text-green-600">
-                            {(() => {
-                              try {
-                                const correctAnswerArray = JSON.parse(
-                                  answer.correctAnswer
-                                );
-                                const optionsArray = JSON.parse(answer.options);
-                                return `${String.fromCharCode(
-                                  65 +
-                                    optionsArray.indexOf(correctAnswerArray[0])
-                                )} - ${correctAnswerArray[0]}`;
-                              } catch (e) {
-                                // Fallback jika bukan JSON valid
-                                const optionsArray = JSON.parse(answer.options);
-                                return `${String.fromCharCode(
-                                  65 +
-                                    optionsArray.indexOf(answer.correctAnswer)
-                                )} - ${answer.correctAnswer}`;
-                              }
-                            })()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 mb-6">
-                      {(() => {
-                        try {
-                          const optionsArray = JSON.parse(answer.options);
-                          return Array.isArray(optionsArray)
-                            ? optionsArray.map(
-                                (option: string, optIndex: number) => {
-                                  const selectedAnswerArray =
-                                    answer.selectedAnswer
-                                      ? (() => {
-                                          try {
-                                            return JSON.parse(
-                                              answer.selectedAnswer
-                                            );
-                                          } catch (e) {
-                                            return [answer.selectedAnswer];
-                                          }
-                                        })()
-                                      : [];
-                                  const correctAnswerArray = (() => {
-                                    try {
-                                      return JSON.parse(answer.correctAnswer);
-                                    } catch (e) {
-                                      return [answer.correctAnswer];
-                                    }
-                                  })();
-                                  const isSelected =
-                                    selectedAnswerArray.includes(option);
-                                  const isCorrect =
-                                    correctAnswerArray.includes(option);
-
-                                  let bgColor = "bg-white hover:bg-blue-50";
-                                  let textColor = "text-gray-900";
-                                  let icon = "";
-                                  let borderColor = "border-gray-200";
-
-                                  if (isCorrect) {
-                                    bgColor = "bg-green-50 hover:bg-green-100";
-                                    textColor = "text-green-900";
-                                    borderColor = "border-green-300";
-                                    icon = "✓ ";
-                                  } else if (isSelected && !isCorrect) {
-                                    bgColor = "bg-red-50 hover:bg-red-100";
-                                    textColor = "text-red-900";
-                                    borderColor = "border-red-300";
-                                    icon = "✗ ";
-                                  }
-
-                                  return (
-                                    <div
-                                      key={optIndex}
-                                      className={`p-4 rounded-xl border-2 transition-all cursor-default ${bgColor} ${textColor} ${borderColor} shadow-sm`}
-                                    >
-                                      <div className="flex items-start gap-3">
-                                        <span className="flex w-6 h-6 rounded-full bg-blue-100 text-blue-700 items-center justify-center font-bold text-sm flex-shrink-0">
-                                          {String.fromCharCode(65 + optIndex)}
-                                        </span>
-                                        <span className="text-base leading-relaxed">
-                                          {icon}
-                                          {option}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  );
-                                }
-                              )
-                            : [];
-                        } catch (e) {
-                          return [];
-                        }
-                      })()}
-                    </div>
-
-                    {answer.explanation && (
-                      <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                        <h5 className="font-semibold text-blue-900 mb-1">
-                          Penjelasan:
-                        </h5>
-                        <p className="text-blue-800 text-sm">
-                          {answer.explanation}
-                        </p>
+                    {Array.isArray(optionsArray) && optionsArray.length > 0 && (
+                      <div className="space-y-2 mb-4">
+                        {optionsArray.map((opt: string, optIdx: number) => {
+                          const isSelected = selectedArray.includes(opt);
+                          const isCorrect = correctArray.includes(opt);
+                          return (
+                            <div
+                              key={optIdx}
+                              className={`flex items-center space-x-3 p-3 border rounded-lg transition-all shadow-sm text-sm ${
+                                isCorrect
+                                  ? "border-green-500 bg-green-50"
+                                  : isSelected
+                                  ? "border-red-400 bg-red-50"
+                                  : "border-gray-200"
+                              } ${
+                                !isCorrect && !isSelected
+                                  ? "hover:bg-gray-50"
+                                  : ""
+                              }`}
+                            >
+                              <span className="flex w-6 h-6 rounded-full bg-blue-100 text-blue-700 items-center justify-center font-bold text-xs">
+                                {String.fromCharCode(65 + optIdx)}
+                              </span>
+                              <span className="text-gray-900 flex-1">
+                                {opt}
+                              </span>
+                              {isCorrect && (
+                                <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                                  Jawaban Benar
+                                </span>
+                              )}
+                              {!isCorrect && isSelected && (
+                                <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+                                  Dipilih
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
-
-                    <div className="text-sm text-gray-500 mt-2">
-                      Poin: {answer.pointsEarned}/{answer.points || 1}
+                    <div className="mt-3 text-xs sm:text-sm flex flex-col gap-1">
+                      <div>
+                        <span className="font-semibold text-gray-700">
+                          Jawaban Anda:{" "}
+                        </span>
+                        <span
+                          className={
+                            answer.isCorrect
+                              ? "text-green-600 font-medium"
+                              : selectedArray.length
+                              ? "text-red-600 font-medium"
+                              : "text-gray-500 font-medium"
+                          }
+                        >
+                          {selectedArray.length
+                            ? selectedArray
+                                .map((sa) => {
+                                  const idxOpt = optionsArray.indexOf(sa);
+                                  return `${
+                                    idxOpt >= 0
+                                      ? String.fromCharCode(65 + idxOpt) + ". "
+                                      : ""
+                                  }${sa}`;
+                                })
+                                .join(", ")
+                            : "Tidak dijawab"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-700">
+                          Jawaban Benar:{" "}
+                        </span>
+                        <span className="text-green-600 font-medium">
+                          {correctArray
+                            .map((ca) => {
+                              const idxOpt = optionsArray.indexOf(ca);
+                              return `${
+                                idxOpt >= 0
+                                  ? String.fromCharCode(65 + idxOpt) + ". "
+                                  : ""
+                              }${ca}`;
+                            })
+                            .join(", ")}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-1">
+                        Poin: {answer.pointsEarned}/{answer.points || 1}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
+          )}
         </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="mt-4 mb-12 flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={() => router.push(`/peserta/hasil-tes/${sessionId}`)}
-            className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-semibold"
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
           >
-            Lihat Hasil Lengkap & Download PDF
+            Lihat Detail Lengkap & PDF →
           </button>
           <button
             onClick={() => router.push("/peserta/dashboard")}
-            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-semibold"
+            className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
           >
             Kembali ke Dashboard
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: string;
+}) {
+  return (
+    <div className="text-center">
+      <div className={`text-3xl font-bold ${color}`}>{value}</div>
+      <p className="mt-1 text-gray-600 text-sm font-medium">{label}</p>
     </div>
   );
 }

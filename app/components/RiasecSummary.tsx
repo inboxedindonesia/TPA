@@ -106,7 +106,9 @@ const RiasecSummary: React.FC<Props> = (p) => {
 
   return (
     <div className="px-4 py-5 sm:p-6">
-      <h2 className="text-xl font-medium text-gray-900 mb-8">Hasil Tes RIASEC</h2>
+      <h2 className="text-xl font-medium text-gray-900 mb-8">
+        Hasil Tes RIASEC
+      </h2>
       {!anyData && (
         <div className="mb-6 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded p-4">
           Data detail RIASEC belum tersedia (skor masih 0 atau modul belum
@@ -165,7 +167,9 @@ const RiasecSummary: React.FC<Props> = (p) => {
             {topSorted.length > 0
               ? `Dimensi dominan: ${topSorted
                   .map((t) => t.label)
-                  .join(", ")}. Pola ini menunjukkan kecenderungan Anda pada aktivitas ${(() => {
+                  .join(
+                    ", "
+                  )}. Pola ini menunjukkan kecenderungan Anda pada aktivitas ${(() => {
                   const first = topSorted[0]?.key;
                   switch (first) {
                     case "R":
@@ -239,9 +243,9 @@ const RiasecSummary: React.FC<Props> = (p) => {
                     "Data Entry & QC",
                   ],
                 };
-                return (map[first] || []).slice(0, 5).map((r) => (
-                  <li key={r}>{r}</li>
-                ));
+                return (map[first] || [])
+                  .slice(0, 5)
+                  .map((r) => <li key={r}>{r}</li>);
               })()}
             </ul>
           ) : (

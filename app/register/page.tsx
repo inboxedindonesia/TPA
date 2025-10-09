@@ -14,6 +14,61 @@ import {
   GraduationCap,
   BookOpen,
 } from "lucide-react";
+import AuthContainer from "../components/AuthContainer";
+
+// Helper evaluasi password kuat
+function evaluatePassword(pw: string) {
+  const length = pw.length >= 8;
+  const upper = /[A-Z]/.test(pw);
+  const lower = /[a-z]/.test(pw);
+  const number = /[0-9]/.test(pw);
+  const symbol = /[^A-Za-z0-9]/.test(pw);
+  const score = [length, upper, lower, number, symbol].filter(Boolean).length;
+  let level: "lemah" | "sedang" | "kuat" = "lemah";
+  if (score >= 4 && pw.length >= 10) level = "kuat";
+  else if (score >= 3) level = "sedang";
+  return {
+    length,
+    upper,
+    lower,
+    number,
+    symbol,
+    score,
+    level,
+    valid: length && upper && lower && number && symbol,
+  };
+}
+
+function PasswordStrength({ password }: { password: string }) {
+  const { score, level } = evaluatePassword(password);
+  const barColors: Record<string, string> = {
+    lemah: "bg-red-500",
+    sedang: "bg-yellow-500",
+    kuat: "bg-green-600",
+  };
+  const percent = (score / 5) * 100;
+  return (
+    <div className="mt-2 flex items-center gap-3">
+      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className={`h-full ${barColors[level]} transition-all duration-300`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <span
+        className={`text-xs font-medium capitalize ${
+          level === "lemah"
+            ? "text-red-600"
+            : level === "sedang"
+            ? "text-yellow-600"
+            : "text-green-600"
+        }`}
+      >
+        {level}
+      </span>
+    </div>
+  );
+}
 
 function RegisterForm() {
   const router = useRouter();
@@ -157,8 +212,10 @@ function RegisterForm() {
         setError("Password tidak cocok!");
         return;
       }
-      if (formData.password.length < 6) {
-        setError("Password minimal 6 karakter!");
+      if (!passwordStrength.valid) {
+        setError(
+          "Password belum kuat. Lengkapi semua kriteria (huruf besar, kecil, angka, simbol, minimal 8)."
+        );
         return;
       }
     }
@@ -179,23 +236,21 @@ function RegisterForm() {
         });
       } else {
         const body = new FormData();
-        if (formData.name) body.append("name", formData.name);
-        if (formData.tempat_lahir)
-          body.append("tempat_lahir", formData.tempat_lahir);
-        if (formData.tanggal_lahir)
-          body.append("tanggal_lahir", formData.tanggal_lahir);
-        if (formData.jenis_kelamin)
-          body.append("jenis_kelamin", formData.jenis_kelamin);
-        if (formData.alamat) body.append("alamat", formData.alamat);
-        if (formData.asal_sekolah)
-          body.append("asal_sekolah", formData.asal_sekolah);
-        if (formData.provinsi_sekolah)
-          body.append("provinsi_sekolah", formData.provinsi_sekolah);
-        if (formData.jurusan) body.append("jurusan", formData.jurusan);
-        if (formData.nik) body.append("nik", formData.nik);
-        if (formData.passport) body.append("passport", formData.passport);
-        if (formData.jenjang) body.append("jenjang", formData.jenjang);
-        if (formData.nationality) body.append("nationality", formData.nationality);
+        const append = (k: string, v?: string) => {
+          if (v) body.append(k, v);
+        };
+        append("name", formData.name);
+        append("tempat_lahir", formData.tempat_lahir);
+        append("tanggal_lahir", formData.tanggal_lahir);
+        append("jenis_kelamin", formData.jenis_kelamin);
+        append("alamat", formData.alamat);
+        append("asal_sekolah", formData.asal_sekolah);
+        append("provinsi_sekolah", formData.provinsi_sekolah);
+        append("jurusan", formData.jurusan);
+        append("nik", formData.nik);
+        append("passport", formData.passport);
+        append("jenjang", formData.jenjang);
+        append("nationality", formData.nationality);
         if (foto) body.append("foto", foto);
         response = await fetch("/api/auth/profile", {
           method: "PUT",
@@ -219,7 +274,7 @@ function RegisterForm() {
       } else {
         router.push("/login");
       }
-    } catch (err) {
+    } catch {
       setError(
         step === 1
           ? "Terjadi kesalahan saat registrasi"
@@ -230,580 +285,625 @@ function RegisterForm() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div
-        className={`${step === 2 ? "max-w-3xl" : "max-w-md"} w-full space-y-8`}
-      >
-        <div className={`card shadow-2xl ${step === 2 ? "p-10" : "p-8"}`}>
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-full flex items-center justify-center mb-6">
-              <GraduationCap className="h-8 w-8 text-white" />
-            </div>
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
-              {step === 1 ? "Daftar Akun" : "Lengkapi Biodata"}
-            </h2>
-            <p className="text-gray-600">
-              {step === 1
-                ? "Buat akun untuk mengikuti TPA"
-                : "Tambahkan informasi untuk melengkapi profil Anda"}
-            </p>
-          </div>
+  const passwordStrength = evaluatePassword(formData.password);
+  const confirmMismatch =
+    formData.confirmPassword.length > 0 &&
+    formData.password !== formData.confirmPassword;
 
+  if (step === 1) {
+    return (
+      <AuthContainer
+        title="Daftar Akun"
+        subtitle="Buat akun untuk mengikuti TPA"
+        footer={
+          <span>
+            Sudah punya akun?{" "}
+            <a
+              href="/login"
+              className="text-primary-600 hover:text-primary-500 font-medium"
+            >
+              Login
+            </a>
+          </span>
+        }
+      >
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6"
+        >
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-6 text-center">
-              <div className="text-sm text-red-700">{error}</div>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center text-sm text-red-700">
+              {error}
             </div>
           )}
-
-          <form
-            className="mt-8 space-y-6"
-            onSubmit={handleSubmit}
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Email
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Mail className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="input-field pl-10"
+                placeholder="Masukkan email Anda"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                required
+                className="input-field pl-10 pr-10"
+                placeholder="Masukkan password"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors duration-200"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+            <PasswordStrength password={formData.password} />
+          </div>
+          <div>
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Konfirmasi Password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                required
+                className={`input-field pl-10 pr-10 ${
+                  confirmMismatch
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                    : ""
+                }`}
+                placeholder="Ulangi password"
+                value={formData.confirmPassword}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    confirmPassword: e.target.value,
+                  })
+                }
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors duration-200"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+            {confirmMismatch && (
+              <p className="mt-1 text-xs text-red-600 font-medium">
+                Password belum sesuai
+              </p>
+            )}
+          </div>
+          <button
+            type="submit"
+            disabled={isLoading || !passwordStrength.valid || confirmMismatch}
+            className="btn-primary w-full flex justify-center items-center disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {step === 1 ? (
+            {isLoading ? (
               <>
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Email
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      className="input-field pl-10"
-                      placeholder="Masukkan email Anda"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      required
-                      className="input-field pl-10 pr-10"
-                      placeholder="Masukkan password"
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors duration-200"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <Eye className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label
-                    htmlFor="confirmPassword"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Konfirmasi Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      required
-                      className="input-field pl-10 pr-10"
-                      placeholder="Ulangi password"
-                      value={formData.confirmPassword}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          confirmPassword: e.target.value,
-                        })
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors duration-200"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <Eye className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                <div className="spinner mr-2"></div>
+                Memproses...
               </>
             ) : (
-              <>
-                <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-gray-700 mb-2"
+              "Daftar"
+            )}
+          </button>
+        </form>
+      </AuthContainer>
+    );
+  }
+  return (
+    <AuthContainer
+      title="Lengkapi Biodata"
+      subtitle="Tambahkan informasi untuk melengkapi profil"
+      width="xl"
+      footer={
+        <span>
+          Sudah punya akun?{" "}
+          <a
+            href="/login"
+            className="text-primary-600 hover:text-primary-500 font-medium"
+          >
+            Login
+          </a>
+        </span>
+      }
+    >
+      {/* Removed step header label */}
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-10"
+      >
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+        <div className="grid gap-8 md:gap-8 md:grid-cols-2 xl:grid-cols-3">
+          {/* Section: Data Pribadi */}
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow xl:col-span-1 md:col-span-2">
+            <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <span className="h-5 w-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center">
+                1
+              </span>
+              Data Pribadi
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              {/* Tempat Lahir */}
+              <div>
+                <label
+                  htmlFor="tempat_lahir"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Tempat Lahir
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="tempat_lahir"
+                    name="tempat_lahir"
+                    type="text"
+                    className="input-field pl-10"
+                    placeholder="Contoh: Bandung"
+                    value={formData.tempat_lahir}
+                    onChange={(e) =>
+                      setFormData({ ...formData, tempat_lahir: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="tanggal_lahir"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Tanggal Lahir
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Calendar className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="tanggal_lahir"
+                    name="tanggal_lahir"
+                    type="date"
+                    className="input-field pl-10"
+                    value={formData.tanggal_lahir}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tanggal_lahir: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="jenis_kelamin"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Jenis Kelamin
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    id="jenis_kelamin"
+                    name="jenis_kelamin"
+                    className="input-field pl-10"
+                    value={formData.jenis_kelamin}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        jenis_kelamin: e.target.value,
+                      })
+                    }
                   >
-                    Nama Lengkap
+                    <option value="">Pilih</option>
+                    <option value="Laki-laki">Laki-laki</option>
+                    <option value="Perempuan">Perempuan</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="nationality"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Kewarganegaraan
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    id="nationality"
+                    name="nationality"
+                    className="input-field pl-10"
+                    value={formData.nationality}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        nationality: e.target.value,
+                        nik: "",
+                        passport: "",
+                      })
+                    }
+                  >
+                    <option value="">Pilih Kewarganegaraan</option>
+                    <option value="WNI">Warga Negara Indonesia (WNI)</option>
+                    <option value="WNA">Warga Negara Asing (WNA)</option>
+                  </select>
+                </div>
+              </div>
+              {formData.nationality === "WNI" && (
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="nik"
+                    className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                  >
+                    NIK
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <User className="h-5 w-5 text-gray-400" />
                     </div>
                     <input
-                      id="name"
-                      name="name"
+                      id="nik"
+                      name="nik"
                       type="text"
-                      autoComplete="name"
-                      required
                       className="input-field pl-10"
-                      placeholder="Masukkan nama lengkap"
-                      value={formData.name}
+                      placeholder="16 digit"
+                      maxLength={16}
+                      pattern="[0-9]{16}"
+                      value={formData.nik}
                       onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
+                        setFormData({
+                          ...formData,
+                          nik: e.target.value.replace(/[^0-9]/g, ""),
+                        })
                       }
                     />
                   </div>
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    Pastikan sesuai KTP.
+                  </p>
                 </div>
-                {/* Grid fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label
-                      htmlFor="tempat_lahir"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Tempat Lahir
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <MapPin className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        id="tempat_lahir"
-                        name="tempat_lahir"
-                        type="text"
-                        className="input-field pl-10"
-                        placeholder="Contoh: Bandung"
-                        value={formData.tempat_lahir}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            tempat_lahir: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="tanggal_lahir"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Tanggal Lahir
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        id="tanggal_lahir"
-                        name="tanggal_lahir"
-                        type="date"
-                        className="input-field pl-10"
-                        value={formData.tanggal_lahir}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            tanggal_lahir: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="jenis_kelamin"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Jenis Kelamin
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <select
-                        id="jenis_kelamin"
-                        name="jenis_kelamin"
-                        className="input-field pl-10"
-                        value={formData.jenis_kelamin}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            jenis_kelamin: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">Pilih</option>
-                        <option value="Laki-laki">Laki-laki</option>
-                        <option value="Perempuan">Perempuan</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="nationality"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Kewarganegaraan
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <MapPin className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <select
-                        id="nationality"
-                        name="nationality"
-                        className="input-field pl-10"
-                        value={formData.nationality}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            nationality: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">Pilih Kewarganegaraan</option>
-                        <option value="WNI">Warga Negara Indonesia (WNI)</option>
-                        <option value="WNA">Warga Negara Asing (WNA)</option>
-                      </select>
-                    </div>
-                  </div>
-                  {/* Conditional field based on nationality */}
-                  {formData.nationality === 'WNI' && (
-                    <div>
-                      <label
-                        htmlFor="nik"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                      >
-                        NIK (Nomor Induk Kependudukan)
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                          id="nik"
-                          name="nik"
-                          type="text"
-                          className="input-field pl-10"
-                          placeholder="Masukkan NIK (16 digit)"
-                          value={formData.nik}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              nik: e.target.value.replace(/[^0-9]/g, ""),
-                            })
-                          }
-                          pattern="[0-9]{16}"
-                          maxLength={16}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {formData.nationality === 'WNA' && (
-                    <div>
-                      <label
-                        htmlFor="passport"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                      >
-                        Nomor Passport
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                          id="passport"
-                          name="passport"
-                          type="text"
-                          className="input-field pl-10"
-                          placeholder="Masukkan nomor passport"
-                          value={formData.passport || ''}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              passport: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <label
-                      htmlFor="jenjang"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Jenjang
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <GraduationCap className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <select
-                        id="jenjang"
-                        name="jenjang"
-                        className="input-field pl-10"
-                        value={formData.jenjang}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            jenjang: e.target.value,
-                            jurusan: "",
-                          })
-                        }
-                      >
-                        <option value="">Pilih Jenjang</option>
-                        {jenjangOptions.map((o) => (
-                          <option
-                            key={o.value}
-                            value={o.value}
-                          >
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="asal_sekolah"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Asal Sekolah
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Home className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        id="asal_sekolah"
-                        name="asal_sekolah"
-                        type="text"
-                        className="input-field pl-10"
-                        placeholder="Nama sekolah"
-                        value={formData.asal_sekolah}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            asal_sekolah: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="provinsi_sekolah"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Provinsi Sekolah
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <MapPin className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        id="provinsi_sekolah"
-                        name="provinsi_sekolah"
-                        type="text"
-                        className="input-field pl-10"
-                        placeholder="Contoh: Jawa Barat"
-                        value={formData.provinsi_sekolah}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            provinsi_sekolah: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="jurusan"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Jurusan
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <BookOpen className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <select
-                        id="jurusan"
-                        name="jurusan"
-                        className="input-field pl-10"
-                        value={formData.jurusan}
-                        onChange={(e) =>
-                          setFormData({ ...formData, jurusan: e.target.value })
-                        }
-                        disabled={!formData.jenjang}
-                      >
-                        {!formData.jenjang ? (
-                          <option value="">
-                            Pilih jenjang terlebih dahulu
-                          </option>
-                        ) : (
-                          <option value="">Pilih Jurusan</option>
-                        )}
-                        {jurusanGroups.map((grp) => (
-                          <optgroup
-                            key={grp.group}
-                            label={grp.group}
-                          >
-                            {grp.options.map((opt) => (
-                              <option
-                                key={opt.value}
-                                value={opt.value}
-                              >
-                                {opt.label}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label
-                      htmlFor="alamat"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Alamat Tempat Tinggal
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Home className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        id="alamat"
-                        name="alamat"
-                        type="text"
-                        className="input-field pl-10"
-                        placeholder="Alamat lengkap"
-                        value={formData.alamat}
-                        onChange={(e) =>
-                          setFormData({ ...formData, alamat: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label
-                      htmlFor="foto"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Foto (opsional)
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <div className="h-16 w-16 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center">
-                        {fotoPreview ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={fotoPreview}
-                            alt="Preview"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <User className="h-8 w-8 text-gray-300" />
-                        )}
-                      </div>
-                      <input
-                        id="foto"
-                        name="foto"
-                        type="file"
-                        accept="image/*"
-                        className="input-field"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          setFoto(file);
-                          if (fotoPreview) URL.revokeObjectURL(fotoPreview);
-                          setFotoPreview(
-                            file ? URL.createObjectURL(file) : null
-                          );
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full flex justify-center items-center group"
-            >
-              {isLoading ? (
-                <>
-                  <div className="spinner mr-2"></div>
-                  Memproses...
-                </>
-              ) : step === 1 ? (
-                "Daftar"
-              ) : (
-                "Simpan"
               )}
-            </button>
-          </form>
-
-          <div className="flex flex-col items-center gap-2 mt-4">
-            <span className="text-sm text-gray-600">
-              Sudah punya akun?{" "}
-              <a
-                href="/login"
-                className="text-primary-600 hover:text-primary-500 font-medium transition-colors duration-200"
-              >
-                Login
-              </a>
-            </span>
+              {formData.nationality === "WNA" && (
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="passport"
+                    className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                  >
+                    Passport
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="passport"
+                      name="passport"
+                      type="text"
+                      className="input-field pl-10"
+                      placeholder="Nomor passport"
+                      value={formData.passport}
+                      onChange={(e) =>
+                        setFormData({ ...formData, passport: e.target.value })
+                      }
+                    />
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    Masukkan nomor aktif.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Section: Pendidikan */}
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow xl:col-span-1 md:col-span-1">
+            <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <span className="h-5 w-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center">
+                2
+              </span>
+              Pendidikan
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label
+                  htmlFor="jenjang"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Jenjang
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <GraduationCap className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    id="jenjang"
+                    name="jenjang"
+                    className="input-field pl-10"
+                    value={formData.jenjang}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        jenjang: e.target.value,
+                        jurusan: "",
+                      })
+                    }
+                  >
+                    <option value="">Pilih Jenjang</option>
+                    {jenjangOptions.map((o) => (
+                      <option
+                        key={o.value}
+                        value={o.value}
+                      >
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="asal_sekolah"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Asal Sekolah
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Home className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="asal_sekolah"
+                    name="asal_sekolah"
+                    type="text"
+                    className="input-field pl-10"
+                    placeholder="Nama sekolah"
+                    value={formData.asal_sekolah}
+                    onChange={(e) =>
+                      setFormData({ ...formData, asal_sekolah: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="provinsi_sekolah"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Provinsi Sekolah
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="provinsi_sekolah"
+                    name="provinsi_sekolah"
+                    type="text"
+                    className="input-field pl-10"
+                    placeholder="Contoh: Jawa Barat"
+                    value={formData.provinsi_sekolah}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        provinsi_sekolah: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="jurusan"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Jurusan
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <BookOpen className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    id="jurusan"
+                    name="jurusan"
+                    className="input-field pl-10"
+                    value={formData.jurusan}
+                    disabled={!formData.jenjang}
+                    onChange={(e) =>
+                      setFormData({ ...formData, jurusan: e.target.value })
+                    }
+                  >
+                    {!formData.jenjang ? (
+                      <option value="">Pilih jenjang terlebih dahulu</option>
+                    ) : (
+                      <option value="">Pilih Jurusan</option>
+                    )}
+                    {jurusanGroups.map((grp) => (
+                      <optgroup
+                        key={grp.group}
+                        label={grp.group}
+                      >
+                        {grp.options.map((opt) => (
+                          <option
+                            key={opt.value}
+                            value={opt.value}
+                          >
+                            {opt.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Section: Lainnya */}
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow xl:col-span-1 md:col-span-2">
+            <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <span className="h-5 w-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center">
+                3
+              </span>
+              Lainnya
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="alamat"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Alamat Tempat Tinggal
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Home className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="alamat"
+                    name="alamat"
+                    type="text"
+                    className="input-field pl-10"
+                    placeholder="Alamat lengkap"
+                    value={formData.alamat}
+                    onChange={(e) =>
+                      setFormData({ ...formData, alamat: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="foto"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Foto{" "}
+                  <span className="text-gray-400 font-normal">(opsional)</span>
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="h-20 w-20 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center ring-1 ring-gray-200">
+                    {fotoPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={fotoPreview}
+                        alt="Preview"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-8 w-8 text-gray-300" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <input
+                      id="foto"
+                      name="foto"
+                      type="file"
+                      accept="image/*"
+                      className="input-field"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setFoto(file);
+                        if (fotoPreview) URL.revokeObjectURL(fotoPreview);
+                        setFotoPreview(file ? URL.createObjectURL(file) : null);
+                      }}
+                    />
+                    <p className="text-[10px] text-gray-500">
+                      Format jpg/png. Disarankan rasio 1:1.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+        <div className="flex items-center justify-between gap-4 pt-2 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className="btn-secondary px-6"
+          >
+            Kembali
+          </button>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="btn-primary min-w-[140px] flex justify-center items-center"
+          >
+            {isLoading ? (
+              <>
+                <div className="spinner mr-2"></div>
+                Memproses...
+              </>
+            ) : (
+              "Simpan"
+            )}
+          </button>
+        </div>
+      </form>
+    </AuthContainer>
   );
 }
 
