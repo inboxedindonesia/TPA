@@ -36,6 +36,7 @@ interface TestSession {
   endTime: string;
   overallPercentage: number;
   minimum_score?: number;
+  test_type?: string; // TPA | RIASEC | COMBO
   categoryBreakdown: {
     TES_VERBAL: CategoryBreakdown;
     TES_ANGKA: CategoryBreakdown;
@@ -44,6 +45,24 @@ interface TestSession {
   };
   test: { name: string; description: string; duration: number };
   answers: Answer[];
+  riasec?: {
+    score_realistic: number;
+    score_investigative: number;
+    score_artistic: number;
+    score_social: number;
+    score_enterprising: number;
+    score_conventional: number;
+    max_score_realistic: number;
+    max_score_investigative: number;
+    max_score_artistic: number;
+    max_score_social: number;
+    max_score_enterprising: number;
+    max_score_conventional: number;
+    holland_code: string | null;
+  };
+  aptitude_score_total?: number;
+  aptitude_max_score_total?: number;
+  aptitude_percentage?: number;
 }
 
 const formatCategoryName = (c: string) => {
@@ -221,12 +240,16 @@ export default function TestResultsPage() {
       </div>
     );
 
+  const isRiasec = session.test_type === "RIASEC";
+  const isCombo = session.test_type === "COMBO";
   const total = allAnswers.length;
-  const correct = allAnswers.filter((a) => a.isCorrect).length;
-  const wrong = allAnswers.filter(
-    (a) => !a.isCorrect && a.selectedAnswer
-  ).length;
-  const unanswered = allAnswers.filter((a) => !a.selectedAnswer).length;
+  // Untuk RIASEC, isCorrect tidak relevan (semua jawaban dihitung sebagai diisi). Fokus: terjawab vs tidak.
+  const answeredCount = allAnswers.filter((a) => a.selectedAnswer).length;
+  const unanswered = total - answeredCount;
+  const correct = isRiasec ? 0 : allAnswers.filter((a) => a.isCorrect).length;
+  const wrong = isRiasec
+    ? 0
+    : allAnswers.filter((a) => !a.isCorrect && a.selectedAnswer).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -241,83 +264,255 @@ export default function TestResultsPage() {
         </div>
         <div className="bg-white overflow-hidden shadow rounded-lg mb-8">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-xl text-center font-bold text-gray-900 mb-8">
-              Skor Total
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-2">
-              <div className="text-center">
-                <div className="text-sm text-gray-600">Nilai</div>
-                <div
-                  className={`text-3xl font-bold ${getColor(
-                    session.overallPercentage,
-                    session.minimum_score
-                  )}`}
-                >
-                  {session.score}/{session.maxScore}
+            {isRiasec ? (
+              <>
+                <h3 className="text-xl text-center font-bold text-gray-900 mb-8">
+                  Ringkasan RIASEC
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Total Item</div>
+                    <div className="text-3xl font-bold text-purple-700">
+                      {total}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Terjawab</div>
+                    <div className="text-3xl font-bold text-green-600">
+                      {answeredCount}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Belum Dijawab</div>
+                    <div className="text-3xl font-bold text-gray-600">
+                      {unanswered}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-600">Persentase</div>
-                <div
-                  className={`text-3xl font-bold ${getColor(
-                    session.overallPercentage,
-                    session.minimum_score
-                  )}`}
-                >
-                  {session.overallPercentage.toFixed(1)}%
+                <p className="mt-4 text-center text-sm text-gray-500">
+                  Ini adalah tes minat (RIASEC), tidak ada status lulus/gagal.
+                </p>
+              </>
+            ) : isCombo ? (
+              <>
+                <h3 className="text-xl text-center font-bold text-gray-900 mb-8">
+                  Ringkasan Aptitude (TPA)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Nilai TPA</div>
+                    <div className="text-3xl font-bold text-blue-700">
+                      {session.aptitude_score_total}/
+                      {session.aptitude_max_score_total}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Persentase TPA</div>
+                    <div className="text-3xl font-bold text-indigo-700">
+                      {session.aptitude_percentage?.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Status</div>
+                    {session.aptitude_percentage !== undefined &&
+                    session.aptitude_percentage >=
+                      (session.minimum_score || 60) ? (
+                      <div className="text-2xl font-bold text-green-600">
+                        Lulus
+                      </div>
+                    ) : (
+                      <div className="text-2xl font-bold text-red-600">
+                        Gagal
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Pesan</div>
+                    <div
+                      className={`text-lg font-bold ${
+                        (session.aptitude_percentage || 0) >=
+                        (session.minimum_score || 60)
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {getScoreMessage(
+                        session.aptitude_percentage || 0,
+                        session.minimum_score
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-600">Status</div>
-                {session.overallPercentage >= (session.minimum_score || 60) ? (
-                  <div className="text-2xl font-bold text-green-600">Lulus</div>
-                ) : (
-                  <div className="text-2xl font-bold text-red-600">Gagal</div>
-                )}
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-600">Pesan</div>
-                <div
-                  className={`text-lg font-bold ${
-                    session.overallPercentage >= (session.minimum_score || 60)
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {getScoreMessage(
-                    session.overallPercentage,
-                    session.minimum_score
-                  )}
+                <h3 className="text-xl text-center font-bold text-gray-900 mb-8">
+                  Ringkasan RIASEC
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Total Item</div>
+                    <div className="text-3xl font-bold text-purple-700">
+                      {total}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Terjawab</div>
+                    <div className="text-3xl font-bold text-green-600">
+                      {answeredCount}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Belum Dijawab</div>
+                    <div className="text-3xl font-bold text-gray-600">
+                      {unanswered}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+                <p className="mt-4 text-center text-sm text-gray-500 mb-2">
+                  Bagian ini adalah tes minat (RIASEC), tidak ada status
+                  lulus/gagal.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl text-center font-bold text-gray-900 mb-8">
+                  Skor Total
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-2">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Nilai</div>
+                    <div
+                      className={`text-3xl font-bold ${getColor(
+                        session.overallPercentage,
+                        session.minimum_score
+                      )}`}
+                    >
+                      {session.score}/{session.maxScore}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Persentase</div>
+                    <div
+                      className={`text-3xl font-bold ${getColor(
+                        session.overallPercentage,
+                        session.minimum_score
+                      )}`}
+                    >
+                      {session.overallPercentage.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Status</div>
+                    {session.overallPercentage >=
+                    (session.minimum_score || 60) ? (
+                      <div className="text-2xl font-bold text-green-600">
+                        Lulus
+                      </div>
+                    ) : (
+                      <div className="text-2xl font-bold text-red-600">
+                        Gagal
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Pesan</div>
+                    <div
+                      className={`text-lg font-bold ${
+                        session.overallPercentage >=
+                        (session.minimum_score || 60)
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {getScoreMessage(
+                        session.overallPercentage,
+                        session.minimum_score
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">
-            Ringkasan Jawaban
+            {isRiasec
+              ? "Ringkasan Item"
+              : isCombo
+              ? "Ringkasan Jawaban (TPA)"
+              : "Ringkasan Jawaban"}
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <Stat
-              label="Benar"
-              value={correct}
-              color="text-green-600"
-            />
-            <Stat
-              label="Salah"
-              value={wrong}
-              color="text-red-600"
-            />
-            <Stat
-              label="Tidak Dijawab"
-              value={unanswered}
-              color="text-gray-600"
-            />
-            <Stat
-              label="Total Soal"
-              value={total}
-              color="text-blue-600"
-            />
+          <div
+            className={`grid ${
+              isRiasec
+                ? "grid-cols-2 md:grid-cols-3"
+                : "grid-cols-2 md:grid-cols-4"
+            } gap-6`}
+          >
+            {isRiasec ? (
+              <>
+                <Stat
+                  label="Terjawab"
+                  value={answeredCount}
+                  color="text-green-600"
+                />
+                <Stat
+                  label="Belum Dijawab"
+                  value={unanswered}
+                  color="text-gray-600"
+                />
+                <Stat
+                  label="Total Item"
+                  value={total}
+                  color="text-blue-600"
+                />
+              </>
+            ) : isCombo ? (
+              <>
+                <Stat
+                  label="Benar"
+                  value={correct}
+                  color="text-green-600"
+                />
+                <Stat
+                  label="Salah"
+                  value={wrong}
+                  color="text-red-600"
+                />
+                <Stat
+                  label="Tidak Dijawab"
+                  value={unanswered}
+                  color="text-gray-600"
+                />
+                <Stat
+                  label="Total Soal"
+                  value={total}
+                  color="text-blue-600"
+                />
+              </>
+            ) : (
+              <>
+                <Stat
+                  label="Benar"
+                  value={correct}
+                  color="text-green-600"
+                />
+                <Stat
+                  label="Salah"
+                  value={wrong}
+                  color="text-red-600"
+                />
+                <Stat
+                  label="Tidak Dijawab"
+                  value={unanswered}
+                  color="text-gray-600"
+                />
+                <Stat
+                  label="Total Soal"
+                  value={total}
+                  color="text-blue-600"
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -371,7 +566,11 @@ export default function TestResultsPage() {
                       <h2 className="text-base sm:text-lg font-semibold text-blue-900 flex items-center gap-2">
                         <span
                           className={`flex w-8 h-8 rounded-full items-center justify-center font-bold shadow-sm text-sm ${
-                            answer.isCorrect
+                            isRiasec
+                              ? selectedArray.length
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                              : answer.isCorrect
                               ? "bg-green-100 text-green-700"
                               : unanswered
                               ? "bg-gray-100 text-gray-600"
@@ -386,14 +585,19 @@ export default function TestResultsPage() {
                             Tidak Dijawab
                           </span>
                         )}
-                        {answer.isCorrect && !unanswered && (
+                        {!isRiasec && answer.isCorrect && !unanswered && (
                           <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 text-green-700 border border-green-200">
                             Benar
                           </span>
                         )}
-                        {!answer.isCorrect && !unanswered && (
+                        {!isRiasec && !answer.isCorrect && !unanswered && (
                           <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-red-100 text-red-700 border border-red-200">
                             Salah
+                          </span>
+                        )}
+                        {isRiasec && selectedArray.length > 0 && (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                            Terjawab
                           </span>
                         )}
                       </h2>
@@ -424,12 +628,18 @@ export default function TestResultsPage() {
                       <div className="space-y-2 mb-4">
                         {optionsArray.map((opt: string, optIdx: number) => {
                           const isSelected = selectedArray.includes(opt);
-                          const isCorrect = correctArray.includes(opt);
+                          const isCorrect = isRiasec
+                            ? false
+                            : correctArray.includes(opt);
                           return (
                             <div
                               key={optIdx}
                               className={`flex items-center space-x-3 p-3 border rounded-lg transition-all shadow-sm text-sm ${
-                                isCorrect
+                                isRiasec
+                                  ? isSelected
+                                    ? "border-purple-400 bg-purple-50"
+                                    : "border-gray-200"
+                                  : isCorrect
                                   ? "border-green-500 bg-green-50"
                                   : isSelected
                                   ? "border-red-400 bg-red-50"
@@ -446,13 +656,18 @@ export default function TestResultsPage() {
                               <span className="text-gray-900 flex-1">
                                 {opt}
                               </span>
-                              {isCorrect && (
+                              {!isRiasec && isCorrect && (
                                 <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
                                   Jawaban Benar
                                 </span>
                               )}
-                              {!isCorrect && isSelected && (
+                              {!isRiasec && !isCorrect && isSelected && (
                                 <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+                                  Dipilih
+                                </span>
+                              )}
+                              {isRiasec && isSelected && (
+                                <span className="ml-2 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
                                   Dipilih
                                 </span>
                               )}
@@ -464,7 +679,9 @@ export default function TestResultsPage() {
                     <div className="mt-3 text-xs sm:text-sm flex flex-col gap-1">
                       <div>
                         <span className="font-semibold text-gray-700">
-                          Jawaban Anda:{" "}
+                          {isRiasec || isCombo
+                            ? "Pilihan Anda: "
+                            : "Jawaban Anda: "}
                         </span>
                         <span
                           className={
@@ -489,26 +706,30 @@ export default function TestResultsPage() {
                             : "Tidak dijawab"}
                         </span>
                       </div>
-                      <div>
-                        <span className="font-semibold text-gray-700">
-                          Jawaban Benar:{" "}
-                        </span>
-                        <span className="text-green-600 font-medium">
-                          {correctArray
-                            .map((ca) => {
-                              const idxOpt = optionsArray.indexOf(ca);
-                              return `${
-                                idxOpt >= 0
-                                  ? String.fromCharCode(65 + idxOpt) + ". "
-                                  : ""
-                              }${ca}`;
-                            })
-                            .join(", ")}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-gray-500 mt-1">
-                        Poin: {answer.pointsEarned}/{answer.points || 1}
-                      </div>
+                      {!isRiasec && !isCombo && (
+                        <div>
+                          <span className="font-semibold text-gray-700">
+                            Jawaban Benar:{" "}
+                          </span>
+                          <span className="text-green-600 font-medium">
+                            {correctArray
+                              .map((ca) => {
+                                const idxOpt = optionsArray.indexOf(ca);
+                                return `${
+                                  idxOpt >= 0
+                                    ? String.fromCharCode(65 + idxOpt) + ". "
+                                    : ""
+                                }${ca}`;
+                              })
+                              .join(", ")}
+                          </span>
+                        </div>
+                      )}
+                      {!isRiasec && !isCombo && (
+                        <div className="text-[11px] text-gray-500 mt-1">
+                          Poin: {answer.pointsEarned}/{answer.points || 1}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

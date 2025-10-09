@@ -85,7 +85,10 @@ const RiasecSummary: React.FC<Props> = (p) => {
     .sort((a, b) => b.pct - a.pct)
     .filter((d) => d.pct > 0)
     .slice(0, 3);
-  const holland = p.holland_code || topSorted.map((d) => d.key).join("-");
+  const rawHolland = p.holland_code || topSorted.map((d) => d.key).join("-");
+  const holland = /^(?:[RIASEC]{3})$/.test(rawHolland)
+    ? rawHolland.split("").join("-")
+    : rawHolland;
 
   const colorMap: Record<string, string> = {
     green: "bg-green-50 border-green-200 text-green-800",

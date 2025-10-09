@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         creatorId: row.creatorId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        test_type: row.test_type || "TPA", // expose test type including RIASEC / COMBO
         creator: {
           id: row.creatorId,
           name: row.creatorName,
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
       sections,
       availableFrom,
       availableUntil,
+      test_type,
     } = body;
 
     // Ambil user dari request (lebih aman daripada mengandalkan body)
@@ -168,6 +170,9 @@ export async function POST(request: NextRequest) {
       await client.query(
         `ALTER TABLE tests ADD COLUMN IF NOT EXISTS "minimumScore" INTEGER DEFAULT 60`
       );
+      await client.query(
+        `ALTER TABLE tests ADD COLUMN IF NOT EXISTS test_type VARCHAR(50) DEFAULT 'TPA'`
+      );
       await client.query(`
         CREATE TABLE IF NOT EXISTS sections (
           id SERIAL PRIMARY KEY,
@@ -204,11 +209,11 @@ export async function POST(request: NextRequest) {
       // Pastikan kolom maxAttempts sudah ada di tabel tests
       const insertQuery = `
         INSERT INTO tests (
-          id, name, description, duration, "creatorId", "isActive", "maxAttempts", "tabLeaveLimit", "minimumScore", "availableFrom", "availableUntil"
+          id, name, description, duration, "creatorId", "isActive", "maxAttempts", "tabLeaveLimit", "minimumScore", "availableFrom", "availableUntil", test_type
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9,
           ($10::timestamptz AT TIME ZONE 'Asia/Jakarta'),
-          ($11::timestamptz AT TIME ZONE 'Asia/Jakarta')
+          ($11::timestamptz AT TIME ZONE 'Asia/Jakarta'), $12
         )
       `;
 
@@ -235,6 +240,8 @@ export async function POST(request: NextRequest) {
         typeof minimumScore === "number" ? minimumScore : 60,
         fromISO || null,
         untilISO || null,
+        // Accept explicit 'RIASEC' or 'COMBO', fallback to 'TPA'
+        ["RIASEC", "COMBO"].includes(test_type) ? test_type : "TPA",
       ];
 
       await client.query(insertQuery, insertParams);
@@ -245,13 +252,25 @@ export async function POST(request: NextRequest) {
           // Insert section with auto-grouping configuration
           const sectionInsert = await client.query(
             `INSERT INTO sections (testId, name, duration, "order", autoGrouping, category, questionCount) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-            [testId, section.name, section.duration, sectionOrder + 1, section.autoGrouping || false, section.category || null, section.questionCount || 10]
+            [
+              testId,
+              section.name,
+              section.duration,
+              sectionOrder + 1,
+              section.autoGrouping || false,
+              section.category || null,
+              section.questionCount || 10,
+            ]
           );
           const sectionId = sectionInsert.rows[0].id;
-          
+
           // Handle auto-grouping: if enabled, fetch questions by category
           let questionIds = section.questionIds || [];
-          if (section.autoGrouping && section.category && questionIds.length === 0) {
+          if (
+            section.autoGrouping &&
+            section.category &&
+            questionIds.length === 0
+          ) {
             // Fetch questions from the specified category
             // Get a reasonable number of questions (default 10, but can be adjusted)
             const questionCount = section.questionCount || 10;
@@ -259,14 +278,16 @@ export async function POST(request: NextRequest) {
               `SELECT id FROM questions WHERE category = $1 ORDER BY RANDOM() LIMIT $2`,
               [section.category, questionCount]
             );
-            questionIds = categoryQuestions.rows.map(row => row.id);
-            
+            questionIds = categoryQuestions.rows.map((row) => row.id);
+
             // Log if not enough questions found
             if (questionIds.length < questionCount) {
-              console.warn(`Only ${questionIds.length} questions found for category ${section.category}, requested ${questionCount}`);
+              console.warn(
+                `Only ${questionIds.length} questions found for category ${section.category}, requested ${questionCount}`
+              );
             }
           }
-          
+
           // Insert ke test_questions untuk setiap soal di section
           if (Array.isArray(questionIds) && questionIds.length > 0) {
             for (const questionId of questionIds) {
@@ -278,7 +299,7 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-      
+
       // No need to update totalQuestions - we calculate it dynamically from test_questions table
 
       // Fetch the created test with creator data

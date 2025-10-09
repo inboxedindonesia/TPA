@@ -20,6 +20,16 @@ interface Question {
   section?: { id: number; name: string; order: number; duration: number };
 }
 
+// Helper untuk identifikasi kategori RIASEC
+const RIASEC_CATEGORIES = new Set([
+  "TES_REALISTIC",
+  "TES_INVESTIGATIVE",
+  "TES_ARTISTIC",
+  "TES_SOCIAL",
+  "TES_ENTERPRISING",
+  "TES_CONVENTIONAL",
+]);
+
 interface Test {
   id: string;
   name: string;
@@ -71,6 +81,8 @@ export default function TakeTestPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
+  const [testType, setTestType] = useState<string | null>(null);
+  const [firstRiasecIndex, setFirstRiasecIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (test?.duration) {
@@ -263,6 +275,7 @@ export default function TakeTestPage() {
         if (!cancelled && testRes.ok) {
           const t = await testRes.json();
           setTest(t);
+          if (t?.test_type) setTestType(t.test_type);
           if (typeof t.tabLeaveLimit === "number")
             setTabLeaveLimit(t.tabLeaveLimit);
         }
@@ -274,6 +287,16 @@ export default function TakeTestPage() {
             ? body.questions
             : [];
           setQuestions(arr || []);
+          // Tentukan index pertama kategori RIASEC untuk COMBO
+          setTimeout(() => {
+            try {
+              if (!Array.isArray(arr)) return;
+              let idx = arr.findIndex((q: any) =>
+                RIASEC_CATEGORIES.has(String(q.category).toUpperCase())
+              );
+              if (idx >= 0) setFirstRiasecIndex(idx);
+            } catch {}
+          }, 0);
           if ((!Array.isArray(arr) || arr.length === 0) && !error) {
             setError("Soal tidak ditemukan pada response API.");
           }
@@ -1040,6 +1063,25 @@ export default function TakeTestPage() {
               </div>
             </div>
           )}
+          {/* Pemisah Section COMBO (transisi Aptitude -> RIASEC) */}
+          {testType === "COMBO" &&
+            firstRiasecIndex !== null &&
+            currentQuestionIndex === firstRiasecIndex && (
+              <div className="relative mb-10 mt-2">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-px flex-1 bg-gradient-to-r from-blue-200 to-purple-300" />
+                  <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-semibold shadow">
+                    Bagian RIASEC (Minat & Kepribadian)
+                  </div>
+                  <div className="h-px flex-1 bg-gradient-to-l from-blue-200 to-purple-300" />
+                </div>
+                <p className="text-center text-xs sm:text-sm text-gray-600 max-w-xl mx-auto">
+                  Lanjutkan menjawab pernyataan berikut sesuai ketertarikan atau
+                  preferensi Anda. Tidak ada jawaban benar / salah pada bagian
+                  ini.
+                </p>
+              </div>
+            )}
           {/* Question Card */}
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-blue-100 transition-all">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">

@@ -1415,11 +1415,19 @@ export default function DetailHasilTesPesertaPage() {
                                     (cat) => cat.percentage >= 75
                                   );
 
+                                // Jika tidak ada kategori (misal test tanpa breakdown valid)
+                                if (!weakestCategory || !strongestCategory) {
+                                  return "Data kategori tidak tersedia atau belum cukup untuk analisis rekomendasi. Pastikan soal memiliki category dan maxScore > 0.";
+                                }
+
                                 let recommendation = "";
 
                                 if (percentage >= 85) {
                                   recommendation = `Pertahankan konsistensi latihan dan fokus pada fine-tuning di area yang masih bisa ditingkatkan. `;
-                                  if (weakestCategory.percentage < 80) {
+                                  if (
+                                    weakestCategory &&
+                                    weakestCategory.percentage < 80
+                                  ) {
                                     recommendation += `Khususnya di ${
                                       weakestCategory.name
                                     } (${weakestCategory.percentage.toFixed(
@@ -1472,7 +1480,10 @@ export default function DetailHasilTesPesertaPage() {
                                         ", "
                                       )} dengan mempelajari strategi penyelesaian yang tepat. `;
                                   }
-                                  if (strongestCategory.percentage >= 70) {
+                                  if (
+                                    strongestCategory &&
+                                    strongestCategory.percentage >= 70
+                                  ) {
                                     recommendation += `Gunakan kekuatan Anda di ${
                                       strongestCategory.name
                                     } (${strongestCategory.percentage.toFixed(
@@ -1482,14 +1493,20 @@ export default function DetailHasilTesPesertaPage() {
                                   recommendation += `Latihan rutin 30-45 menit per hari dengan pembagian waktu yang proporsional untuk setiap kategori akan membantu peningkatan yang stabil.`;
                                 } else if (percentage >= 55) {
                                   recommendation = `Mulai dengan memperkuat fondasi di semua area TPA secara sistematis. `;
-                                  if (weakestCategory.percentage < 45) {
+                                  if (
+                                    weakestCategory &&
+                                    weakestCategory.percentage < 45
+                                  ) {
                                     recommendation += `Prioritaskan ${
                                       weakestCategory.name
                                     } (${weakestCategory.percentage.toFixed(
                                       1
                                     )}%) dengan latihan intensif dan bimbingan tambahan jika diperlukan. `;
                                   }
-                                  if (strongestCategory.percentage >= 60) {
+                                  if (
+                                    strongestCategory &&
+                                    strongestCategory.percentage >= 60
+                                  ) {
                                     recommendation += `Kembangkan kepercayaan diri melalui ${
                                       strongestCategory.name
                                     } (${strongestCategory.percentage.toFixed(
@@ -1499,14 +1516,20 @@ export default function DetailHasilTesPesertaPage() {
                                   recommendation += `Ikuti program bimbingan terstruktur dengan jadwal latihan harian yang konsisten, mulai dari level dasar hingga menengah.`;
                                 } else {
                                   recommendation = `Disarankan mengikuti program bimbingan intensif dengan pendekatan step-by-step yang disesuaikan dengan kebutuhan individual. `;
-                                  if (weakestCategory.percentage < 35) {
+                                  if (
+                                    weakestCategory &&
+                                    weakestCategory.percentage < 35
+                                  ) {
                                     recommendation += `Mulai dari penguatan ${
                                       weakestCategory.name
                                     } (${weakestCategory.percentage.toFixed(
                                       1
                                     )}%) dengan materi dasar dan latihan terbimbing. `;
                                   }
-                                  if (strongestCategory.percentage >= 45) {
+                                  if (
+                                    strongestCategory &&
+                                    strongestCategory.percentage >= 45
+                                  ) {
                                     recommendation += `Bangun kepercayaan diri melalui ${
                                       strongestCategory.name
                                     } (${strongestCategory.percentage.toFixed(

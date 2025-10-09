@@ -1,0 +1,907 @@
+[
+  {
+    "id": "RIASEC_R_01",
+    "category": "TES_REALISTIC",
+    "question": "Saya senang memperbaiki atau merakit benda secara langsung.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_R_02",
+    "category": "TES_REALISTIC",
+    "question": "Saya menikmati kegiatan di luar ruangan yang melibatkan aktivitas fisik.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_R_03",
+    "category": "TES_REALISTIC",
+    "question": "Saya tertarik mengoperasikan peralatan, mesin, atau alat kerja teknis.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_R_04",
+    "category": "TES_REALISTIC",
+    "question": "Saya lebih suka praktik langsung dibanding membaca teori panjang.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_R_05",
+    "category": "TES_REALISTIC",
+    "question": "Saya merasa nyaman bekerja dengan alat atau bahan teknis.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_R_06",
+    "category": "TES_REALISTIC",
+    "question": "Saya suka pekerjaan yang hasilnya bisa dilihat secara nyata.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_R_07",
+    "category": "TES_REALISTIC",
+    "question": "Saya lebih memilih bergerak aktif daripada duduk lama di depan komputer.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_R_08",
+    "category": "TES_REALISTIC",
+    "question": "Saya tertarik pada bidang seperti otomotif, konstruksi, atau mekanik.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_R_09",
+    "category": "TES_REALISTIC",
+    "question": "Saya menikmati membuat sesuatu dengan tangan sendiri (misal rak, model, alat sederhana).",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_R_10",
+    "category": "TES_REALISTIC",
+    "question": "Saya nyaman mengikuti instruksi teknis untuk menggunakan perangkat baru.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+
+  {
+    "id": "RIASEC_I_01",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya suka memecahkan masalah yang membutuhkan analisis mendalam.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_I_02",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya menikmati membaca atau menonton konten ilmiah dan eksperimen.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_I_03",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya tertarik mencari jawaban atas pertanyaan 'mengapa' sesuatu terjadi.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_I_04",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya suka mengumpulkan dan membandingkan data sebelum mengambil keputusan.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_I_05",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya menikmati tugas yang melibatkan penelitian atau pengamatan mendetail.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_I_06",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya sering penasaran dengan cara kerja sistem atau fenomena tertentu.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_I_07",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya suka menelusuri sumber informasi untuk memastikan kebenaran suatu hal.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_I_08",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya menikmati teka-teki logis atau permainan analitis.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_I_09",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya tertarik mempelajari bidang seperti sains, teknologi, atau riset akademik.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_I_10",
+    "category": "TES_INVESTIGATIVE",
+    "question": "Saya cenderung menganalisa masalah sebelum mencoba solusi praktis.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+
+  {
+    "id": "RIASEC_A_01",
+    "category": "TES_ARTISTIC",
+    "question": "Saya menikmati kegiatan yang melibatkan kreativitas seperti menggambar atau menulis.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_A_02",
+    "category": "TES_ARTISTIC",
+    "question": "Saya merasa nyaman mengekspresikan ide melalui karya visual atau tulisan.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_A_03",
+    "category": "TES_ARTISTIC",
+    "question": "Saya suka mencoba gaya baru dalam desain, dekorasi, atau presentasi.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_A_04",
+    "category": "TES_ARTISTIC",
+    "question": "Saya lebih suka tugas terbuka yang memberi kebebasan bereksperimen daripada instruksi kaku.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_A_05",
+    "category": "TES_ARTISTIC",
+    "question": "Saya terinspirasi oleh warna, bentuk, ritme, atau cerita yang kuat.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_A_06",
+    "category": "TES_ARTISTIC",
+    "question": "Saya menikmati membuat sesuatu yang unik dibanding menyalin contoh yang ada.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_A_07",
+    "category": "TES_ARTISTIC",
+    "question": "Saya merasa terdorong untuk mencurahkan emosi ke dalam karya atau ekspresi saya.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_A_08",
+    "category": "TES_ARTISTIC",
+    "question": "Saya menikmati kegiatan seperti musik, teater, desain, fotografi, atau sastra.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_A_09",
+    "category": "TES_ARTISTIC",
+    "question": "Saya tertarik membuat karya yang bisa menginspirasi atau menyentuh orang lain.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_A_10",
+    "category": "TES_ARTISTIC",
+    "question": "Saya sering mendapat ide-ide kreatif di luar rutinitas sehari-hari.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+
+  {
+    "id": "RIASEC_S_01",
+    "category": "TES_SOCIAL",
+    "question": "Saya senang membantu orang memahami sesuatu yang sulit.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_S_02",
+    "category": "TES_SOCIAL",
+    "question": "Saya merasa puas ketika dapat mendukung atau menguatkan orang lain.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_S_03",
+    "category": "TES_SOCIAL",
+    "question": "Saya peka terhadap kebutuhan atau perasaan orang di sekitar saya.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_S_04",
+    "category": "TES_SOCIAL",
+    "question": "Saya menikmati bekerja dalam tim untuk mencapai tujuan bersama.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_S_05",
+    "category": "TES_SOCIAL",
+    "question": "Saya tertarik pada bidang seperti pendidikan, konseling, atau layanan sosial.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_S_06",
+    "category": "TES_SOCIAL",
+    "question": "Saya sering menjadi tempat curhat atau dimintai pendapat oleh orang lain.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_S_07",
+    "category": "TES_SOCIAL",
+    "question": "Saya menikmati mengarahkan atau memfasilitasi diskusi kelompok.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_S_08",
+    "category": "TES_SOCIAL",
+    "question": "Saya peduli pada dampak sosial dari keputusan atau tindakan.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_S_09",
+    "category": "TES_SOCIAL",
+    "question": "Saya termotivasi ketika bisa membuat perbedaan positif bagi orang lain.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_S_10",
+    "category": "TES_SOCIAL",
+    "question": "Saya menikmati kegiatan seperti mentoring, mengajar, atau membimbing.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+
+  {
+    "id": "RIASEC_E_01",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya bersemangat ketika bisa memimpin atau mengarahkan orang lain.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_E_02",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya menikmati menantang diri mencapai target yang ambisius.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_E_03",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya tertarik pada dunia bisnis, pemasaran, atau negosiasi.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_E_04",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya percaya diri mempresentasikan ide kepada orang lain.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_E_05",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya suka mengambil keputusan di situasi yang dinamis atau menantang.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_E_06",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya nyaman berbicara di depan banyak orang atau audiens baru.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_E_07",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya menikmati memotivasi orang lain mencapai hasil yang lebih baik.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_E_08",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya tertarik membuat atau mengembangkan peluang usaha baru.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_E_09",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya terdorong oleh tantangan kompetitif dan target terukur.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_E_10",
+    "category": "TES_ENTERPRISING",
+    "question": "Saya menikmati memengaruhi keputusan orang lain melalui ide atau argumen.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+
+  {
+    "id": "RIASEC_C_01",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya suka tugas yang membutuhkan ketelitian dalam pencatatan atau pengarsipan.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_C_02",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya menikmati mengorganisir data, dokumen, atau informasi agar rapi.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_C_03",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya merasa nyaman mengikuti prosedur atau format yang sudah ditetapkan.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_C_04",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya teliti dalam memeriksa kesalahan angka atau detail kecil.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_C_05",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya menikmati membuat daftar, tabel, atau struktur yang membantu pekerjaan teratur.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_C_06",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya suka menyelesaikan tugas administratif dengan akurat dan tepat waktu.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_C_07",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya nyaman bekerja dengan spreadsheet, form, atau sistem terstruktur.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_C_08",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya merasa tenang ketika segala sesuatunya terdokumentasi dengan baik.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_C_09",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya menyukai pekerjaan yang konsisten, stabil, dan prosedural.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "MUDAH",
+    "points": 1
+  },
+  {
+    "id": "RIASEC_C_10",
+    "category": "TES_CONVENTIONAL",
+    "question": "Saya terorganisir dalam mengelola waktu, tugas, dan dokumen kerja.",
+    "type": "MULTIPLE_CHOICE_SINGLE",
+    "options": [
+      "Sangat Tidak Setuju",
+      "Tidak Setuju",
+      "Netral",
+      "Setuju",
+      "Sangat Setuju"
+    ],
+    "difficulty": "SEDANG",
+    "points": 1
+  }
+]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { Plus, BookOpen, Trash2 } from "lucide-react";
@@ -67,7 +67,62 @@ export default function CreateTestPage() {
     minimumScore: 60, // default 60%
     availableFrom: "",
     availableUntil: "",
+    test_type: "TPA" as "TPA" | "RIASEC" | "COMBO",
   });
+  // ================= RIASEC Auto Grouping Support =================
+  const RIASEC_SECTIONS: { cat: string; name: string }[] = [
+    { cat: "TES_REALISTIC", name: "Realistic" },
+    { cat: "TES_INVESTIGATIVE", name: "Investigative" },
+    { cat: "TES_ARTISTIC", name: "Artistic" },
+    { cat: "TES_SOCIAL", name: "Social" },
+    { cat: "TES_ENTERPRISING", name: "Enterprising" },
+    { cat: "TES_CONVENTIONAL", name: "Conventional" },
+  ];
+
+  const addRiasecSections = () => {
+    setSections((prev) => {
+      const existingCats = new Set(
+        prev.filter((p) => p.category).map((p) => p.category)
+      );
+      const toAdd = RIASEC_SECTIONS.filter((s) => !existingCats.has(s.cat));
+      if (toAdd.length === 0) return prev; // nothing to add
+      const newSecs: Section[] = toAdd.map((s) => ({
+        name: s.name,
+        duration: 10, // default 10 minutes per dimension (adjust as needed)
+        questions: [],
+        autoGrouping: true,
+        category: s.cat,
+        questionCount: 10,
+      }));
+      return [...prev, ...newSecs];
+    });
+  };
+
+  // Auto inject RIASEC sections when switching to pure RIASEC test and no sections yet
+  useEffect(() => {
+    if (formData.test_type === "RIASEC" && sections.length === 0) {
+      addRiasecSections();
+    }
+  }, [formData.test_type]);
+
+  // Dynamic category options for auto-grouping modal
+  const TPA_CATEGORY_OPTIONS = [
+    { value: "TES_VERBAL", label: "Tes Verbal" },
+    { value: "TES_GAMBAR", label: "Tes Gambar" },
+    { value: "TES_LOGIKA", label: "Tes Logika" },
+    { value: "TES_ANGKA", label: "Tes Angka" },
+  ];
+  const RIASEC_CATEGORY_OPTIONS = RIASEC_SECTIONS.map((s) => ({
+    value: s.cat,
+    label: `${s.name} (${s.cat.replace("TES_", "").charAt(0)})`,
+  }));
+  const categoryOptions = (() => {
+    if (formData.test_type === "RIASEC") return RIASEC_CATEGORY_OPTIONS;
+    if (formData.test_type === "COMBO")
+      return [...TPA_CATEGORY_OPTIONS, ...RIASEC_CATEGORY_OPTIONS];
+    return TPA_CATEGORY_OPTIONS;
+  })();
+
   const [isUnlimitedPeriod, setIsUnlimitedPeriod] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -104,7 +159,7 @@ export default function CreateTestPage() {
     >
   ) => {
     const { name, value, type } = e.target;
-    
+
     if (type === "checkbox") {
       setFormData((prev) => ({
         ...prev,
@@ -114,13 +169,13 @@ export default function CreateTestPage() {
       const numValue = parseInt(value) || 0;
       // Validasi khusus untuk setiap field numerik
       let validatedValue = numValue;
-      
+
       if (name === "maxAttempts") {
         validatedValue = Math.max(0, Math.min(20, numValue));
       } else if (name === "tabLeaveLimit") {
         validatedValue = Math.max(0, Math.min(10, numValue));
       }
-      
+
       setFormData((prev) => ({
         ...prev,
         [name]: validatedValue,
@@ -128,13 +183,13 @@ export default function CreateTestPage() {
     } else {
       // Validasi untuk text dan textarea
       let validatedValue = value;
-      
+
       if (name === "name" && value.length > 100) {
         validatedValue = value.substring(0, 100);
       } else if (name === "description" && value.length > 500) {
         validatedValue = value.substring(0, 500);
       }
-      
+
       setFormData((prev) => ({
         ...prev,
         [name]: validatedValue,
@@ -229,20 +284,12 @@ export default function CreateTestPage() {
     }
     // Validasi nama tes
     if (!formData.name.trim()) {
-      showFeedback(
-        "warning",
-        "Validasi Gagal",
-        "Nama tes wajib diisi"
-      );
+      showFeedback("warning", "Validasi Gagal", "Nama tes wajib diisi");
       return;
     }
-    
+
     if (formData.name.trim().length < 3) {
-      showFeedback(
-        "warning",
-        "Validasi Gagal",
-        "Nama tes minimal 3 karakter"
-      );
+      showFeedback("warning", "Validasi Gagal", "Nama tes minimal 3 karakter");
       return;
     }
 
@@ -256,11 +303,11 @@ export default function CreateTestPage() {
         );
         return;
       }
-      
+
       const from = new Date(formData.availableFrom);
       const until = new Date(formData.availableUntil);
       const now = new Date();
-      
+
       if (isNaN(from.getTime()) || isNaN(until.getTime())) {
         showFeedback(
           "warning",
@@ -269,7 +316,7 @@ export default function CreateTestPage() {
         );
         return;
       }
-      
+
       if (from >= until) {
         showFeedback(
           "warning",
@@ -278,7 +325,7 @@ export default function CreateTestPage() {
         );
         return;
       }
-      
+
       if (until <= now) {
         showFeedback(
           "warning",
@@ -288,7 +335,7 @@ export default function CreateTestPage() {
         return;
       }
     }
-    
+
     // Validasi nilai numerik
     if (formData.maxAttempts < 0) {
       showFeedback(
@@ -298,7 +345,7 @@ export default function CreateTestPage() {
       );
       return;
     }
-    
+
     if (formData.tabLeaveLimit < 0) {
       showFeedback(
         "warning",
@@ -307,7 +354,7 @@ export default function CreateTestPage() {
       );
       return;
     }
-    
+
     // Validasi batas minimum skor
     if (formData.minimumScore < 0 || formData.minimumScore > 100) {
       showFeedback(
@@ -354,18 +401,18 @@ export default function CreateTestPage() {
         (sum, s) => sum + (s.duration || 0),
         0
       );
-      
+
       // Prepare data dengan handling periode unlimited
       const testData = {
         ...formData,
         duration: totalDuration,
         creatorId,
         // Jika unlimited period, set availableFrom ke now dan availableUntil ke tanggal yang sangat jauh
-        availableFrom: isUnlimitedPeriod 
-          ? new Date().toISOString().slice(0, 16) 
+        availableFrom: isUnlimitedPeriod
+          ? new Date().toISOString().slice(0, 16)
           : formData.availableFrom,
-        availableUntil: isUnlimitedPeriod 
-          ? new Date('2099-12-31T23:59').toISOString().slice(0, 16)
+        availableUntil: isUnlimitedPeriod
+          ? new Date("2099-12-31T23:59").toISOString().slice(0, 16)
           : formData.availableUntil,
         sections: sections.map((s) => ({
           name: s.name,
@@ -375,8 +422,9 @@ export default function CreateTestPage() {
           category: s.category,
           questionCount: s.questionCount,
         })),
+        test_type: formData.test_type,
       };
-      
+
       const testResponse = await fetch("/api/tests", {
         method: "POST",
         headers: {
@@ -397,7 +445,8 @@ export default function CreateTestPage() {
         }, 2000);
       } else {
         const errorData = await testResponse.json();
-        const errorMessage = errorData.error || "Terjadi kesalahan saat membuat tes";
+        const errorMessage =
+          errorData.error || "Terjadi kesalahan saat membuat tes";
         setError(errorMessage);
         showFeedback("error", "Gagal Membuat Tes", errorMessage);
       }
@@ -455,8 +504,16 @@ export default function CreateTestPage() {
               >
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
-                    <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    <svg
+                      className="w-5 h-5 mr-2 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span className="font-medium">Error:</span>
                     <span className="ml-1">{error}</span>
@@ -511,6 +568,31 @@ export default function CreateTestPage() {
                 </div>
 
                 {/* Durasi */}
+                {/* Jenis Tes */}
+                <div>
+                  <label
+                    htmlFor="test_type"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Jenis Tes <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="test_type"
+                    name="test_type"
+                    value={formData.test_type}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  >
+                    <option value="TPA">TPA (Aptitude)</option>
+                    <option value="RIASEC">RIASEC (Minat Karir)</option>
+                    <option value="COMBO">Gabungan (TPA + RIASEC)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Pilih "RIASEC" untuk tes minat karir (tanpa lulus/gagal).
+                  </p>
+                </div>
+
+                <div className="mt-2" />
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Durasi Tes
@@ -535,7 +617,8 @@ export default function CreateTestPage() {
                       htmlFor="maxAttempts"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Batas Percobaan Tes <span className="text-red-500">*</span>
+                      Batas Percobaan Tes{" "}
+                      <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -552,14 +635,15 @@ export default function CreateTestPage() {
                       0 = tak terbatas
                     </p>
                   </div>
-                  
+
                   {/* Batas Tab/Window Leave */}
                   <div>
                     <label
                       htmlFor="tabLeaveLimit"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Batas Peringatan Tab Leave <span className="text-red-500">*</span>
+                      Batas Peringatan Tab Leave{" "}
+                      <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -584,7 +668,8 @@ export default function CreateTestPage() {
                     htmlFor="minimumScore"
                     className="block text-sm font-medium text-gray-700 mb-2"
                   >
-                    Batas Minimum Skor Kelulusan <span className="text-red-500">*</span>
+                    Batas Minimum Skor Kelulusan{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -604,7 +689,8 @@ export default function CreateTestPage() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Peserta harus mencapai skor minimal ini untuk dinyatakan lulus (0-100%)
+                    Peserta harus mencapai skor minimal ini untuk dinyatakan
+                    lulus (0-100%)
                   </p>
                 </div>
                 {/* Periode Tes */}
@@ -625,13 +711,12 @@ export default function CreateTestPage() {
                     </label>
                   </div>
                   <p className="text-xs text-gray-500 mb-4">
-                    {isUnlimitedPeriod 
+                    {isUnlimitedPeriod
                       ? "Tes dapat diakses kapan saja tanpa batas waktu"
-                      : "Tentukan periode waktu tes dapat diakses peserta"
-                    }
+                      : "Tentukan periode waktu tes dapat diakses peserta"}
                   </p>
                 </div>
-                
+
                 {!isUnlimitedPeriod && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -639,7 +724,8 @@ export default function CreateTestPage() {
                         htmlFor="availableFrom"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        Periode Mulai Tes <span className="text-red-500">*</span>
+                        Periode Mulai Tes{" "}
+                        <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="datetime-local"
@@ -659,7 +745,8 @@ export default function CreateTestPage() {
                         htmlFor="availableUntil"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        Periode Berakhir Tes <span className="text-red-500">*</span>
+                        Periode Berakhir Tes{" "}
+                        <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="datetime-local"
@@ -677,20 +764,32 @@ export default function CreateTestPage() {
                   </div>
                 )}
 
-
                 {/* Section List */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-gray-700">
                       Section Tes
                     </label>
-                    <button
-                      type="button"
-                      className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-sm font-medium"
-                      onClick={() => setShowSectionModal(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" /> Tambah Section
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-sm font-medium"
+                        onClick={() => setShowSectionModal(true)}
+                      >
+                        <Plus className="w-4 h-4 mr-2" /> Tambah Section
+                      </button>
+                      {(formData.test_type === "RIASEC" ||
+                        formData.test_type === "COMBO") && (
+                        <button
+                          type="button"
+                          onClick={addRiasecSections}
+                          className="flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors text-sm font-medium"
+                          title="Tambah otomatis 6 section dimensi RIASEC yang belum ada"
+                        >
+                          Auto RIASEC
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {sections.length === 0 ? (
                     <div className="text-gray-400 text-sm italic">
@@ -712,7 +811,11 @@ export default function CreateTestPage() {
                                 Durasi: {section.duration} menit &bull;{" "}
                                 {section.autoGrouping ? (
                                   <span className="text-blue-600 font-medium">
-                                    Auto-grouping: {section.questionCount || 10} soal dari kategori {section.category?.replace('TES_', '').replace('_', ' ')}
+                                    Auto-grouping: {section.questionCount || 10}{" "}
+                                    soal dari kategori{" "}
+                                    {section.category
+                                      ?.replace("TES_", "")
+                                      .replace("_", " ")}
                                   </span>
                                 ) : (
                                   `${section.questions.length} soal`
@@ -775,25 +878,25 @@ export default function CreateTestPage() {
                                     </div>
                                     <div className="flex justify-end gap-2">
                                       <button
-                        type="button"
-                        className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
-                        onClick={() =>
-                          setShowEditSectionModal(false)
-                        }
-                      >
-                        Batal
-                      </button>
-                      <button
-                        type="button"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                        onClick={handleEditSectionSave}
-                        disabled={
-                          !editSectionNameValue.trim() ||
-                          editSectionDurationValue < 1
-                        }
-                      >
-                        Simpan
-                      </button>
+                                        type="button"
+                                        className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+                                        onClick={() =>
+                                          setShowEditSectionModal(false)
+                                        }
+                                      >
+                                        Batal
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                                        onClick={handleEditSectionSave}
+                                        disabled={
+                                          !editSectionNameValue.trim() ||
+                                          editSectionDurationValue < 1
+                                        }
+                                      >
+                                        Simpan
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -808,9 +911,9 @@ export default function CreateTestPage() {
                               <button
                                 type="button"
                                 className={`px-2 py-1 rounded transition-colors ${
-                                  section.autoGrouping 
-                                    ? 'text-gray-400 cursor-not-allowed' 
-                                    : 'text-green-600 hover:bg-green-50'
+                                  section.autoGrouping
+                                    ? "text-gray-400 cursor-not-allowed"
+                                    : "text-green-600 hover:bg-green-50"
                                 }`}
                                 onClick={() => {
                                   if (!section.autoGrouping) {
@@ -819,9 +922,15 @@ export default function CreateTestPage() {
                                   }
                                 }}
                                 disabled={section.autoGrouping}
-                                title={section.autoGrouping ? 'Soal akan dipilih otomatis' : 'Pilih soal manual'}
+                                title={
+                                  section.autoGrouping
+                                    ? "Soal akan dipilih otomatis"
+                                    : "Pilih soal manual"
+                                }
                               >
-                                {section.autoGrouping ? 'Auto-grouping Aktif' : 'Pilih Soal'}
+                                {section.autoGrouping
+                                  ? "Auto-grouping Aktif"
+                                  : "Pilih Soal"}
                               </button>
                             </div>
                           </div>
@@ -829,11 +938,25 @@ export default function CreateTestPage() {
                           {section.autoGrouping ? (
                             <div className="text-xs text-blue-600 italic mt-2 bg-blue-50 p-2 rounded">
                               <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clipRule="evenodd"
+                                  />
                                 </svg>
                                 <span>
-                                  Soal akan dipilih otomatis saat tes dibuat ({section.questionCount || 10} soal dari kategori {section.category?.replace('TES_', '').replace('_', ' ')})
+                                  Soal akan dipilih otomatis saat tes dibuat (
+                                  {section.questionCount || 10} soal dari
+                                  kategori{" "}
+                                  {section.category
+                                    ?.replace("TES_", "")
+                                    .replace("_", " ")}
+                                  )
                                 </span>
                               </div>
                             </div>
@@ -901,15 +1024,33 @@ export default function CreateTestPage() {
                     disabled={
                       loading ||
                       sections.length === 0 ||
-                      sections.some((s) => !s.autoGrouping && s.questions.length === 0)
+                      sections.some(
+                        (s) => !s.autoGrouping && s.questions.length === 0
+                      )
                     }
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                   >
                     {loading ? (
                       <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                         Menyimpan...
                       </>
@@ -974,7 +1115,7 @@ export default function CreateTestPage() {
                   setSectionDurationInput(parseInt(e.target.value) || 1)
                 }
               />
-              
+
               {/* Auto-grouping toggle */}
               <div className="mb-3">
                 <label className="flex items-center">
@@ -989,7 +1130,8 @@ export default function CreateTestPage() {
                   </span>
                 </label>
                 <p className="text-xs text-gray-500 mt-1">
-                  Sistem akan otomatis memilih soal berdasarkan kategori yang dipilih
+                  Sistem akan otomatis memilih soal berdasarkan kategori yang
+                  dipilih
                 </p>
               </div>
 
@@ -1006,10 +1148,14 @@ export default function CreateTestPage() {
                     required
                   >
                     <option value="">Pilih Kategori</option>
-                    <option value="TES_VERBAL">Tes Verbal</option>
-                    <option value="TES_GAMBAR">Tes Gambar</option>
-                    <option value="TES_LOGIKA">Tes Logika</option>
-                    <option value="TES_ANGKA">Tes Angka</option>
+                    {categoryOptions.map((opt) => (
+                      <option
+                        key={opt.value}
+                        value={opt.value}
+                      >
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -1022,14 +1168,17 @@ export default function CreateTestPage() {
                   <input
                     type="number"
                     value={sectionQuestionCount}
-                    onChange={(e) => setSectionQuestionCount(parseInt(e.target.value) || 10)}
+                    onChange={(e) =>
+                      setSectionQuestionCount(parseInt(e.target.value) || 10)
+                    }
                     min="1"
                     max="50"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Jumlah soal yang akan dipilih otomatis"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Sistem akan memilih soal secara acak dari kategori yang dipilih
+                    Sistem akan memilih soal secara acak dari kategori yang
+                    dipilih
                   </p>
                 </div>
               )}
@@ -1046,7 +1195,12 @@ export default function CreateTestPage() {
                 type="button"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 onClick={handleAddSection}
-                disabled={!sectionNameInput.trim() || !sectionDurationInput || (sectionAutoGrouping && (!sectionCategory || !sectionQuestionCount))}
+                disabled={
+                  !sectionNameInput.trim() ||
+                  !sectionDurationInput ||
+                  (sectionAutoGrouping &&
+                    (!sectionCategory || !sectionQuestionCount))
+                }
               >
                 Tambah
               </button>

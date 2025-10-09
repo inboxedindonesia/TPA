@@ -80,7 +80,7 @@ export async function POST(request: Request, context: any) {
 
       const scoreTpaAptitude = async () => {
         const questionsRes = await client.query(
-          `SELECT q.id, q."correctAnswer", q.points, q.category
+          `SELECT q.id, q."correctAnswer", q.points, q.category, q.options
            FROM questions q
            INNER JOIN test_questions tq ON q.id = tq.question_id
            WHERE tq.test_id = $1`,
@@ -178,7 +178,7 @@ export async function POST(request: Request, context: any) {
 
       const scoreRiasec = async () => {
         const questionsRes = await client.query(
-          `SELECT q.id, q.points, q.category
+          `SELECT q.id, q.points, q.category, q.options
            FROM questions q
            INNER JOIN test_questions tq ON q.id = tq.question_id
            WHERE tq.test_id = $1`,
@@ -186,71 +186,163 @@ export async function POST(request: Request, context: any) {
         );
         const questions = questionsRes.rows;
 
+        // Raw & max per dimensi (Likert 1-5)
         let scoreRealistic = 0,
-          maxScoreRealistic = 0;
+          maxScoreRealistic = 0,
+          highRealistic = 0;
         let scoreInvestigative = 0,
-          maxScoreInvestigative = 0;
+          maxScoreInvestigative = 0,
+          highInvestigative = 0;
         let scoreArtistic = 0,
-          maxScoreArtistic = 0;
+          maxScoreArtistic = 0,
+          highArtistic = 0;
         let scoreSocial = 0,
-          maxScoreSocial = 0;
+          maxScoreSocial = 0,
+          highSocial = 0;
         let scoreEnterprising = 0,
-          maxScoreEnterprising = 0;
+          maxScoreEnterprising = 0,
+          highEnterprising = 0;
         let scoreConventional = 0,
-          maxScoreConventional = 0;
+          maxScoreConventional = 0,
+          highConventional = 0;
+
+        const HIGH_THRESHOLD = 4; // jawaban >=4 dianggap tinggi
 
         for (const q of questions) {
-          const userAnswer = answers[q.id];
-          const point = typeof q.points === "number" ? q.points : 1;
           const category = q.category || "";
+          const userAnswer = answers[q.id]; // bisa index (0..4), 1-5, string likert, atau object
 
-          // Accumulate max scores
-          if (category === "TES_REALISTIC") maxScoreRealistic += point;
+          const isRiasec = [
+            "TES_REALISTIC",
+            "TES_INVESTIGATIVE",
+            "TES_ARTISTIC",
+            "TES_SOCIAL",
+            "TES_ENTERPRISING",
+            "TES_CONVENTIONAL",
+          ].includes(category);
+          if (!isRiasec) continue;
+
+          // Normalisasi max per item = 5
+          const itemMax = 5;
+          if (category === "TES_REALISTIC") maxScoreRealistic += itemMax;
           else if (category === "TES_INVESTIGATIVE")
-            maxScoreInvestigative += point;
-          else if (category === "TES_ARTISTIC") maxScoreArtistic += point;
-          else if (category === "TES_SOCIAL") maxScoreSocial += point;
+            maxScoreInvestigative += itemMax;
+          else if (category === "TES_ARTISTIC") maxScoreArtistic += itemMax;
+          else if (category === "TES_SOCIAL") maxScoreSocial += itemMax;
           else if (category === "TES_ENTERPRISING")
-            maxScoreEnterprising += point;
+            maxScoreEnterprising += itemMax;
           else if (category === "TES_CONVENTIONAL")
-            maxScoreConventional += point;
+            maxScoreConventional += itemMax;
 
-          // If answered, add to score and mark as correct
-          if (userAnswer !== undefined && userAnswer !== null) {
-            await client.query(
-              `UPDATE answers SET "isCorrect" = $1, "pointsEarned" = $2
-               WHERE "sessionId" = $3 AND "questionId" = $4`,
-              [true, point, sessionId, q.id]
-            );
+          if (userAnswer === undefined || userAnswer === null) continue;
 
-            if (category === "TES_REALISTIC") scoreRealistic += point;
-            else if (category === "TES_INVESTIGATIVE")
-              scoreInvestigative += point;
-            else if (category === "TES_ARTISTIC") scoreArtistic += point;
-            else if (category === "TES_SOCIAL") scoreSocial += point;
-            else if (category === "TES_ENTERPRISING")
-              scoreEnterprising += point;
-            else if (category === "TES_CONVENTIONAL")
-              scoreConventional += point;
+          // Normalisasi jawaban ke skala 1..5
+          let itemScore: number | null = null;
+          const parseLikert = (raw: any): number | null => {
+            if (raw === null || raw === undefined) return null;
+            if (typeof raw === "number") {
+              if (raw >= 1 && raw <= 5) return raw; // sudah 1..5
+              if (raw >= 0 && raw <= 4) return raw + 1; // index 0..4
+            }
+            if (typeof raw === "string") {
+              const trimmed = raw.trim();
+              const lower = trimmed.toLowerCase();
+              if (lower.startsWith("sangat tidak setuju")) return 1;
+              if (lower.startsWith("tidak setuju")) return 2;
+              if (lower.includes("netral")) return 3;
+              if (lower.startsWith("sangat setuju")) return 5;
+              if (lower.startsWith("setuju")) return 4;
+              // numeric string
+              if (/^[1-5]$/.test(trimmed)) return parseInt(trimmed, 10);
+              // coba cocokkan exact option
+              try {
+                if (q.options) {
+                  let opts = q.options as any;
+                  if (typeof opts === "string") {
+                    const ot = opts.trim();
+                    if (ot.startsWith("[") && ot.endsWith("]"))
+                      opts = JSON.parse(ot);
+                  }
+                  if (Array.isArray(opts)) {
+                    const idxExact = opts.findIndex(
+                      (o: any) =>
+                        String(o).toLowerCase() === trimmed.toLowerCase()
+                    );
+                    if (idxExact >= 0) return idxExact + 1;
+                    // fuzzy: cocokkan huruf pertama (Sangat Tidak Setuju = S, dst) & panjang > 0
+                    const first = trimmed[0].toLowerCase();
+                    const idxFirst = opts.findIndex((o: any) =>
+                      String(o).toLowerCase().startsWith(first)
+                    );
+                    if (idxFirst >= 0) return idxFirst + 1;
+                  }
+                }
+              } catch {}
+            }
+            if (typeof raw === "object") {
+              // pattern { value:3 } atau { index:2 }
+              if ("value" in raw && typeof (raw as any).value === "number") {
+                return parseLikert((raw as any).value);
+              }
+              if ("index" in raw && typeof (raw as any).index === "number") {
+                return parseLikert((raw as any).index);
+              }
+            }
+            return null;
+          };
+          itemScore = parseLikert(userAnswer);
+          if (itemScore === null) continue; // skip jika benar-benar tidak bisa diinterpretasi
+
+          const isHigh = itemScore >= HIGH_THRESHOLD;
+
+          // Simpan ke answers (pointsEarned = itemScore, isCorrect=true)
+          await client.query(
+            `UPDATE answers SET "isCorrect" = $1, "pointsEarned" = $2 WHERE "sessionId" = $3 AND "questionId" = $4`,
+            [true, itemScore, sessionId, q.id]
+          );
+
+          if (category === "TES_REALISTIC") {
+            scoreRealistic += itemScore;
+            if (isHigh) highRealistic++;
+          } else if (category === "TES_INVESTIGATIVE") {
+            scoreInvestigative += itemScore;
+            if (isHigh) highInvestigative++;
+          } else if (category === "TES_ARTISTIC") {
+            scoreArtistic += itemScore;
+            if (isHigh) highArtistic++;
+          } else if (category === "TES_SOCIAL") {
+            scoreSocial += itemScore;
+            if (isHigh) highSocial++;
+          } else if (category === "TES_ENTERPRISING") {
+            scoreEnterprising += itemScore;
+            if (isHigh) highEnterprising++;
+          } else if (category === "TES_CONVENTIONAL") {
+            scoreConventional += itemScore;
+            if (isHigh) highConventional++;
           }
         }
 
-        // Calculate Holland Code
+        // Holland code dengan tie-break high answer count
         const riasecScores = [
-          { code: "R", score: scoreRealistic },
-          { code: "I", score: scoreInvestigative },
-          { code: "A", score: scoreArtistic },
-          { code: "S", score: scoreSocial },
-          { code: "E", score: scoreEnterprising },
-          { code: "C", score: scoreConventional },
+          { code: "R", score: scoreRealistic, high: highRealistic },
+          { code: "I", score: scoreInvestigative, high: highInvestigative },
+          { code: "A", score: scoreArtistic, high: highArtistic },
+          { code: "S", score: scoreSocial, high: highSocial },
+          { code: "E", score: scoreEnterprising, high: highEnterprising },
+          { code: "C", score: scoreConventional, high: highConventional },
         ];
-        riasecScores.sort((a, b) => b.score - a.score);
+        riasecScores.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          if (b.high !== a.high) return b.high - a.high;
+          // fallback urutan R I A S E C
+          const order = ["R", "I", "A", "S", "E", "C"];
+          return order.indexOf(a.code) - order.indexOf(b.code);
+        });
         const hollandCode = riasecScores
           .slice(0, 3)
-          .map((item) => item.code)
+          .map((i) => i.code)
           .join("");
 
-        // Calculate total score for RIASEC (sum of all scores)
         const totalScore =
           scoreRealistic +
           scoreInvestigative +
@@ -301,6 +393,273 @@ export async function POST(request: Request, context: any) {
 
       if (testType === "RIASEC") {
         await scoreRiasec();
+      } else if (testType === "COMBO") {
+        // Combined scoring: aptitude + RIASEC dalam satu kali update agar nilai aptitude tidak dioverwrite.
+        const questionsRes = await client.query(
+          `SELECT q.id, q."correctAnswer", q.points, q.category
+           FROM questions q
+           INNER JOIN test_questions tq ON q.id = tq.question_id
+           WHERE tq.test_id = $1`,
+          [session.testId]
+        );
+        const questions = questionsRes.rows;
+
+        // Aptitude (TPA) score vars
+        let scoreVerbal = 0,
+          maxScoreVerbal = 0;
+        let scoreAngka = 0,
+          maxScoreAngka = 0;
+        let scoreLogika = 0,
+          maxScoreLogika = 0;
+        let scoreGambar = 0,
+          maxScoreGambar = 0;
+
+        // RIASEC score vars
+        let scoreRealistic = 0,
+          maxScoreRealistic = 0,
+          highRealistic = 0;
+        let scoreInvestigative = 0,
+          maxScoreInvestigative = 0,
+          highInvestigative = 0;
+        let scoreArtistic = 0,
+          maxScoreArtistic = 0,
+          highArtistic = 0;
+        let scoreSocial = 0,
+          maxScoreSocial = 0,
+          highSocial = 0;
+        let scoreEnterprising = 0,
+          maxScoreEnterprising = 0,
+          highEnterprising = 0;
+        let scoreConventional = 0,
+          maxScoreConventional = 0,
+          highConventional = 0;
+
+        const HIGH_THRESHOLD = 4;
+
+        for (const q of questions) {
+          const point = typeof q.points === "number" ? q.points : 1;
+          const category = q.category || "";
+          const userAnswer = answers[q.id];
+
+          const isRiasecCategory = [
+            "TES_REALISTIC",
+            "TES_INVESTIGATIVE",
+            "TES_ARTISTIC",
+            "TES_SOCIAL",
+            "TES_ENTERPRISING",
+            "TES_CONVENTIONAL",
+          ].includes(category);
+
+          if (isRiasecCategory) {
+            // Likert normalization: max per item = 5
+            const itemMax = 5;
+            if (category === "TES_REALISTIC") maxScoreRealistic += itemMax;
+            else if (category === "TES_INVESTIGATIVE")
+              maxScoreInvestigative += itemMax;
+            else if (category === "TES_ARTISTIC") maxScoreArtistic += itemMax;
+            else if (category === "TES_SOCIAL") maxScoreSocial += itemMax;
+            else if (category === "TES_ENTERPRISING")
+              maxScoreEnterprising += itemMax;
+            else if (category === "TES_CONVENTIONAL")
+              maxScoreConventional += itemMax;
+
+            if (userAnswer !== undefined && userAnswer !== null) {
+              // Map answer to index 0..4 if needed
+              // Normalisasi jawaban ke skala 1..5 (COMBO)
+              let itemScore: number | null = null;
+              const parseLikert = (raw: any): number | null => {
+                if (raw === null || raw === undefined) return null;
+                if (typeof raw === "number") {
+                  if (raw >= 1 && raw <= 5) return raw;
+                  if (raw >= 0 && raw <= 4) return raw + 1;
+                }
+                if (typeof raw === "string") {
+                  const trimmed = raw.trim();
+                  const lower = trimmed.toLowerCase();
+                  if (lower.startsWith("sangat tidak setuju")) return 1;
+                  if (lower.startsWith("tidak setuju")) return 2;
+                  if (lower.includes("netral")) return 3;
+                  if (lower.startsWith("sangat setuju")) return 5;
+                  if (lower.startsWith("setuju")) return 4;
+                  if (/^[1-5]$/.test(trimmed)) return parseInt(trimmed, 10);
+                  try {
+                    if (q.options) {
+                      let opts = q.options as any;
+                      if (typeof opts === "string") {
+                        const ot = opts.trim();
+                        if (ot.startsWith("[") && ot.endsWith("]"))
+                          opts = JSON.parse(ot);
+                      }
+                      if (Array.isArray(opts)) {
+                        const idxExact = opts.findIndex(
+                          (o: any) =>
+                            String(o).toLowerCase() === trimmed.toLowerCase()
+                        );
+                        if (idxExact >= 0) return idxExact + 1;
+                        const first = trimmed[0].toLowerCase();
+                        const idxFirst = opts.findIndex((o: any) =>
+                          String(o).toLowerCase().startsWith(first)
+                        );
+                        if (idxFirst >= 0) return idxFirst + 1;
+                      }
+                    }
+                  } catch {}
+                }
+                if (typeof raw === "object") {
+                  if ("value" in raw && typeof (raw as any).value === "number")
+                    return parseLikert((raw as any).value);
+                  if ("index" in raw && typeof (raw as any).index === "number")
+                    return parseLikert((raw as any).index);
+                }
+                return null;
+              };
+              itemScore = parseLikert(userAnswer);
+              if (itemScore === null) continue;
+              const isHighCombo = itemScore >= HIGH_THRESHOLD;
+              const isHigh = itemScore >= HIGH_THRESHOLD;
+
+              await client.query(
+                `UPDATE answers SET "isCorrect" = $1, "pointsEarned" = $2 WHERE "sessionId" = $3 AND "questionId" = $4`,
+                [true, itemScore, sessionId, q.id]
+              );
+
+              if (category === "TES_REALISTIC") {
+                scoreRealistic += itemScore;
+                if (isHighCombo) highRealistic++;
+              } else if (category === "TES_INVESTIGATIVE") {
+                scoreInvestigative += itemScore;
+                if (isHighCombo) highInvestigative++;
+              } else if (category === "TES_ARTISTIC") {
+                scoreArtistic += itemScore;
+                if (isHighCombo) highArtistic++;
+              } else if (category === "TES_SOCIAL") {
+                scoreSocial += itemScore;
+                if (isHighCombo) highSocial++;
+              } else if (category === "TES_ENTERPRISING") {
+                scoreEnterprising += itemScore;
+                if (isHighCombo) highEnterprising++;
+              } else if (category === "TES_CONVENTIONAL") {
+                scoreConventional += itemScore;
+                if (isHighCombo) highConventional++;
+              }
+            }
+          } else {
+            // Aptitude categories: treat with correctness rules
+            if (category === "TES_VERBAL") maxScoreVerbal += point;
+            else if (category === "TES_ANGKA") maxScoreAngka += point;
+            else if (category === "TES_LOGIKA") maxScoreLogika += point;
+            else if (category === "TES_GAMBAR") maxScoreGambar += point;
+
+            // Evaluate correctness
+            let correct = false;
+            let correctAnswer = q.correctAnswer;
+            if (typeof correctAnswer === "string") {
+              const trimmed = correctAnswer.trim();
+              if (
+                (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+                (trimmed.startsWith("{") && trimmed.endsWith("}"))
+              ) {
+                try {
+                  correctAnswer = JSON.parse(trimmed);
+                } catch (e) {
+                  console.error(
+                    "[ERROR] Gagal parse correctAnswer (COMBO):",
+                    trimmed,
+                    e
+                  );
+                }
+              }
+            }
+            if (Array.isArray(correctAnswer)) {
+              correct = Array.isArray(userAnswer)
+                ? JSON.stringify(userAnswer.sort()) ===
+                  JSON.stringify(correctAnswer.sort())
+                : correctAnswer.includes(userAnswer);
+            } else {
+              correct = userAnswer == correctAnswer;
+            }
+            const pointsEarned = correct ? point : 0;
+            await client.query(
+              `UPDATE answers SET "isCorrect" = $1, "pointsEarned" = $2 WHERE "sessionId" = $3 AND "questionId" = $4`,
+              [correct, pointsEarned, sessionId, q.id]
+            );
+            if (correct) {
+              if (category === "TES_VERBAL") scoreVerbal += point;
+              else if (category === "TES_ANGKA") scoreAngka += point;
+              else if (category === "TES_LOGIKA") scoreLogika += point;
+              else if (category === "TES_GAMBAR") scoreGambar += point;
+            }
+          }
+        }
+
+        // Hitung holland code dari skor RIASEC dengan tie-break high answers
+        const riasecScores = [
+          { code: "R", score: scoreRealistic, high: highRealistic },
+          { code: "I", score: scoreInvestigative, high: highInvestigative },
+          { code: "A", score: scoreArtistic, high: highArtistic },
+          { code: "S", score: scoreSocial, high: highSocial },
+          { code: "E", score: scoreEnterprising, high: highEnterprising },
+          { code: "C", score: scoreConventional, high: highConventional },
+        ];
+        riasecScores.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          if (b.high !== a.high) return b.high - a.high;
+          const order = ["R", "I", "A", "S", "E", "C"];
+          return order.indexOf(a.code) - order.indexOf(b.code);
+        });
+        const hollandCode = riasecScores
+          .slice(0, 3)
+          .map((item) => item.code)
+          .join("");
+
+        const aptitudeScoreTotal =
+          scoreVerbal + scoreAngka + scoreLogika + scoreGambar;
+        const aptitudeMaxScoreTotal =
+          maxScoreVerbal + maxScoreAngka + maxScoreLogika + maxScoreGambar;
+
+        await client.query(
+          `UPDATE test_sessions SET 
+           status = 'COMPLETED', "endTime" = (NOW() AT TIME ZONE 'Asia/Jakarta'),
+           score = $1, "maxScore" = $2,
+           score_verbal = $3, max_score_verbal = $4,
+           score_angka = $5, max_score_angka = $6,
+           score_logika = $7, max_score_logika = $8,
+           score_gambar = $9, max_score_gambar = $10,
+           score_realistic = $11, max_score_realistic = $12,
+           score_investigative = $13, max_score_investigative = $14,
+           score_artistic = $15, max_score_artistic = $16,
+           score_social = $17, max_score_social = $18,
+           score_enterprising = $19, max_score_enterprising = $20,
+           score_conventional = $21, max_score_conventional = $22,
+           holland_code = $23
+           WHERE id = $24`,
+          [
+            aptitudeScoreTotal,
+            aptitudeMaxScoreTotal,
+            scoreVerbal,
+            maxScoreVerbal,
+            scoreAngka,
+            maxScoreAngka,
+            scoreLogika,
+            maxScoreLogika,
+            scoreGambar,
+            maxScoreGambar,
+            scoreRealistic,
+            maxScoreRealistic,
+            scoreInvestigative,
+            maxScoreInvestigative,
+            scoreArtistic,
+            maxScoreArtistic,
+            scoreSocial,
+            maxScoreSocial,
+            scoreEnterprising,
+            maxScoreEnterprising,
+            scoreConventional,
+            maxScoreConventional,
+            hollandCode,
+            sessionId,
+          ]
+        );
       } else {
         await scoreTpaAptitude();
       }

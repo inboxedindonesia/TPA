@@ -29,6 +29,19 @@ export async function GET(request: NextRequest, context: any) {
           ts.score_angka,
           ts.score_logika,
           ts.score_gambar,
+          ts.score_realistic,
+          ts.score_investigative,
+          ts.score_artistic,
+          ts.score_social,
+          ts.score_enterprising,
+          ts.score_conventional,
+          ts.max_score_realistic,
+          ts.max_score_investigative,
+          ts.max_score_artistic,
+          ts.max_score_social,
+          ts.max_score_enterprising,
+          ts.max_score_conventional,
+          ts.holland_code,
           ts.max_score_verbal,
           ts.max_score_angka,
           ts.max_score_logika,
@@ -43,7 +56,8 @@ export async function GET(request: NextRequest, context: any) {
           t.name as test_name,
           t.description as test_description,
           t.duration as test_duration,
-          t."minimumScore" as minimum_score
+          t."minimumScore" as minimum_score,
+          t.test_type as test_type
         FROM test_sessions ts
         LEFT JOIN users u ON ts."userId" = u.id
         LEFT JOIN tests t ON ts."testId" = t.id
@@ -158,6 +172,23 @@ export async function GET(request: NextRequest, context: any) {
           aptitude_score_total,
           aptitude_max_score_total,
           aptitude_percentage,
+          test_type: session.test_type,
+          // Expose RIASEC scores directly for frontend conditional rendering
+          riasec: {
+            score_realistic: session.score_realistic || 0,
+            score_investigative: session.score_investigative || 0,
+            score_artistic: session.score_artistic || 0,
+            score_social: session.score_social || 0,
+            score_enterprising: session.score_enterprising || 0,
+            score_conventional: session.score_conventional || 0,
+            max_score_realistic: session.max_score_realistic || 0,
+            max_score_investigative: session.max_score_investigative || 0,
+            max_score_artistic: session.max_score_artistic || 0,
+            max_score_social: session.max_score_social || 0,
+            max_score_enterprising: session.max_score_enterprising || 0,
+            max_score_conventional: session.max_score_conventional || 0,
+            holland_code: session.holland_code || null,
+          },
         },
         answers: answersRes.rows,
       };
