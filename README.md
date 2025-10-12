@@ -157,6 +157,40 @@ npm start
 npm run lint
 ```
 
+## ✉️ OTP/Email Blast Test (safe harness)
+
+Script Node kecil untuk menyimulasikan pengiriman OTP secara konkuren (cocok untuk uji lokal/staging SMTP).
+
+Pengaman:
+
+- Wajib set `OTP_BLAST_ENABLE=true`, jika tidak script tidak akan berjalan.
+- Jika base URL terdeteksi seperti production (mis. vercel.app atau .com), juga wajib set `OTP_BLAST_ALLOW_PROD=true`.
+
+Menjalankan:
+
+- Mode register (default): mendaftarkan akun dummy dan memicu OTP email
+  - `OTP_BLAST_ENABLE=true npm run otp:blast -- --base http://localhost:3000 --count 20 --concurrency 5`
+- Mode resend (untuk email yang SUDAH terdaftar): kirim OTP baru ke daftar email
+  - `OTP_BLAST_ENABLE=true npm run otp:blast -- --mode resend --base http://localhost:3000 --emails emails.txt --concurrency 10`
+- Mode smtp (tidak menulis ke DB, hanya kirim email test via `/api/test-smtp`):
+  - `OTP_BLAST_ENABLE=true npm run otp:blast -- --mode smtp --base http://localhost:3000 --emails emails.txt --concurrency 10`
+
+Opsi:
+
+- `--base` Base URL (default: NEXT_PUBLIC_BASE_URL atau http://localhost:3000)
+- `--count` Jumlah email yang di-generate (jika tidak pakai `--emails`)
+- `--emails` Path file berisi daftar email (satu per baris)
+- `--concurrency` Batas request paralel (default 5)
+- `--mode` `register` (default), `resend`, atau `smtp`
+- `--password` Password akun dummy (default `Test1234!`)
+- `--name-prefix` Prefix nama akun dummy
+- `--domain` Domain email untuk auto-generate (default example.test)
+- `--timeout` Timeout per request dalam ms (default 20000)
+
+Output:
+
+- Script akan menulis laporan JSON di `scripts/reports/otp-blast-<timestamp>.json` berisi hasil per email dan latensi.
+
 ## 📊 Database Schema
 
 ### Tables:

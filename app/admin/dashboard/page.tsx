@@ -1594,11 +1594,11 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-center">
                                 <div>
-                                  {Number(peserta.averageScore) >= 70 ? (
+                                  {peserta.kelulusan === "lolos" ? (
                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                       Lolos
                                     </span>
-                                  ) : peserta.totalTests > 0 ? (
+                                  ) : peserta.kelulusan === "tidak-lolos" ? (
                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                                       Tidak Lolos
                                     </span>

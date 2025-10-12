@@ -10,7 +10,7 @@ interface AuthContainerProps {
   footer?: React.ReactNode;
 }
 
-// Komponen wrapper sederhana agar login & register konsisten tanpa ubah global CSS
+// Wrapper autentikasi dengan fullscreen gradient background (tanpa rounded panel)
 export function AuthContainer({
   title,
   subtitle,
@@ -19,9 +19,12 @@ export function AuthContainer({
   footer,
 }: AuthContainerProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      {/* Fullscreen soft gradient */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50" />
+
       <div
-        className={`${
+        className={`relative z-10 ${
           width === "xl"
             ? "max-w-6xl"
             : width === "lg"
@@ -34,7 +37,7 @@ export function AuthContainer({
             width === "xl" ? "p-12" : width === "lg" ? "p-10" : "p-8"
           } shadow-2xl relative overflow-hidden`}
         >
-          {/* Decorative subtle circles */}
+          {/* Decorative subtle circles on card */}
           <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full bg-blue-100/50 blur-2xl" />
           <div className="pointer-events-none absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-indigo-100/40 blur-2xl" />
           <div className="text-center relative">

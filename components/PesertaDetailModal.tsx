@@ -1,6 +1,16 @@
 import React, { useRef, useEffect } from "react";
 import jsPDF from "jspdf";
-import { X, CalendarDays, Trophy, Clock, FileDown } from "lucide-react";
+import {
+  X,
+  CalendarDays,
+  Trophy,
+  Clock,
+  FileDown,
+  Timer,
+  Gauge,
+  CheckCircle2,
+  ArrowRight,
+} from "lucide-react";
 
 interface PesertaDetailModalProps {
   isOpen: boolean;
@@ -16,24 +26,27 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
   testResults,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     if (!isOpen) return;
-    
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
         onClose();
       }
     };
-    
-    document.addEventListener('mousedown', handleClickOutside);
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [onClose, isOpen]);
 
   if (!isOpen) return null;
-  
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("id-ID", {
@@ -55,7 +68,7 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
     }
     return `${age} tahun`;
   };
-  
+
   const formatDuration = (sec?: number | null) => {
     if (sec == null || isNaN(sec as any)) return "-";
     const m = Math.floor(sec / 60);
@@ -93,11 +106,25 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
         y
       );
       y += 8;
-      doc.text(`Tanggal      : ${r?.startTime ? formatDate(r.startTime) : "-"}`, 10, y);
+      doc.text(
+        `Tanggal      : ${r?.startTime ? formatDate(r.startTime) : "-"}`,
+        10,
+        y
+      );
       y += 8;
-      doc.text(`Durasi        : ${r?.duration ? formatDuration(r.duration) : "-"}`, 10, y);
+      doc.text(
+        `Durasi        : ${r?.duration ? formatDuration(r.duration) : "-"}`,
+        10,
+        y
+      );
       y += 8;
-      doc.text(`Status        : ${r?.status === "COMPLETED" ? "Selesai" : "Belum Selesai"}`, 10, y);
+      doc.text(
+        `Status        : ${
+          r?.status === "COMPLETED" ? "Selesai" : "Belum Selesai"
+        }`,
+        10,
+        y
+      );
 
       // Tambahkan informasi detail jika ada
       if (r?.correctAnswers !== undefined || r?.wrongAnswers !== undefined) {
@@ -110,16 +137,18 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
       }
 
       // Preview PDF terlebih dahulu
-      const pdfBlob = doc.output('blob');
+      const pdfBlob = doc.output("blob");
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      
+
       // Buka preview di tab baru
-      const previewWindow = window.open(pdfUrl, '_blank');
-      
+      const previewWindow = window.open(pdfUrl, "_blank");
+
       if (previewWindow) {
         // Tunggu sebentar lalu tanyakan apakah ingin download
         setTimeout(() => {
-          const shouldDownload = confirm('Apakah Anda ingin mengunduh PDF ini?');
+          const shouldDownload = confirm(
+            "Apakah Anda ingin mengunduh PDF ini?"
+          );
           if (shouldDownload) {
             const dateForFile = r?.startTime
               ? new Date(r.startTime).toISOString().slice(0, 10)
@@ -132,7 +161,7 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
         }, 1000);
       } else {
         // Jika popup diblokir, langsung download
-        alert('Popup diblokir. PDF akan langsung diunduh.');
+        alert("Popup diblokir. PDF akan langsung diunduh.");
         const dateForFile = r?.startTime
           ? new Date(r.startTime).toISOString().slice(0, 10)
           : "tanggal";
@@ -144,7 +173,7 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
       alert("Gagal membuat PDF hasil tes.");
     }
   };
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div
@@ -159,7 +188,7 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
           <X className="w-5 h-5" />
         </button>
         <h2 className="text-xl font-bold mb-4">Detail Peserta</h2>
-        
+
         {/* Header Summary Card */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm mb-4">
           <div className="flex items-center justify-between">
@@ -200,7 +229,7 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
             )}
           </div>
         </div>
-        
+
         {/* Personal Information Card */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm mb-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
@@ -254,7 +283,7 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
             </div>
           </div>
         </div>
-        
+
         {/* Address / School Card */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm mb-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
@@ -284,9 +313,7 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
         {/* Recent Test History Card */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Riwayat Tes
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900">Riwayat Tes</h3>
           </div>
           <div className="max-h-60 overflow-y-auto">
             {testResults && testResults.length > 0 ? (
@@ -326,16 +353,30 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
                                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${scoreColor} ring-1 ring-black/5`}
                               >
                                 <Trophy className="h-3.5 w-3.5" />
-                                {`Skor: ${tes.score ?? "-"}${tes?.maxScore ? "/" + tes.maxScore : ""}${percent !== null ? ` (${percent}%)` : ""}`}
+                                {`Skor: ${tes.score ?? "-"}${
+                                  tes?.maxScore ? "/" + tes.maxScore : ""
+                                }${percent !== null ? ` (${percent}%)` : ""}`}
                               </span>
                               <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 shadow-sm">
                                 <CalendarDays className="h-3.5 w-3.5" />
-                                {`${tes?.startTime ? formatDate(tes.startTime) : "-"}`}
+                                {`${
+                                  tes?.startTime
+                                    ? formatDate(tes.startTime)
+                                    : "-"
+                                }`}
                               </span>
                               <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${tes.status === "COMPLETED" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  tes.status === "COMPLETED"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }`}
                               >
-                                {tes.status === "COMPLETED" ? "Selesai" : tes.status === "IN_PROGRESS" ? "Sedang Dikerjakan" : "Belum Selesai"}
+                                {tes.status === "COMPLETED"
+                                  ? "Selesai"
+                                  : tes.status === "IN_PROGRESS"
+                                  ? "Sedang Dikerjakan"
+                                  : "Belum Selesai"}
                               </span>
                             </div>
                           </div>
@@ -347,6 +388,13 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
                               <FileDown className="h-4 w-4" />
                               Unduh PDF
                             </button>
+                            <a
+                              href={`/admin/hasil-tes/${tes.id}`}
+                              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+                            >
+                              Lihat Detail
+                              <ArrowRight className="h-4 w-4" />
+                            </a>
                           </div>
                         </div>
 
@@ -415,6 +463,9 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
                         {/* Metrics - full width */}
                         <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-4">
                           <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2">
+                            <div className="rounded-md bg-white p-1.5 text-gray-500 shadow-sm ring-1 ring-gray-200">
+                              <CheckCircle2 className="h-4 w-4" />
+                            </div>
                             <div>
                               <div className="text-gray-500">Benar</div>
                               <div className="font-semibold text-gray-900">
@@ -423,6 +474,63 @@ const PesertaDetailModal: React.FC<PesertaDetailModalProps> = ({
                               </div>
                             </div>
                           </div>
+
+                          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2">
+                            <div className="rounded-md bg-white p-1.5 text-gray-500 shadow-sm ring-1 ring-gray-200">
+                              <Clock className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <div className="text-gray-500">
+                                Waktu Pengerjaan
+                              </div>
+                              <div className="font-semibold text-gray-900">
+                                {formatDuration(tes?.durationSpentSec)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2">
+                            <div className="rounded-md bg-white p-1.5 text-gray-500 shadow-sm ring-1 ring-gray-200">
+                              <Timer className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <div className="text-gray-500">Durasi Tes</div>
+                              <div className="font-semibold text-gray-900">
+                                {tes?.testDuration != null
+                                  ? `${tes.testDuration} menit`
+                                  : "-"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {typeof tes?.totalQuestions === "number" &&
+                          typeof tes?.durationSpentSec === "number" &&
+                          tes.durationSpentSec > 0 ? (
+                            <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2">
+                              <div className="rounded-md bg-white p-1.5 text-gray-500 shadow-sm ring-1 ring-gray-200">
+                                <Gauge className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <div className="text-gray-500">Kecepatan</div>
+                                <div className="font-semibold text-gray-900">
+                                  {(() => {
+                                    const spm =
+                                      tes.durationSpentSec > 0
+                                        ? tes.totalQuestions /
+                                          (tes.durationSpentSec / 60)
+                                        : 0;
+                                    const value =
+                                      spm >= 10
+                                        ? Math.round(spm).toString()
+                                        : spm.toFixed(1);
+                                    return `${value} soal/menit`;
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="hidden sm:block" />
+                          )}
                         </div>
                       </div>
                     </div>
