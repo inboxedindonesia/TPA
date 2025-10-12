@@ -619,13 +619,11 @@ export default function AdminDashboard() {
   });
 
   const handleViewPeserta = async (peserta: any) => {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL || "https://tpa-seven.vercel.app";
     try {
-      const res = await fetch(
-        `${baseUrl}/api/admin/stats/peserta?id=${peserta.id}`,
-        { credentials: "include" }
-      );
+      // Use same-origin API to avoid CORS issues in production
+      const res = await fetch(`/api/admin/stats/peserta?id=${peserta.id}`, {
+        credentials: "include",
+      });
       if (!res.ok) {
         setFeedbackModal({
           isOpen: true,
