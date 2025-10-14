@@ -76,8 +76,14 @@ export async function POST(request: Request, context: any) {
         const durationMs = duration * 60 * 1000;
         const elapsed = now - start;
         if (elapsed < durationMs) {
-          // Masih dalam waktu, kembalikan sesi lama
-          return NextResponse.json({ session });
+          // Masih dalam waktu, kembalikan sesi lama + expiresAtMs berbasis WIB di DB
+          const expRes = await client.query(
+            `SELECT (EXTRACT(EPOCH FROM ((ts."startTime" AT TIME ZONE 'Asia/Jakarta') + make_interval(mins => $2))) * 1000)::bigint AS ms
+             FROM test_sessions ts WHERE ts.id = $1 LIMIT 1`,
+            [session.id, duration]
+          );
+          const expiresAtMs = Number(expRes.rows[0]?.ms || 0);
+          return NextResponse.json({ session, expiresAtMs });
         } else {
           // Sudah habis waktunya, update status sesi lama ke 'EXPIRED'
           await client.query(
@@ -89,8 +95,11 @@ export async function POST(request: Request, context: any) {
       // Buat sesi baru
       const sessionId = randomUUID();
       const res = await client.query(
-        `INSERT INTO test_sessions (id, "userId", "testId", status, "startTime") VALUES ($1, $2, $3, 'ONGOING', NOW() AT TIME ZONE 'Asia/Jakarta') RETURNING *`,
-        [sessionId, user.userId, testId]
+        `INSERT INTO test_sessions (id, "userId", "testId", status, "startTime")
+         VALUES ($1, $2, $3, 'ONGOING', NOW() AT TIME ZONE 'Asia/Jakarta')
+         RETURNING *,
+           (EXTRACT(EPOCH FROM (("startTime" AT TIME ZONE 'Asia/Jakarta') + make_interval(mins => $4))) * 1000)::bigint AS expires_at_ms`,
+        [sessionId, user.userId, testId, duration]
       );
 
       // Log test started activity
@@ -112,7 +121,9 @@ export async function POST(request: Request, context: any) {
         console.error("Error logging test start activity:", error);
       }
 
-      return NextResponse.json({ session: res.rows[0] });
+      const created = res.rows[0];
+      const expiresAtMs = Number(created.expires_at_ms || 0);
+      return NextResponse.json({ session: created, expiresAtMs });
     } finally {
       client.release();
     }

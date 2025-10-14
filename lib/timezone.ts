@@ -53,19 +53,31 @@ export function calculateRemainingTime(
   startTime: string,
   durationMinutes: number
 ): number {
-  // Parse startTime as UTC from database
-  const startDate = new Date(startTime);
-  const startMs = startDate.getTime();
-
-  const durationMs = durationMinutes * 60 * 1000;
-  const endMs = startMs + durationMs;
-
-  // Use current UTC time for consistent calculation
+  // Base calculation using parsed date from server and client current time
+  const startMs = new Date(startTime).getTime();
+  const durationMs = Math.max(0, durationMinutes) * 60 * 1000;
   const now = Date.now();
+  let remainingSec = Math.max(
+    0,
+    Math.floor((startMs + durationMs - now) / 1000)
+  );
 
-  const remainingSeconds = Math.max(0, Math.floor((endMs - now) / 1000));
+  // Guard against timezone skew when DB stores WIB (UTC+7) as timestamp without tz
+  // but it gets serialized as UTC (adds +7h). In that case remaining > duration.
+  const durationSec = Math.floor(durationMs / 1000);
+  if (durationSec > 0 && remainingSec > durationSec) {
+    // Adjust by subtracting WIB offset (7h) from start time if it brings remaining within duration
+    const WIB_OFFSET_MS = 7 * 60 * 60 * 1000; // UTC+7, no DST
+    const adjustedRemaining = Math.max(
+      0,
+      Math.floor((startMs - WIB_OFFSET_MS + durationMs - now) / 1000)
+    );
+    if (adjustedRemaining <= durationSec) {
+      remainingSec = adjustedRemaining;
+    }
+  }
 
-  return remainingSeconds;
+  return remainingSec;
 }
 
 /**

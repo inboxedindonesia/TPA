@@ -13,6 +13,8 @@ import {
   Home,
   GraduationCap,
   BookOpen,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import AuthContainer from "../components/AuthContainer";
 
@@ -46,7 +48,9 @@ function PasswordStrength({ password }: { password: string }) {
     sedang: "bg-yellow-500",
     kuat: "bg-green-600",
   };
-  const percent = (score / 5) * 100;
+  // Bar full (100%) hanya saat level "kuat"; selain itu dibatasi agar tidak full
+  const raw = Math.round((score / 5) * 100);
+  const percent = level === "kuat" ? 100 : Math.min(80, raw);
   return (
     <div className="mt-2 flex items-center gap-3">
       <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -66,6 +70,42 @@ function PasswordStrength({ password }: { password: string }) {
       >
         {level}
       </span>
+    </div>
+  );
+}
+
+function PasswordCriteria({
+  evaluation,
+}: {
+  evaluation: ReturnType<typeof evaluatePassword>;
+}) {
+  const items = [
+    { label: "Minimal 8 karakter", ok: evaluation.length },
+    { label: "Huruf besar (A–Z)", ok: evaluation.upper },
+    { label: "Huruf kecil (a–z)", ok: evaluation.lower },
+    { label: "Angka (0–9)", ok: evaluation.number },
+    { label: "Simbol (!@#$% dll)", ok: evaluation.symbol },
+  ];
+  return (
+    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+      {items.map((it) => (
+        <div
+          key={it.label}
+          className="flex items-center gap-2"
+        >
+          {it.ok ? (
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+          ) : (
+            <XCircle className="h-4 w-4 text-gray-400" />
+          )}
+          <span className={it.ok ? "text-green-700" : "text-gray-600"}>
+            {it.label}
+          </span>
+        </div>
+      ))}
+      <div className="col-span-1 sm:col-span-2 text-[11px] text-gray-500 mt-1">
+        Tips: kombinasi 10+ karakter akan meningkatkan skor menjadi kuat.
+      </div>
     </div>
   );
 }
@@ -361,6 +401,12 @@ function RegisterForm() {
                 required
                 className="input-field pl-10 pr-10"
                 placeholder="Masukkan password"
+                pattern={
+                  "(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}"
+                }
+                title={
+                  "Minimal 8 karakter dan mengandung huruf besar, huruf kecil, angka, dan simbol"
+                }
                 value={formData.password}
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
@@ -379,6 +425,9 @@ function RegisterForm() {
               </button>
             </div>
             <PasswordStrength password={formData.password} />
+            <PasswordCriteria
+              evaluation={evaluatePassword(formData.password)}
+            />
           </div>
           <div>
             <label

@@ -78,6 +78,7 @@ export default function TakeTestPage() {
   const [test, setTest] = useState<Test | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [session, setSession] = useState<TestSession | null>(null);
+  const [expiresAtMs, setExpiresAtMs] = useState<number | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
@@ -220,7 +221,7 @@ export default function TakeTestPage() {
   // Countdown timer based on session start time and test duration
   useEffect(() => {
     if (showInstruction) return;
-    if (!test || !session?.startTime) return;
+    if (!test || (!session?.startTime && !expiresAtMs)) return;
 
     const durationMinutes = Number(test.duration) || 0;
     if (durationMinutes <= 0) {
@@ -231,12 +232,15 @@ export default function TakeTestPage() {
     let stopped = false;
     const tick = () => {
       if (stopped) return;
-
-      // Use timezone utility for consistent calculation
-      const remaining = calculateRemainingTime(
-        session.startTime,
-        durationMinutes
-      );
+      let remaining: number;
+      if (typeof expiresAtMs === "number" && expiresAtMs > 0) {
+        // Timezone-agnostic path: count down to absolute expiry timestamp
+        remaining = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
+      } else {
+        // Fallback: derive from startTime with timezone guard in util
+        const start = session?.startTime || "";
+        remaining = start ? calculateRemainingTime(start, durationMinutes) : 0;
+      }
       setTimeLeft(remaining);
 
       if (remaining <= 0) {
@@ -254,7 +258,7 @@ export default function TakeTestPage() {
       stopped = true;
       window.clearInterval(id);
     };
-  }, [showInstruction, test, session, hasSubmitted, submitting]);
+  }, [showInstruction, test, session, expiresAtMs, hasSubmitted, submitting]);
 
   // Background-load test & questions while on instruction for faster start
   useEffect(() => {
@@ -476,6 +480,11 @@ export default function TakeTestPage() {
       if (sessionResponse.ok) {
         const sessionData = await sessionResponse.json();
         setSession(sessionData.session);
+        if (typeof sessionData.expiresAtMs === "number") {
+          setExpiresAtMs(sessionData.expiresAtMs);
+        } else {
+          setExpiresAtMs(null);
+        }
         setCurrentQuestionIndex(sessionData.session.currentQuestionIndex || 0);
       }
     } catch (error) {
@@ -865,6 +874,11 @@ export default function TakeTestPage() {
                     if (sessionRes.ok) {
                       const sessionData = await sessionRes.json();
                       setSession(sessionData.session);
+                      if (typeof sessionData.expiresAtMs === "number") {
+                        setExpiresAtMs(sessionData.expiresAtMs);
+                      } else {
+                        setExpiresAtMs(null);
+                      }
                       setCurrentQuestionIndex(
                         sessionData.session.currentQuestionIndex || 0
                       );
