@@ -52,6 +52,8 @@ export async function GET(request: NextRequest, context: any) {
           ts."updatedAt",
           u.name as user_name,
           u.email as user_email,
+          u.jurusan as user_jurusan,
+          u.jenjang as user_jenjang,
           u.registration_id as user_registration_id,
           t.name as test_name,
           t.description as test_description,

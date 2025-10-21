@@ -2,6 +2,8 @@
 
 import { display } from "html2canvas/dist/types/css/property-descriptors/display";
 import React from "react";
+import { jurusanOptionsByJenjang } from "@/lib/jurusanOptions";
+import { getTopMajors } from "@/lib/majorRecommendation";
 
 interface Answer {
   id: string;
@@ -80,6 +82,8 @@ interface TestSession {
   user_name: string;
   user_email: string;
   user_registration_id: string;
+  user_jurusan?: string;
+  user_jenjang?: string;
   answers: Answer[];
 }
 
@@ -260,50 +264,28 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
     };
   };
 
-  const getAptitudePercent = () => {
-    const total = session.aptitude_score_total || 0;
-    const max = session.aptitude_max_score_total || 0;
-    return max > 0 ? Math.round((total / max) * 100) : 0;
-  };
+  // Hitung komponen Multiple Intelligences dari categoryBreakdown
+  const deriveMultipleIntelligences = (breakdown: any) => {
+    const gambar = breakdown?.TES_GAMBAR || null;
+    const logika = breakdown?.TES_LOGIKA || null;
+    const angka = breakdown?.TES_ANGKA || null;
+    const verbal = breakdown?.TES_VERBAL || null;
 
-  const getTopHolland = () => {
-    const pairs: Array<[string, number]> = [
-      ["R", session.score_realistic || 0],
-      ["I", session.score_investigative || 0],
-      ["A", session.score_artistic || 0],
-      ["S", session.score_social || 0],
-      ["E", session.score_enterprising || 0],
-      ["C", session.score_conventional || 0],
-    ];
-    const top = pairs
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map((p) => p[0])
-      .join("-");
-    return session.holland_code || top;
-  };
+    const pct = (item: any) =>
+      item && item.maxScore > 0
+        ? Math.round(((item.score as number) / (item.maxScore as number)) * 100)
+        : 0;
 
-  // ===== Aptitude / Multiple Intelligences (Derived from TPA categories) =====
-  // Mapping:
-  //  - Visual-Spatial        <- TES_GAMBAR
-  //  - Logical-Mathematical  <- Weighted (60% TES_LOGIKA + 40% TES_ANGKA)
-  //  - Linguistic            <- TES_VERBAL
-  // Only render intelligences whose underlying categories have maxScore > 0
-  const deriveMultipleIntelligences = (
-    cb: Record<string, CategoryBreakdown>
-  ) => {
-    const verbal = cb.TES_VERBAL;
-    const angka = cb.TES_ANGKA;
-    const logika = cb.TES_LOGIKA;
-    const gambar = cb.TES_GAMBAR;
-    const pct = (v?: CategoryBreakdown) => (v ? v.percentage : 0);
-
-    const weightedLogicalMath = (() => {
-      const l = pct(logika);
-      const a = pct(angka);
-      if (l === 0 && a === 0) return 0;
-      return Math.round(l * 0.6 + a * 0.4);
-    })();
+    const totalMaxLogicalMath =
+      (logika?.maxScore || 0) + (angka?.maxScore || 0);
+    const weightedLogicalMath =
+      totalMaxLogicalMath > 0
+        ? Math.round(
+            (((logika?.score || 0) + (angka?.score || 0)) /
+              totalMaxLogicalMath) *
+              100
+          )
+        : 0;
 
     const list = [
       gambar &&
@@ -318,12 +300,12 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
           bar: "#059669",
           desc: "Kemampuan memproses informasi visual & pola spasial",
         },
-      (logika?.maxScore || 0) + (angka?.maxScore || 0) > 0 && {
+      totalMaxLogicalMath > 0 && {
         key: "logical_mathematical",
         name: "Logical-Mathematical Intelligence",
         percentage: weightedLogicalMath,
         score: (logika?.score || 0) + (angka?.score || 0),
-        max: (logika?.maxScore || 0) + (angka?.maxScore || 0),
+        max: totalMaxLogicalMath,
         bg: "#EFF6FF",
         border: "#BFDBFE",
         bar: "#2563EB",
@@ -354,6 +336,8 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
     }>;
     return list;
   };
+
+  // jurusanOptionsByJenjang now imported from shared lib
 
   const miLevelFromPct = (p: number) => {
     if (p >= 85) return "Dominan";
@@ -558,6 +542,8 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
             >
               <p>Nama: {session.user_name || "N/A"}</p>
               <p>Email: {session.user_email || "N/A"}</p>
+              {session.user_jenjang && <p>Jenjang: {session.user_jenjang}</p>}
+              {session.user_jurusan && <p>Jurusan: {session.user_jurusan}</p>}
               <p>
                 ID Peserta:{" "}
                 {session.user_registration_id || session.userId || "N/A"}
@@ -2156,31 +2142,50 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
               const bidang = (() => {
                 if (!dominant) return [] as string[];
                 const rec = (arr: string[]) => arr.slice(0, 5);
+                const preferMajor = (arr: string[]) => {
+                  const jur = (session.user_jurusan || "").toLowerCase();
+                  if (!jur) return arr;
+                  const idx = arr.findIndex((a) =>
+                    a.toLowerCase().includes(jur)
+                  );
+                  if (idx > 0) {
+                    const copy = [...arr];
+                    const [picked] = copy.splice(idx, 1);
+                    return [picked, ...copy];
+                  }
+                  return arr;
+                };
                 switch (dominant.key) {
                   case "visual_spatial":
-                    return rec([
-                      "Desain & Arsitektur",
-                      "UI/UX & Product Design",
-                      "Data Visualization",
-                      "Engineering CAD",
-                      "Animasi & Multimedia",
-                    ]);
+                    return preferMajor(
+                      rec([
+                        "Desain & Arsitektur",
+                        "UI/UX & Product Design",
+                        "Data Visualization",
+                        "Engineering CAD",
+                        "Animasi & Multimedia",
+                      ])
+                    );
                   case "logical_mathematical":
-                    return rec([
-                      "Software Engineering",
-                      "Data Science & Analytics",
-                      "Research & Development",
-                      "Financial Quantitative",
-                      "AI / Machine Learning",
-                    ]);
+                    return preferMajor(
+                      rec([
+                        "Software Engineering",
+                        "Data Science & Analytics",
+                        "Research & Development",
+                        "Financial Quantitative",
+                        "AI / Machine Learning",
+                      ])
+                    );
                   case "linguistic":
-                    return rec([
-                      "Content Strategy",
-                      "Hukum & Legal Drafting",
-                      "Pendidikan & Pelatihan",
-                      "Public Relations",
-                      "Copywriting / Editorial",
-                    ]);
+                    return preferMajor(
+                      rec([
+                        "Content Strategy",
+                        "Hukum & Legal Drafting",
+                        "Pendidikan & Pelatihan",
+                        "Public Relations",
+                        "Copywriting / Editorial",
+                      ])
+                    );
                   default:
                     return [];
                 }
@@ -2361,26 +2366,71 @@ const PDFResultTemplate: React.FC<PDFResultTemplateProps> = ({ session }) => {
                         Rekomendasi Bidang
                       </div>
                       <div style={{ fontSize: "10px", color: "#374151" }}>
-                        {dominant && bidang.length > 0 ? (
-                          <ul
-                            style={{
-                              margin: 0,
-                              paddingLeft: "16px",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "2px",
-                            }}
-                          >
-                            {bidang.map((b) => (
-                              <li key={b}>{b}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <div style={{ fontStyle: "italic" }}>
-                            Belum ada rekomendasi karena skor masih di bawah
-                            ambang ({THRESHOLD_MIN}%).
-                          </div>
-                        )}
+                        {(() => {
+                          const jenjangKey = (
+                            session.user_jenjang || ""
+                          ).toUpperCase();
+                          const groups =
+                            jurusanOptionsByJenjang[jenjangKey] || [];
+                          if (!jenjangKey || groups.length === 0) {
+                            return (
+                              <div style={{ fontStyle: "italic" }}>
+                                Belum ada rekomendasi karena jenjang belum
+                                dipilih.
+                              </div>
+                            );
+                          }
+                          // Build MI percents from categoryBreakdown
+                          const breakdown: any =
+                            session.categoryBreakdown || {};
+                          const gambar = breakdown?.TES_GAMBAR;
+                          const logika = breakdown?.TES_LOGIKA;
+                          const angka = breakdown?.TES_ANGKA;
+                          const verbal = breakdown?.TES_VERBAL;
+                          const pct = (it: any) =>
+                            it && it.maxScore > 0
+                              ? Math.round((it.score / it.maxScore) * 100)
+                              : 0;
+                          const mi = {
+                            visual_spatial: pct(gambar),
+                            logical_mathematical: (() => {
+                              const max =
+                                (logika?.maxScore || 0) +
+                                (angka?.maxScore || 0);
+                              return max > 0
+                                ? Math.round(
+                                    (((logika?.score || 0) +
+                                      (angka?.score || 0)) /
+                                      max) *
+                                      100
+                                  )
+                                : 0;
+                            })(),
+                            linguistic: pct(verbal),
+                          };
+                          const top = getTopMajors(
+                            mi,
+                            session.user_jenjang,
+                            session.user_jurusan
+                          );
+                          if (top.length === 0) {
+                            return (
+                              <div style={{ fontStyle: "italic" }}>
+                                Belum ada rekomendasi karena profil MI belum
+                                memadai.
+                              </div>
+                            );
+                          }
+                          return (
+                            <ul style={{ margin: 0, paddingLeft: "16px" }}>
+                              {top.map(
+                                (t: { value: string; label: string }) => (
+                                  <li key={t.value}>{t.label}</li>
+                                )
+                              )}
+                            </ul>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

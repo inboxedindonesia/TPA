@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { getTopMajors } from "@/lib/majorRecommendation";
 
 interface CategoryBreakdownItem {
   score: number;
@@ -12,6 +13,8 @@ interface Props {
   aptitude_score_total?: number;
   aptitude_max_score_total?: number;
   aptitude_percentage?: number;
+  user_jenjang?: string;
+  user_jurusan?: string;
   // Optional RIASEC scores (untuk memperkaya inferensi MI lain jika diinginkan ke depan)
   score_realistic?: number;
   score_investigative?: number;
@@ -156,36 +159,15 @@ const AptitudeMultipleIntelligences: React.FC<Props> = (props) => {
   })();
 
   const bidang = (() => {
-    if (!dominant) return [] as string[];
-    const rec = (list: string[]) => list.slice(0, 5);
-    switch (dominant?.key) {
-      case "visual_spatial":
-        return rec([
-          "Desain & Arsitektur",
-          "UI/UX & Product Design",
-          "Data Visualization",
-          "Engineering CAD",
-          "Animasi & Multimedia",
-        ]);
-      case "logical_mathematical":
-        return rec([
-          "Software Engineering",
-          "Data Science & Analytics",
-          "Research & Development",
-          "Financial Quantitative",
-          "AI / Machine Learning",
-        ]);
-      case "linguistic":
-        return rec([
-          "Content Strategy",
-          "Hukum & Legal Drafting",
-          "Pendidikan & Pelatihan",
-          "Public Relations",
-          "Copywriting / Editorial",
-        ]);
-      default:
-        return [];
-    }
+    // Top-3 jurusan berdasarkan MI + jenjang
+    const miScores = {
+      visual_spatial: mi.find((x) => x.key === "visual_spatial")?.percentage || 0,
+      logical_mathematical:
+        mi.find((x) => x.key === "logical_mathematical")?.percentage || 0,
+      linguistic: mi.find((x) => x.key === "linguistic")?.percentage || 0,
+    };
+    const top = getTopMajors(miScores, props.user_jenjang, props.user_jurusan);
+    return top.map((t) => t.label);
   })();
 
   return (
@@ -213,6 +195,7 @@ const AptitudeMultipleIntelligences: React.FC<Props> = (props) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        {/* Left: Interpretasi */}
         <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
           <h4 className="font-semibold text-amber-800 mb-2 text-sm">
             Interpretasi & Peta Kekuatan
@@ -221,12 +204,10 @@ const AptitudeMultipleIntelligences: React.FC<Props> = (props) => {
             {dominant ? (
               <>
                 <p>
-                  <span className="font-semibold">Interpretasi:</span>{" "}
-                  {interpretation}
+                  <span className="font-semibold">Interpretasi:</span> {interpretation}
                 </p>
                 <p>
-                  <span className="font-semibold">Kekuatan Utama:</span>{" "}
-                  {dominant?.name || "-"}
+                  <span className="font-semibold">Kekuatan Utama:</span> {dominant?.name || "-"}
                 </p>
                 <p>
                   <span className="font-semibold">Detail:</span> {detail}
@@ -239,22 +220,35 @@ const AptitudeMultipleIntelligences: React.FC<Props> = (props) => {
             )}
           </div>
         </div>
+
+        {/* Right: Rekomendasi Bidang (Top-3 Jurusan) */}
         <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
           <h4 className="font-semibold text-emerald-800 mb-2 text-sm">
             Rekomendasi Bidang
           </h4>
-          {dominant && bidang.length > 0 ? (
-            <ul className="text-xs text-gray-800 space-y-1 list-disc list-inside">
-              {bidang.map((b) => (
-                <li key={b}>{b}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-gray-600 italic">
-              Belum ada rekomendasi karena skor masih di bawah ambang (
-              {THRESHOLD_MIN}%).
-            </p>
-          )}
+          {(() => {
+            if (!props.user_jenjang) {
+              return (
+                <p className="text-xs text-gray-600 italic">
+                  Belum ada rekomendasi karena jenjang belum dipilih.
+                </p>
+              );
+            }
+            if (bidang.length === 0) {
+              return (
+                <p className="text-xs text-gray-600 italic">
+                  Belum ada rekomendasi karena profil MI belum memadai.
+                </p>
+              );
+            }
+            return (
+              <ul className="text-xs text-gray-800 space-y-1 list-disc list-inside">
+                {bidang.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            );
+          })()}
         </div>
       </div>
 

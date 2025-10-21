@@ -79,6 +79,8 @@ interface TestSession {
   user_name: string;
   user_email: string;
   user_registration_id: string;
+  user_jurusan?: string;
+  user_jenjang?: string;
   answers: Answer[];
 }
 
@@ -2110,6 +2112,8 @@ export default function DetailHasilTesPesertaPage() {
                 max_score_enterprising={session.max_score_enterprising}
                 max_score_conventional={session.max_score_conventional}
                 holland_code={session.holland_code}
+                user_jenjang={session.user_jenjang}
+                user_jurusan={session.user_jurusan}
               />
             </div>
 
@@ -2120,6 +2124,8 @@ export default function DetailHasilTesPesertaPage() {
                   aptitude_percentage={session.aptitude_percentage}
                   aptitude_score_total={session.aptitude_score_total}
                   aptitude_max_score_total={session.aptitude_max_score_total}
+                  user_jenjang={session.user_jenjang}
+                  user_jurusan={session.user_jurusan}
                 />
               </div>
             )}

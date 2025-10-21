@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { getTopMajorsByRiasec } from "@/lib/majorRecommendation";
 
 interface Props {
   score_realistic?: number;
@@ -15,6 +16,8 @@ interface Props {
   max_score_enterprising?: number;
   max_score_conventional?: number;
   holland_code?: string;
+  user_jenjang?: string;
+  user_jurusan?: string;
 }
 
 const RiasecSummary: React.FC<Props> = (p) => {
@@ -198,64 +201,40 @@ const RiasecSummary: React.FC<Props> = (p) => {
           <h4 className="font-semibold text-emerald-800 mb-2 text-sm">
             Rekomendasi Bidang
           </h4>
-          {topSorted.length > 0 ? (
-            <ul className="text-xs text-gray-800 space-y-1 list-disc list-inside">
-              {(() => {
-                const first = topSorted[0]?.key;
-                const map: Record<string, string[]> = {
-                  R: [
-                    "Teknik Mesin",
-                    "Teknik Sipil",
-                    "Robotik",
-                    "Kelistrikan",
-                    "Logistik",
-                  ],
-                  I: [
-                    "Data Science",
-                    "Bioteknologi",
-                    "Riset & Laboratorium",
-                    "Kedokteran",
-                    "Statistika",
-                  ],
-                  A: [
-                    "Desain Grafis",
-                    "Seni & Multimedia",
-                    "Arsitektur",
-                    "UI/UX",
-                    "Animasi",
-                  ],
-                  S: [
-                    "Psikologi",
-                    "Pendidikan",
-                    "Keperawatan",
-                    "HR Development",
-                    "Bimbingan & Konseling",
-                  ],
-                  E: [
-                    "Manajemen Bisnis",
-                    "Marketing",
-                    "Kewirausahaan",
-                    "Hukum Bisnis",
-                    "Public Relations",
-                  ],
-                  C: [
-                    "Akuntansi",
-                    "Administrasi",
-                    "Perpajakan",
-                    "Manajemen Operasional",
-                    "Data Entry & QC",
-                  ],
-                };
-                return (map[first] || [])
-                  .slice(0, 5)
-                  .map((r) => <li key={r}>{r}</li>);
-              })()}
-            </ul>
-          ) : (
-            <p className="text-xs text-gray-600 italic">
-              Belum ada rekomendasi karena semua skor 0 / belum tersedia.
-            </p>
-          )}
+          {(() => {
+            const total = withPct.reduce((acc, d) => acc + d.max, 0);
+            if (total === 0) {
+              return (
+                <p className="text-xs text-gray-600 italic">
+                  Belum ada rekomendasi karena semua skor 0 / belum tersedia.
+                </p>
+              );
+            }
+            // Convert to percentages for RIASEC recommender
+            const r = {
+              R: withPct.find((d) => d.key === "R")?.pct || 0,
+              I: withPct.find((d) => d.key === "I")?.pct || 0,
+              A: withPct.find((d) => d.key === "A")?.pct || 0,
+              S: withPct.find((d) => d.key === "S")?.pct || 0,
+              E: withPct.find((d) => d.key === "E")?.pct || 0,
+              C: withPct.find((d) => d.key === "C")?.pct || 0,
+            };
+            const top = getTopMajorsByRiasec(r, p.user_jenjang, p.user_jurusan);
+            if (top.length === 0) {
+              return (
+                <p className="text-xs text-gray-600 italic">
+                  Belum ada rekomendasi karena jenjang belum dipilih.
+                </p>
+              );
+            }
+            return (
+              <ul className="text-xs text-gray-800 space-y-1 list-disc list-inside">
+                {top.map((t) => (
+                  <li key={t.value}>{t.label}</li>
+                ))}
+              </ul>
+            );
+          })()}
         </div>
       </div>
     </div>
