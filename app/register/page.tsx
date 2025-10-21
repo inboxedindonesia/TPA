@@ -500,7 +500,7 @@ function RegisterForm() {
     <AuthContainer
       title="Lengkapi Biodata"
       subtitle="Tambahkan informasi untuk melengkapi profil"
-      width="xl"
+      width="2xl"
       footer={
         <span>
           Sudah punya akun?{" "}
@@ -523,16 +523,42 @@ function RegisterForm() {
             {error}
           </div>
         )}
-        <div className="grid gap-8 md:gap-8 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-8 md:gap-8 md:grid-cols-2 xl:grid-cols-3 items-stretch">
           {/* Section: Data Pribadi */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow xl:col-span-1 md:col-span-2">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow xl:col-span-1 md:col-span-2 h-full">
             <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <span className="h-5 w-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center">
                 1
               </span>
               Data Pribadi
             </h3>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Nama Lengkap */}
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="name"
+                  className="block text-xs font-medium text-gray-700 tracking-wide mb-1.5"
+                >
+                  Nama Lengkap
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    className="input-field pl-10"
+                    placeholder="Sesuai KTP/Identitas"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
               {/* Tempat Lahir */}
               <div>
                 <label
@@ -710,7 +736,7 @@ function RegisterForm() {
             </div>
           </div>
           {/* Section: Pendidikan */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow xl:col-span-1 md:col-span-1">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow xl:col-span-1 md:col-span-1 h-full">
             <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <span className="h-5 w-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center">
                 2
@@ -852,7 +878,7 @@ function RegisterForm() {
             </div>
           </div>
           {/* Section: Lainnya */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow xl:col-span-1 md:col-span-2">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow xl:col-span-1 md:col-span-2 h-full">
             <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <span className="h-5 w-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center">
                 3

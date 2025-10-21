@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     try {
       // Cari user
       const userRes = await client.query(
-        "SELECT id FROM users WHERE email = $1",
+        "SELECT id, is_verified, name, role_id FROM users WHERE email = $1",
         [email]
       );
       if (userRes.rows.length === 0) {
@@ -26,7 +26,11 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      const userId = userRes.rows[0].id;
+      const userId = userRes.rows[0].id as string;
+      if (userRes.rows[0].is_verified) {
+        client.release();
+        return NextResponse.json({ message: "Akun sudah terverifikasi" });
+      }
       // Cari OTP aktif
       const otpRes = await client.query(
         `SELECT * FROM user_otps WHERE user_id = $1 AND otp_code = $2 AND is_used = FALSE AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1`,

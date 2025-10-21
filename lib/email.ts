@@ -5,13 +5,29 @@ function buildTransport() {
   const port = Number(process.env.SMTP_PORT) || 587;
   const user = process.env.SMTP_USER || "";
   const pass = process.env.SMTP_PASS || "";
+  const pool = process.env.SMTP_POOL === "true"; // enable pooling for throughput
+  const dkimDomainName = process.env.SMTP_DKIM_DOMAIN;
+  const dkimKeySelector = process.env.SMTP_DKIM_SELECTOR;
+  const dkimPrivateKey = process.env.SMTP_DKIM_PRIVATE_KEY;
+  const dkim =
+    dkimDomainName && dkimKeySelector && dkimPrivateKey
+      ? {
+          domainName: dkimDomainName,
+          keySelector: dkimKeySelector,
+          privateKey: dkimPrivateKey,
+        }
+      : undefined;
 
   if (!host && user.includes("@gmail.com")) {
     // Fallback to Gmail service if host not provided
-    return nodemailer.createTransport({
-      service: "gmail",
-      auth: { user, pass },
-    });
+    return nodemailer.createTransport(
+      {
+        service: "gmail",
+        pool,
+        auth: { user, pass },
+        dkim,
+      } as any
+    );
   }
 
   if (!host) {
@@ -20,20 +36,31 @@ function buildTransport() {
     );
   }
 
-  return nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
     host,
     port,
     secure: port === 465, // true for 465, false for 587/others
+    pool,
     auth: { user, pass },
-  });
+    dkim,
+    // Improve deliverability with TLS options if needed
+    tls: {
+      rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED === "true",
+      ciphers: process.env.SMTP_TLS_CIPHERS || undefined,
+    },
+  } as any);
+
+  return transporter;
 }
 
 export async function sendOtpEmail(to: string, otp: string) {
   const transporter = buildTransport();
   // Verify connection when possible (no-op on some providers)
-  try {
-    await transporter.verify();
-  } catch {}
+  if (process.env.SMTP_VERIFY_BEFORE_SEND !== "false") {
+    try {
+      await transporter.verify();
+    } catch {}
+  }
 
   // Pisahkan setiap angka OTP ke dalam kotak
   const otpBoxes = String(otp)
@@ -56,6 +83,13 @@ export async function sendOtpEmail(to: string, otp: string) {
           : undefined),
       to,
       subject: "Kode OTP Verifikasi Akun TPA Universitas",
+      headers: {
+        "X-Priority": "1",
+        "X-MSMail-Priority": "High",
+        "Importance": "high",
+        "List-Unsubscribe": `<mailto:${process.env.SMTP_FROM || process.env.SMTP_USER}?subject=unsubscribe>`,
+      },
+      replyTo: process.env.SMTP_REPLY_TO || undefined,
       text: `Kode OTP Anda: ${otp}\n\nKlik link berikut untuk verifikasi: ${verifyLink}`,
       html: `
       <div style="font-family: Arial, sans-serif; background: #f4f6fb; padding: 32px;">

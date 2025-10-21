@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function VerifyOtpInner() {
   const [resendLoading, setResendLoading] = useState(false);
+  const OTP_WINDOW_MS = 10 * 60 * 1000; // 10 menit
+  const [expiresAt, setExpiresAt] = useState<number>(0);
+  const [remainingMs, setRemainingMs] = useState<number>(0);
 
   const handleResendOtp = async () => {
     setResendLoading(true);
@@ -21,6 +24,13 @@ function VerifyOtpInner() {
         setError(data.error || "Gagal mengirim ulang OTP");
       } else {
         setSuccess("OTP baru telah dikirim ke email Anda.");
+        const nextExpires = Date.now() + OTP_WINDOW_MS;
+        setExpiresAt(nextExpires);
+        if (email) {
+          try {
+            localStorage.setItem(`otpExpiresAt:${email}`, String(nextExpires));
+          } catch {}
+        }
       }
     } catch (err) {
       setError("Terjadi kesalahan saat mengirim ulang OTP");
@@ -35,6 +45,41 @@ function VerifyOtpInner() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Initialize or restore countdown per-email
+  useEffect(() => {
+    if (!email) return;
+    let stored = 0;
+    try {
+      const raw = localStorage.getItem(`otpExpiresAt:${email}`);
+      if (raw) stored = Number(raw) || 0;
+    } catch {}
+    const now = Date.now();
+    // If no stored or already expired, start a new 10-min window from now
+    const exp = stored > now ? stored : now + OTP_WINDOW_MS;
+    setExpiresAt(exp);
+    try {
+      localStorage.setItem(`otpExpiresAt:${email}`, String(exp));
+    } catch {}
+  }, [email]);
+
+  // Tick remaining time every second
+  useEffect(() => {
+    if (!expiresAt) return;
+    const update = () => setRemainingMs(Math.max(0, expiresAt - Date.now()));
+    update();
+    const t = setInterval(update, 1000);
+    return () => clearInterval(t);
+  }, [expiresAt]);
+
+  const formattedRemaining = useMemo(() => {
+    const total = Math.max(0, remainingMs);
+    const m = Math.floor(total / 60000);
+    const s = Math.floor((total % 60000) / 1000);
+    const mm = String(m).padStart(2, "0");
+    const ss = String(s).padStart(2, "0");
+    return `${mm}:${ss}`;
+  }, [remainingMs]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,9 +174,13 @@ function VerifyOtpInner() {
                 type="button"
                 className="text-blue-600 hover:underline text-sm disabled:text-gray-400"
                 onClick={handleResendOtp}
-                disabled={resendLoading}
+                disabled={resendLoading || remainingMs > 0}
               >
-                {resendLoading ? "Mengirim ulang..." : "Kirim Ulang OTP"}
+                {resendLoading
+                  ? "Mengirim ulang..."
+                  : remainingMs > 0
+                  ? `Kirim Ulang OTP (${formattedRemaining})`
+                  : "Kirim Ulang OTP"}
               </button>
             </div>
             {error && <div className="text-red-600 text-center">{error}</div>}

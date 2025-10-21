@@ -6,7 +6,7 @@ interface AuthContainerProps {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
-  width?: "sm" | "lg" | "xl";
+  width?: "sm" | "lg" | "xl" | "2xl";
   footer?: React.ReactNode;
 }
 
@@ -25,7 +25,9 @@ export function AuthContainer({
 
       <div
         className={`relative z-10 ${
-          width === "xl"
+          width === "2xl"
+            ? "max-w-7xl"
+            : width === "xl"
             ? "max-w-6xl"
             : width === "lg"
             ? "max-w-3xl"
